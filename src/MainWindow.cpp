@@ -80,6 +80,12 @@ MainWindow::MainWindow(QWidget *parent)
         }, Qt::QueuedConnection);
     });
 
+    m_engine.setLogCallback([this](const std::string &msg) {
+        QMetaObject::invokeMethod(this, [this, msg]() {
+            logMessage(QString::fromStdString(msg));
+        }, Qt::QueuedConnection);
+    });
+
     m_engine.setStatusCallback([this](DownloadStatus status, const std::string &msg) {
         QMetaObject::invokeMethod(this, [this, status, msg]() {
             QString qtMsg = QString::fromStdString(msg);
@@ -554,6 +560,37 @@ void MainWindow::setupUI()
     logsTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 15px;");
     logsLayout->addWidget(logsTitle);
 
+    QHBoxLayout *logFilterLayout = new QHBoxLayout();
+    logFilterLayout->setSpacing(8);
+
+    m_filterAllBtn = new QPushButton("🌐 Todos os Logs", pageLogs);
+    m_filterProcessesBtn = new QPushButton("⚙️ Apenas Processos", pageLogs);
+    m_filterErrorsBtn = new QPushButton("❌ Apenas Erros", pageLogs);
+    m_filterGeneralBtn = new QPushButton("📌 Sistema & Gerais", pageLogs);
+    m_clearLogsBtn = new QPushButton("🧹 Limpar Terminal", pageLogs);
+
+    m_filterAllBtn->setCursor(Qt::PointingHandCursor);
+    m_filterProcessesBtn->setCursor(Qt::PointingHandCursor);
+    m_filterErrorsBtn->setCursor(Qt::PointingHandCursor);
+    m_filterGeneralBtn->setCursor(Qt::PointingHandCursor);
+    m_clearLogsBtn->setCursor(Qt::PointingHandCursor);
+
+    logFilterLayout->addWidget(m_filterAllBtn);
+    logFilterLayout->addWidget(m_filterProcessesBtn);
+    logFilterLayout->addWidget(m_filterErrorsBtn);
+    logFilterLayout->addWidget(m_filterGeneralBtn);
+    logFilterLayout->addStretch();
+    logFilterLayout->addWidget(m_clearLogsBtn);
+    logsLayout->addLayout(logFilterLayout);
+
+    connect(m_filterAllBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(0); });
+    connect(m_filterProcessesBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(1); });
+    connect(m_filterErrorsBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(2); });
+    connect(m_filterGeneralBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(3); });
+    connect(m_clearLogsBtn, &QPushButton::clicked, this, [this]() { m_allLogs.clear(); refreshLogDisplay(); });
+
+    updateLogFilter(0); // Inicializa com estilo ativo no botão 'Todos os Logs'
+
     m_logEdit = new QTextEdit(pageLogs);
     m_logEdit->setReadOnly(true);
     m_logEdit->setObjectName("logArea");
@@ -863,7 +900,7 @@ void MainWindow::onConvertProcessOutput()
     QByteArray out = m_convertProcess->readAllStandardOutput();
     QByteArray err = m_convertProcess->readAllStandardError();
 
-    if (!out.isEmpty()) logMessage(QString::fromUtf8(out).trimmed());
+    if (!out.isEmpty()) logMessage("[Processo Conversor] " + QString::fromUtf8(out).trimmed());
     if (!err.isEmpty()) {
         QString errStr = QString::fromUtf8(err).trimmed();
         if (errStr.contains("time=") || errStr.contains("size=") || errStr.contains("speed=")) {
@@ -875,6 +912,11 @@ void MainWindow::onConvertProcessOutput()
                     m_statusLabel->setText("Status da Conversão Automática: " + sub);
                 }
             }
+            logMessage("[Processo Conversor] Progresso FFmpeg: " + errStr);
+        } else if (errStr.contains("Error") || errStr.contains("Invalid") || errStr.contains("No such file") || errStr.contains("failed") || errStr.contains("Unable")) {
+            logMessage("[Erro no Conversor] " + errStr);
+        } else {
+            logMessage("[Processo Conversor] " + errStr);
         }
     }
 }
@@ -1231,8 +1273,75 @@ void MainWindow::onCancelClicked()
 
 void MainWindow::logMessage(const QString &msg)
 {
-    if (m_logEdit) {
+    m_allLogs.append(msg);
+    if (m_logEdit && shouldShowLogLine(msg)) {
         m_logEdit->append(msg);
+    }
+}
+
+bool MainWindow::shouldShowLogLine(const QString &line) const
+{
+    if (m_logFilterMode == 0) return true; // Todos
+    if (m_logFilterMode == 1) {
+        // Apenas Processos (yt-dlp, FFmpeg, junção, conversão)
+        return line.contains("[Processo", Qt::CaseInsensitive) ||
+               line.contains("[DownloadEngine", Qt::CaseInsensitive) ||
+               line.contains("[Conversor]", Qt::CaseInsensitive) ||
+               line.contains("[Recorte]", Qt::CaseInsensitive) ||
+               line.contains("[Auto-Conversao]", Qt::CaseInsensitive) ||
+               line.contains("[Status]", Qt::CaseInsensitive) ||
+               line.contains("[Muxing]", Qt::CaseInsensitive) ||
+               line.contains("[Output]", Qt::CaseInsensitive) ||
+               line.contains("[Sucesso]", Qt::CaseInsensitive);
+    }
+    if (m_logFilterMode == 2) {
+        // Apenas Erros e Alertas
+        return line.contains("[Erro", Qt::CaseInsensitive) ||
+               line.contains("Erro", Qt::CaseInsensitive) ||
+               line.contains("Falha", Qt::CaseInsensitive) ||
+               line.contains("[Alerta", Qt::CaseInsensitive) ||
+               line.contains("Warning", Qt::CaseInsensitive) ||
+               line.contains("Error", Qt::CaseInsensitive) ||
+               line.contains("404", Qt::CaseInsensitive) ||
+               line.contains("403", Qt::CaseInsensitive) ||
+               line.contains("Unavailable", Qt::CaseInsensitive);
+    }
+    if (m_logFilterMode == 3) {
+        // Apenas Gerais (Sistema, GPU, Biblioteca, Updater, Destino)
+        return line.contains("[System]", Qt::CaseInsensitive) ||
+               line.contains("[Biblioteca]", Qt::CaseInsensitive) ||
+               line.contains("[Updater]", Qt::CaseInsensitive) ||
+               line.contains("[Destino", Qt::CaseInsensitive) ||
+               line.contains("Placa gráfica", Qt::CaseInsensitive) ||
+               line.contains("===");
+    }
+    return true;
+}
+
+void MainWindow::updateLogFilter(int mode)
+{
+    m_logFilterMode = mode;
+    QString activeStyle = "background-color: #10b981; color: #000000; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid #10b981;";
+    QString inactiveStyle = "background-color: #262626; color: #dedede; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid #333333;";
+    QString clearStyle = "background-color: #ef4444; color: #ffffff; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid #dc2626;";
+    
+    if (m_filterAllBtn) m_filterAllBtn->setStyleSheet(mode == 0 ? activeStyle : inactiveStyle);
+    if (m_filterProcessesBtn) m_filterProcessesBtn->setStyleSheet(mode == 1 ? activeStyle : inactiveStyle);
+    if (m_filterErrorsBtn) m_filterErrorsBtn->setStyleSheet(mode == 2 ? activeStyle : inactiveStyle);
+    if (m_filterGeneralBtn) m_filterGeneralBtn->setStyleSheet(mode == 3 ? activeStyle : inactiveStyle);
+    if (m_clearLogsBtn) m_clearLogsBtn->setStyleSheet(clearStyle);
+    
+    refreshLogDisplay();
+}
+
+void MainWindow::refreshLogDisplay()
+{
+    if (!m_logEdit) return;
+    m_logEdit->clear();
+    for (const QString &line : m_allLogs) {
+        if (shouldShowLogLine(line)) {
+            m_logEdit->append(line);
+        }
     }
 }
 

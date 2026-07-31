@@ -41,6 +41,10 @@ void DownloadEngine::setStatusCallback(std::function<void(DownloadStatus, const 
     m_onStatus = cb;
 }
 
+void DownloadEngine::setLogCallback(std::function<void(const std::string&)> cb) {
+    m_onLog = cb;
+}
+
 void DownloadEngine::startDownload(const std::string &url, const std::string &quality, const std::string &timeRange, const std::string &outputFolder) {
     if (m_isRunning.load()) {
         std::cerr << "[DownloadEngine] ERRO: Download já está em progresso!\n";
@@ -91,6 +95,7 @@ void DownloadEngine::cancelCurrent() {
 
 void DownloadEngine::workerLoop(const std::string &command) {
     std::cout << "[DownloadEngine Worker] Executando comando nativo (Modo Silencioso/GUI): " << command << "\n";
+    if (m_onLog) m_onLog("[Processo Motor] Acionando linha de comando no Windows: " + command);
     
     QProcess process;
 #ifdef _WIN32
@@ -105,6 +110,7 @@ void DownloadEngine::workerLoop(const std::string &command) {
         std::cerr << "[DownloadEngine] Falha ao abrir processo com yt-dlp/ffmpeg.\n";
         m_isRunning.store(false);
         if (m_onStatus) m_onStatus(DownloadStatus::Error, "Falha ao acionar binários do yt-dlp/ffmpeg.");
+        if (m_onLog) m_onLog("[Erro no Motor] Falha crítica: Os executáveis do yt-dlp/ffmpeg não foram encontrados ou não puderam iniciar na pasta da aplicação.");
         return;
     }
 
@@ -138,20 +144,32 @@ void DownloadEngine::workerLoop(const std::string &command) {
 void DownloadEngine::parseYtDlpOutput(const std::string &line) {
     std::cout << "[Output] " << line;
     try {
+        if (line.find("ERROR:") != std::string::npos || line.find("HTTP Error") != std::string::npos || line.find("Unable to download") != std::string::npos || line.find("Video unavailable") != std::string::npos || line.find("Permission denied") != std::string::npos) {
+            if (m_onLog) m_onLog("[Erro no Motor] " + line);
+            return;
+        }
+        if (line.find("WARNING:") != std::string::npos) {
+            if (m_onLog) m_onLog("[Alerta no Motor] " + line);
+            return;
+        }
         if (line.find("[Merger]") != std::string::npos || line.find("Merging formats into") != std::string::npos) {
             if (m_onStatus) m_onStatus(DownloadStatus::Muxing, "📦 Mesclando áudio e vídeo de forma instantânea sem perda (Stream Copy)...");
+            if (m_onLog) m_onLog("[Processo Motor] Mesclando streams: " + line);
             return;
         }
         if (line.find("[ExtractAudio]") != std::string::npos || (line.find("Destination: ") != std::string::npos && line.find(".mp3") != std::string::npos)) {
             if (m_onStatus) m_onStatus(DownloadStatus::ConvertingGPU, "🎵 Extraindo faixas de áudio MP3 em alta velocidade...");
+            if (m_onLog) m_onLog("[Processo Motor] Extraindo áudio MP3: " + line);
             return;
         }
         if (line.find("Deleting original file") != std::string::npos) {
             if (m_onStatus) m_onStatus(DownloadStatus::Muxing, "🧹 Limpando arquivos temporários e finalizando...");
+            if (m_onLog) m_onLog("[Processo Motor] Limpando arquivos temporários de junção...");
             return;
         }
         if (line.find("Already downloaded and merged") != std::string::npos) {
             if (m_onStatus) m_onStatus(DownloadStatus::Muxing, "🔍 Verificando integridade da mídia...");
+            if (m_onLog) m_onLog("[Processo Motor] O arquivo selecionado já se encontra no disco.");
             return;
         }
 
@@ -167,6 +185,16 @@ void DownloadEngine::parseYtDlpOutput(const std::string &line) {
             m_currentItem.eta = eta;
 
             if (m_onProgress) m_onProgress(percent, speed, eta);
+            return;
+        }
+
+        // Se contiver outras informações valiosas (como [youtube], [info], [ffmpeg], etc.), transmitimos aos logs
+        std::string cleanLine = line;
+        while (!cleanLine.empty() && (cleanLine.back() == '\r' || cleanLine.back() == '\n' || cleanLine.back() == ' ')) {
+            cleanLine.pop_back();
+        }
+        if (!cleanLine.empty() && cleanLine.find("[download] ") == std::string::npos) {
+            if (m_onLog) m_onLog("[Processo Motor] " + cleanLine);
         }
     } catch (...) {
         // Ignora possíveis exceções de formatação do terminal

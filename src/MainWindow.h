@@ -58,6 +58,9 @@ private:
     void setupUI();
     void setupStyles();
     void logMessage(const QString &msg);
+    void updateLogFilter(int mode);
+    void refreshLogDisplay();
+    bool shouldShowLogLine(const QString &line) const;
     bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir);
     void startUpdateDownload(const QString &url, const QString &fileName);
 
@@ -111,6 +114,13 @@ private:
 
     // Tela de Terminal de Logs (Página 3)
     QTextEdit *m_logEdit;
+    QStringList m_allLogs;
+    int m_logFilterMode{0}; // 0=Todos, 1=Processos, 2=Erros, 3=Geral
+    QPushButton *m_filterAllBtn;
+    QPushButton *m_filterProcessesBtn;
+    QPushButton *m_filterErrorsBtn;
+    QPushButton *m_filterGeneralBtn;
+    QPushButton *m_clearLogsBtn;
 
     // Componentes da Tela de Informações e Hardware (Página 4)
     QLabel *m_gpuModelLabel;

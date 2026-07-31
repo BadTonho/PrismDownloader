@@ -23,6 +23,7 @@ public:
     // Callbacks C++ nativos para eventos em tempo real
     void setProgressCallback(std::function<void(double, const std::string&, const std::string&)> cb);
     void setStatusCallback(std::function<void(DownloadStatus, const std::string&)> cb);
+    void setLogCallback(std::function<void(const std::string&)> cb);
 
 private:
     GPUDetector m_gpuDetector;
@@ -32,6 +33,7 @@ private:
 
     std::function<void(double, const std::string&, const std::string&)> m_onProgress;
     std::function<void(DownloadStatus, const std::string&)> m_onStatus;
+    std::function<void(const std::string&)> m_onLog;
 
     void parseYtDlpOutput(const std::string &line);
     void workerLoop(const std::string &command);
