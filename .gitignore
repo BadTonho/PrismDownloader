@@ -1,5 +1,6 @@
 # Diretório de Build e binários compilados
 build/
+dist/
 *.exe
 *.dll
 *.obj
