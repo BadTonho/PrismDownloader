@@ -29,11 +29,10 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ## 🛠️ 3. Etapas do Projeto (Desenvolvimento em Estágios)
 
-### 📍 Etapa 1: Concepção & Decisões Arquiteturais (Atual 🏁)
-* [ ] **1.1. Definição da Stack Visual:** Decidir a tecnologia para a Interface Gráfica (GUI) com foco na facilidade de distribuição:
-  * **Opção A: Python + CustomTkinter** (Leve, dark-mode nativo, código simples, executável menor ~50MB).
-  * **Opção B: Python + PySide6 (Qt)** (Visual de nível comercial, animações avançadas, super flexível, executável médio ~100MB).
-  * **Opção C: Tauri + React / Python** (Interface Web moderna, altamente personalizável, mas exige compilação mais complexa).
+### 📍 Etapa 1: Concepção & Decisões Arquiteturais (Em Andamento 🏁)
+* [x] **1.1. Definição da Stack Principal & Visual:** **C++ com Qt / QML** 🏆 (Escolhida)
+  * **Por que essa escolha?** Combina a velocidade extrema de inicialização e baixo consumo do C++ com a engine visual mais conceituada do mercado (Qt/QML), permitindo animações suaves fluidas na GPU sem parecer um software clássico dos anos 2000.
+  * Além disso, é nativa, fantástica para distribuição sem exigir instalação de interpretadores terceiros (como Python ou Node).
 * [ ] **1.2. Definição de Recursos MVP (Versão 1.0):**
   * Baixar vídeo único em alta resolução (4K, 1080p, 720p).
   * Baixar apenas o Áudio (MP3 / FLAC - Ideal para podcasts/músicas).
@@ -41,10 +40,10 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ---
 
-### 📍 Etapa 2: Motor Core & Inteligência de Hardware
-* [ ] **2.1. Integração com `yt-dlp`:** Criar módulo Python para extrair links, resoluções disponíveis, miniatura e progresso (velocidade e tempo estimado).
-* [ ] **2.2. Módulo de Detecção de GPU:** Script que investiga se o computador possui NVIDIA, AMD ou Intel compatíveis antes de rodar o comando do FFmpeg.
-* [ ] **2.3. Mídia Sem Perda (*Stream Copy*):** Criar a lógica para evitar conversões desnecessárias da CPU em arquivos padronizados.
+### 📍 Etapa 2: Motor Core & Inteligência de Hardware (C++)
+* [ ] **2.1. Integração C++ <> Motores de Mídia:** Criar classe gerenciadora em C++ (via `QProcess` ou pipes) para invocar os binários otimizados de `yt-dlp` e `ffmpeg` em background, capturando velocidade, progresso e miniatura sem congelar a interface.
+* [ ] **2.2. Módulo de Detecção de GPU:** Lógica que verifica placas NVIDIA (ex: GTX 1660 Super), AMD ou Intel na máquina do usuário para selecionar o codec mais rápido.
+* [ ] **2.3. Mídia Sem Perda (*Stream Copy*):** Estratégia para apenas juntar streams originais e evitar qualquer processamento de CPU sempre que possível.
 
 ---
 
@@ -73,4 +72,4 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [ ] **5.3. Criar Instalador Amigo:** (Opcional) Usar *Inno Setup* para criar um instalador oficial ("Setup.exe") com ícone personalizado e atalho na Área de Trabalho.
 
 ---
-*Status do Projeto: 🟡 Em discussão - Etapa 1*
+*Status do Projeto: 🟢 Stack C++ & Qt definida! Discutindo escopo de funcionalidades da Versão 1.0 (Etapa 1.2).*
