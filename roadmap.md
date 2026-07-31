@@ -64,10 +64,10 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ---
 
-### 📍 Etapa 5: Empacotamento e Preparação para Distribuição (Deploy)
-* [ ] **5.1. Bundle de Dependências:** Configurar para embutir automaticamente os binários do `FFmpeg` para o Windows.
-* [ ] **5.2. Compilação para `.exe` autônomo:** Utilizar ferramentas como *Nuitka* ou *PyInstaller* para gerar um executável de performance máxima.
-* [ ] **5.3. Criar Instalador Amigo:** (Opcional) Usar *Inno Setup* para criar um instalador oficial ("Setup.exe") com ícone personalizado e atalho na Área de Trabalho.
+### 📍 Etapa 5: Empacotamento e Preparação para Distribuição (Deploy) 🏁 (Concluído!)
+* [x] **5.1. Bundle de Dependências:** Todos os binários de aceleração (FFmpeg/NVENC) e bibliotecas nativas do Qt 6 foram embutidos junto ao executável principal C++17.
+* [x] **5.2. Pacote Portável Autônomo:** Gerado o pacote ZIP auto-executável sem necessidade de instalação em `dist\NeoVDownloader_V1.0_Portable.zip`.
+* [x] **5.3. Criar Instalador Oficial:** Gerado com *Inno Setup 6* o instalador moderno com compressão LZMA2, atalho de Área de Trabalho e suporte ao Português em `dist\NeoVDownloader_V1.0_Setup.exe`.
 
 ---
-*Status do Projeto: 🏆 Etapa 3 Concluída! Janela Gráfica (UI/UX) com tema Dark Tech compilada com Qt 6.7 e executando limpa na tela do usuário com indicador NVIDIA NVENC ativo.*
+*Status do Projeto: 🏆 ROADMAP 100% CONCLUÍDO COM SUCESSO! O NeoVDownloader V1.0 está compilado em C++17 puro + Qt 6, empacotado e pronto para uso profissional e distribuição ao mundo!*
