@@ -113,14 +113,14 @@ private:
     QProcess *m_convertProcess;
 
     // Tela de Terminal de Logs (Página 3)
-    QTextEdit *m_logEdit;
+    QTextEdit *m_logEdit{nullptr};
     QStringList m_allLogs;
     int m_logFilterMode{0}; // 0=Todos, 1=Processos, 2=Erros, 3=Geral
-    QPushButton *m_filterAllBtn;
-    QPushButton *m_filterProcessesBtn;
-    QPushButton *m_filterErrorsBtn;
-    QPushButton *m_filterGeneralBtn;
-    QPushButton *m_clearLogsBtn;
+    QPushButton *m_filterAllBtn{nullptr};
+    QPushButton *m_filterProcessesBtn{nullptr};
+    QPushButton *m_filterErrorsBtn{nullptr};
+    QPushButton *m_filterGeneralBtn{nullptr};
+    QPushButton *m_clearLogsBtn{nullptr};
 
     // Componentes da Tela de Informações e Hardware (Página 4)
     QLabel *m_gpuModelLabel;

@@ -589,13 +589,13 @@ void MainWindow::setupUI()
     connect(m_filterGeneralBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(3); });
     connect(m_clearLogsBtn, &QPushButton::clicked, this, [this]() { m_allLogs.clear(); refreshLogDisplay(); });
 
-    updateLogFilter(0); // Inicializa com estilo ativo no botão 'Todos os Logs'
-
     m_logEdit = new QTextEdit(pageLogs);
     m_logEdit->setReadOnly(true);
     m_logEdit->setObjectName("logArea");
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
+
+    updateLogFilter(0); // Inicializa com estilo ativo após m_logEdit já existir com segurança!
 
     // ---> TELA 4: INFORMAÇÕES E HARDWARE <---
     QWidget *pageInfo = new QWidget(m_stackedWidget);
