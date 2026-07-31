@@ -23,6 +23,7 @@ private slots:
     void onCancelClicked();
     void onBrowseClicked();
     void onOpenFolderClicked();
+    void onInfoClicked();
 
 private:
     void setupUI();
@@ -41,14 +42,17 @@ private:
     QPushButton *m_startBtn;
     QPushButton *m_cancelBtn;
     QPushButton *m_openFolderBtn;
+    QPushButton *m_infoBtn;
 
     // Indicadores e Monitoramento ao vivo
-    QLabel *m_gpuBanner;
     QProgressBar *m_progressBar;
     QLabel *m_speedLabel;
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
     QTextEdit *m_logArea;
+
+    // Dados de Hardware memorizados para exibição no botão de Informações
+    QString m_hardwareInfoText;
 
     // Motor Central nativo C++
     DownloadEngine m_engine;
