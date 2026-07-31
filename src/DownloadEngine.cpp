@@ -4,13 +4,9 @@
 #include <array>
 #include <regex>
 
-#ifdef _WIN32
-#define POPEN _popen
-#define PCLOSE _pclose
-#else
-#define POPEN popen
-#define PCLOSE pclose
-#endif
+#include <QProcess>
+#include <QString>
+#include <QStringList>
 
 DownloadEngine::DownloadEngine() {}
 
@@ -91,20 +87,37 @@ void DownloadEngine::cancelCurrent() {
 }
 
 void DownloadEngine::workerLoop(const std::string &command) {
-    std::cout << "[DownloadEngine Worker] Executando comando nativo: " << command << "\n";
-    std::array<char, 256> buffer;
+    std::cout << "[DownloadEngine Worker] Executando comando nativo (Modo Silencioso/GUI): " << command << "\n";
     
-    std::unique_ptr<FILE, decltype(&PCLOSE)> pipe(POPEN(command.c_str(), "r"), PCLOSE);
-    if (!pipe) {
-        std::cerr << "[DownloadEngine] Falha ao abrir pipe com yt-dlp.\n";
+    QProcess process;
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    process.start("cmd.exe", QStringList() << "/c" << QString::fromUtf8(command.c_str()));
+    
+    if (!process.waitForStarted()) {
+        std::cerr << "[DownloadEngine] Falha ao abrir processo com yt-dlp/ffmpeg.\n";
         m_isRunning.store(false);
         if (m_onStatus) m_onStatus(DownloadStatus::Error, "Falha ao acionar binários do yt-dlp/ffmpeg.");
         return;
     }
 
-    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr && m_isRunning.load()) {
-        std::string line(buffer.data());
-        parseYtDlpOutput(line);
+    while (m_isRunning.load() && (process.state() == QProcess::Running || process.bytesAvailable() > 0)) {
+        if (process.waitForReadyRead(200) || process.bytesAvailable() > 0) {
+            while (process.canReadLine() && m_isRunning.load()) {
+                QByteArray line = process.readLine();
+                parseYtDlpOutput(line.toStdString());
+            }
+        }
+    }
+
+    if (!m_isRunning.load() && process.state() != QProcess::NotRunning) {
+        process.kill();
+        process.waitForFinished(2000);
+    } else {
+        process.waitForFinished(-1);
+        while (process.canReadLine()) {
+            QByteArray line = process.readLine();
+            parseYtDlpOutput(line.toStdString());
+        }
     }
 
     m_isRunning.store(false);

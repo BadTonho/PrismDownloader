@@ -4,27 +4,17 @@
 #include <memory>
 #include <algorithm>
 
-#ifdef _WIN32
-#include <windows.h>
-#define POPEN _popen
-#define PCLOSE _pclose
-#else
-#define POPEN popen
-#define PCLOSE pclose
-#endif
+#include <QProcess>
+#include <QString>
+#include <QStringList>
 
 std::string GPUDetector::execCommand(const char* cmd) {
-    std::array<char, 128> buffer;
-    std::string result;
-    
-    std::unique_ptr<FILE, decltype(&PCLOSE)> pipe(POPEN(cmd, "r"), PCLOSE);
-    if (!pipe) {
-        return "";
-    }
-    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
-    return result;
+    QProcess process;
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    process.start("cmd.exe", QStringList() << "/c" << QString::fromUtf8(cmd));
+    process.waitForFinished(10000);
+    QByteArray result = process.readAll();
+    return result.toStdString();
 }
 
 void GPUDetector::detect() {
