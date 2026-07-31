@@ -43,7 +43,7 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ---
 
-### 📍 Etapa 2: Motor Core & Inteligência de Hardware (C++)
+### 📍 Etapa 2: Motor Core & Inteligência de Hardware em C++ (Em Andamento 🏁)
 * [ ] **2.1. Integração C++ <> Motores de Mídia:** Criar classe gerenciadora em C++ (via `QProcess` ou pipes) para invocar os binários otimizados de `yt-dlp` e `ffmpeg` em background, capturando velocidade, progresso e miniatura sem congelar a interface.
 * [ ] **2.2. Módulo de Detecção de GPU:** Lógica que verifica placas NVIDIA (ex: GTX 1660 Super), AMD ou Intel na máquina do usuário para selecionar o codec mais rápido.
 * [ ] **2.3. Mídia Sem Perda (*Stream Copy*):** Estratégia para apenas juntar streams originais e evitar qualquer processamento de CPU sempre que possível.
@@ -75,4 +75,4 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [ ] **5.3. Criar Instalador Amigo:** (Opcional) Usar *Inno Setup* para criar um instalador oficial ("Setup.exe") com ícone personalizado e atalho na Área de Trabalho.
 
 ---
-*Status do Projeto: 🏆 Etapa 1 Concluída com Sucesso! (Stack C++ & Qt sacramentada + Recursos da Versão 1.0 alinhados). Prontos para discutir a Etapa 2 (Motor Core em C++) quando quiser!*
+*Status do Projeto: 🟡 Etapa 2 Em Andamento: Construindo a arquitetura em C++ e Qt para Detecção de GPU e Motor de Download (QProcess).*
