@@ -220,6 +220,11 @@ void MainWindow::setupUI()
     m_navInfoBtn->setCheckable(true);
     m_navInfoBtn->setCursor(Qt::PointingHandCursor);
 
+    m_sidebarUpdateBtn = new QPushButton("Atualizações", sidebar);
+    m_sidebarUpdateBtn->setObjectName("updateSideBtn");
+    m_sidebarUpdateBtn->setCheckable(true);
+    m_sidebarUpdateBtn->setCursor(Qt::PointingHandCursor);
+
     QButtonGroup *navGroup = new QButtonGroup(this);
     navGroup->setExclusive(true);
     navGroup->addButton(m_navDownloadBtn, 0);
@@ -227,6 +232,7 @@ void MainWindow::setupUI()
     navGroup->addButton(m_navConverterBtn, 2);
     navGroup->addButton(m_navLogsBtn, 3);
     navGroup->addButton(m_navInfoBtn, 4);
+    navGroup->addButton(m_sidebarUpdateBtn, 5);
 
     sidebarLayout->addWidget(m_navDownloadBtn);
     sidebarLayout->addWidget(m_navLibraryBtn);
@@ -234,6 +240,13 @@ void MainWindow::setupUI()
     sidebarLayout->addWidget(m_navLogsBtn);
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
+
+    m_sidebarUpdateNotification = new QLabel("🛡️ v1.0.0 (Em Dia)", sidebar);
+    m_sidebarUpdateNotification->setAlignment(Qt::AlignCenter);
+    m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+    sidebarLayout->addWidget(m_sidebarUpdateNotification);
+
+    sidebarLayout->addWidget(m_sidebarUpdateBtn);
 
     m_openFolderBtn = new QPushButton("Abrir Pasta", sidebar);
     m_openFolderBtn->setObjectName("openFolderSideBtn");
@@ -542,63 +555,7 @@ void MainWindow::setupUI()
     infoLayout->setSpacing(16);
     infoLayout->setContentsMargins(24, 20, 24, 20);
 
-    // CENTRAL DE ATUALizaÇõES VIA GITHUB RELEASES E YT-DLP
-    QGroupBox *updateGroup = new QGroupBox("Central de Atualizações e Versão (GitHub Release Core)", pageInfo);
-    QVBoxLayout *upLayout = new QVBoxLayout(updateGroup);
-    upLayout->setSpacing(12);
-    upLayout->setContentsMargins(16, 24, 16, 16);
 
-    QGridLayout *upGrid = new QGridLayout();
-    upGrid->setSpacing(10);
-
-    QLabel *lblServerKey = new QLabel("Repositório de Nuvem:", updateGroup);
-    lblServerKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    QLabel *lblServerVal = new QLabel("GitHub Oficial (BadTonho/Baixar)", updateGroup);
-    lblServerVal->setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;");
-
-    QLabel *lblUpStatusKey = new QLabel("Status de Versão:", updateGroup);
-    lblUpStatusKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    m_updateStatusLabel = new QLabel("Versão v1.0.0 (Release) operacional. Aguardando verificação...", updateGroup);
-    m_updateStatusLabel->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
-
-    upGrid->addWidget(lblServerKey, 0, 0);
-    upGrid->addWidget(lblServerVal, 0, 1);
-    upGrid->addWidget(lblUpStatusKey, 1, 0);
-    upGrid->addWidget(m_updateStatusLabel, 1, 1);
-    upGrid->setColumnStretch(1, 1);
-    upLayout->addLayout(upGrid);
-
-    m_checkUpdatesOnStartChk = new QCheckBox("Verificar novas atualizações automaticamente ao iniciar o aplicativo", updateGroup);
-    m_checkUpdatesOnStartChk->setCursor(Qt::PointingHandCursor);
-    
-    m_autoDownloadUpdatesChk = new QCheckBox("Baixar e instalar novas versões automaticamente no fundo (Desativado por padrão)", updateGroup);
-    m_autoDownloadUpdatesChk->setCursor(Qt::PointingHandCursor);
-    m_autoDownloadUpdatesChk->setStyleSheet("color: #f59e0b; font-weight: bold;");
-
-    QVBoxLayout *chkVertLayout = new QVBoxLayout();
-    chkVertLayout->setSpacing(6);
-    chkVertLayout->addWidget(m_checkUpdatesOnStartChk);
-    chkVertLayout->addWidget(m_autoDownloadUpdatesChk);
-    upLayout->addLayout(chkVertLayout);
-
-    QHBoxLayout *upBtnsLayout = new QHBoxLayout();
-    m_checkUpdateBtn = new QPushButton("VERIFICAR NO GITHUB AGORA", updateGroup);
-    m_checkUpdateBtn->setObjectName("startBtn");
-    m_checkUpdateBtn->setCursor(Qt::PointingHandCursor);
-    m_checkUpdateBtn->setMinimumHeight(40);
-    connect(m_checkUpdateBtn, &QPushButton::clicked, this, [this]() { checkForUpdates(false); });
-
-    m_updateYtdlpBtn = new QPushButton("ATUALIZAR MOTOR EXTRATOR (YT-DLP)", updateGroup);
-    m_updateYtdlpBtn->setObjectName("browseBtn");
-    m_updateYtdlpBtn->setCursor(Qt::PointingHandCursor);
-    m_updateYtdlpBtn->setMinimumHeight(40);
-    connect(m_updateYtdlpBtn, &QPushButton::clicked, this, &MainWindow::updateYtdlpEngine);
-
-    upBtnsLayout->addWidget(m_checkUpdateBtn, 3);
-    upBtnsLayout->addWidget(m_updateYtdlpBtn, 2);
-    upLayout->addLayout(upBtnsLayout);
-
-    infoLayout->addWidget(updateGroup);
 
     QGroupBox *appInfoGroup = new QGroupBox("Informações do Aplicativo", pageInfo);
     QGridLayout *appLayout = new QGridLayout(appInfoGroup);
@@ -695,6 +652,71 @@ void MainWindow::setupUI()
 
     infoLayout->addStretch();
     m_stackedWidget->addWidget(pageInfo);
+
+    // ---> TELA 5: CENTRAL DE ATUALIZAÇÕES E COMPATIBILIDADE <---
+    QWidget *pageUpdates = new QWidget(m_stackedWidget);
+    QVBoxLayout *upPageLayout = new QVBoxLayout(pageUpdates);
+    upPageLayout->setSpacing(16);
+    upPageLayout->setContentsMargins(24, 20, 24, 20);
+
+    QGroupBox *updateGroup = new QGroupBox("Central de Atualizações e Versão (GitHub Release Core)", pageUpdates);
+    QVBoxLayout *upLayout = new QVBoxLayout(updateGroup);
+    upLayout->setSpacing(12);
+    upLayout->setContentsMargins(16, 24, 16, 16);
+
+    QGridLayout *upGrid = new QGridLayout();
+    upGrid->setSpacing(10);
+
+    QLabel *lblServerKey = new QLabel("Repositório de Nuvem:", updateGroup);
+    lblServerKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblServerVal = new QLabel("GitHub Oficial (BadTonho/Baixar)", updateGroup);
+    lblServerVal->setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;");
+
+    QLabel *lblUpStatusKey = new QLabel("Status de Versão:", updateGroup);
+    lblUpStatusKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    m_updateStatusLabel = new QLabel("Versão v1.0.0 (Release) operacional. Aguardando verificação...", updateGroup);
+    m_updateStatusLabel->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
+
+    upGrid->addWidget(lblServerKey, 0, 0);
+    upGrid->addWidget(lblServerVal, 0, 1);
+    upGrid->addWidget(lblUpStatusKey, 1, 0);
+    upGrid->addWidget(m_updateStatusLabel, 1, 1);
+    upGrid->setColumnStretch(1, 1);
+    upLayout->addLayout(upGrid);
+
+    m_checkUpdatesOnStartChk = new QCheckBox("Verificar novas atualizações automaticamente ao iniciar o aplicativo", updateGroup);
+    m_checkUpdatesOnStartChk->setCursor(Qt::PointingHandCursor);
+    
+    m_autoDownloadUpdatesChk = new QCheckBox("Baixar e instalar novas versões automaticamente no fundo (Desativado por padrão)", updateGroup);
+    m_autoDownloadUpdatesChk->setCursor(Qt::PointingHandCursor);
+    m_autoDownloadUpdatesChk->setStyleSheet("color: #f59e0b; font-weight: bold;");
+
+    QVBoxLayout *chkVertLayout = new QVBoxLayout();
+    chkVertLayout->setSpacing(6);
+    chkVertLayout->addWidget(m_checkUpdatesOnStartChk);
+    chkVertLayout->addWidget(m_autoDownloadUpdatesChk);
+    upLayout->addLayout(chkVertLayout);
+
+    QHBoxLayout *upBtnsLayout = new QHBoxLayout();
+    m_checkUpdateBtn = new QPushButton("VERIFICAR NO GITHUB AGORA", updateGroup);
+    m_checkUpdateBtn->setObjectName("startBtn");
+    m_checkUpdateBtn->setCursor(Qt::PointingHandCursor);
+    m_checkUpdateBtn->setMinimumHeight(40);
+    connect(m_checkUpdateBtn, &QPushButton::clicked, this, [this]() { checkForUpdates(false); });
+
+    m_updateYtdlpBtn = new QPushButton("ATUALIZAR MOTOR EXTRATOR (YT-DLP)", updateGroup);
+    m_updateYtdlpBtn->setObjectName("browseBtn");
+    m_updateYtdlpBtn->setCursor(Qt::PointingHandCursor);
+    m_updateYtdlpBtn->setMinimumHeight(40);
+    connect(m_updateYtdlpBtn, &QPushButton::clicked, this, &MainWindow::updateYtdlpEngine);
+
+    upBtnsLayout->addWidget(m_checkUpdateBtn, 3);
+    upBtnsLayout->addWidget(m_updateYtdlpBtn, 2);
+    upLayout->addLayout(upBtnsLayout);
+
+    upPageLayout->addWidget(updateGroup);
+    upPageLayout->addStretch();
+    m_stackedWidget->addWidget(pageUpdates);
 
     // Conectar navegação e botões principais
     connect(navGroup, &QButtonGroup::idClicked, this, &MainWindow::switchPage);
@@ -1212,6 +1234,24 @@ void MainWindow::setupStyles()
             color: #10b981;
             border-left: 3px solid #10b981;
         }
+        QPushButton#updateSideBtn {
+            background-color: #1b2922;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 13px;
+            border: 1px solid #10b981;
+            border-radius: 5px;
+            padding: 9px;
+            margin: 0 14px 6px 14px;
+        }
+        QPushButton#updateSideBtn:hover {
+            background-color: #10b981;
+            color: #021810;
+        }
+        QPushButton#updateSideBtn:checked {
+            background-color: #10b981;
+            color: #021810;
+        }
         QPushButton#openFolderSideBtn {
             background-color: #1c2e3a;
             color: #38bdf8;
@@ -1388,6 +1428,10 @@ void MainWindow::checkForUpdates(bool silent)
     if (!m_networkManager) return;
     
     m_updateStatusLabel->setText("Sondando servidores do GitHub (BadTonho/Baixar)...");
+    if (m_sidebarUpdateNotification) {
+        m_sidebarUpdateNotification->setText("🔄 Checando...");
+        m_sidebarUpdateNotification->setStyleSheet("color: #38bdf8; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+    }
     logMessage("[Updater] Consultando API pública do GitHub para release mais recente...");
 
     QUrl url("https://api.github.com/repos/BadTonho/Baixar/releases/latest");
@@ -1407,12 +1451,20 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
         int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (httpCode == 404) {
             m_updateStatusLabel->setText("Nenhuma release pública postada ainda (Versão v1.0.0 Dev em uso).");
+            if (m_sidebarUpdateNotification) {
+                m_sidebarUpdateNotification->setText("✅ v1.0.0 (Em Dia)");
+                m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+            }
             logMessage("[Updater] Resposta 404: Repositório sem releases públicas criadas no GitHub. O software local está atualizado.");
             if (!silent) {
                 QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do NeoVDownloader (v1.0.0)!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
             }
         } else {
             m_updateStatusLabel->setText("Falha de conexão ou offline. (Versão v1.0.0 em uso).");
+            if (m_sidebarUpdateNotification) {
+                m_sidebarUpdateNotification->setText("🛡️ v1.0.0 (Offline/Local)");
+                m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+            }
             logMessage("[Updater] Erro ao conectar com o GitHub: " + reply->errorString());
             if (!silent) {
                 QMessageBox::warning(this, "Atenção", "Não foi possível contactar o servidor do GitHub para checar atualizações:\n" + reply->errorString());
@@ -1429,6 +1481,10 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     QString body = obj.value("body").toString();
     if (tagName.isEmpty()) {
         m_updateStatusLabel->setText("Versão v1.0.0 operacional (Nenhuma tag encontrada).");
+        if (m_sidebarUpdateNotification) {
+            m_sidebarUpdateNotification->setText("✅ v1.0.0 (Em Dia)");
+            m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+        }
         return;
     }
 
@@ -1441,6 +1497,10 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
 
     if (cleanRemote == cleanLocal || cleanRemote.isEmpty()) {
         m_updateStatusLabel->setText("Você está utilizando a versão mais recente (" + tagName + ").");
+        if (m_sidebarUpdateNotification) {
+            m_sidebarUpdateNotification->setText("✅ v1.0.0 (Em Dia)");
+            m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+        }
         logMessage("[Updater] A versão instalada já é a mais recente disponível.");
         if (!silent) {
             QMessageBox::information(this, "Atualizado", "O seu aplicativo NeoVDownloader já está na versão mais atualizada (" + localVersion + ")!");
@@ -1451,7 +1511,10 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     // Se chegou aqui, temos uma NOVA VERSÃO no GitHub
     m_updateStatusLabel->setText("🚀 Nova versão " + tagName + " disponível no GitHub!");
     m_updateStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 14px;");
-    logMessage("[Updater] ALERTA: Nova versão identificada no GitHub -> " + tagName);
+    if (m_sidebarUpdateNotification) {
+        m_sidebarUpdateNotification->setText("🔔 Nova Versão " + tagName + "!");
+        m_sidebarUpdateNotification->setStyleSheet("color: #f59e0b; background-color: #2a1f0c; border: 1px solid #f59e0b; border-radius: 4px; padding: 4px; font-size: 12px; font-weight: bold; margin: 0 10px 2px 10px;");
+    }    logMessage("[Updater] ALERTA: Nova versão identificada no GitHub -> " + tagName);
 
     QJsonArray assets = obj.value("assets").toArray();
     QString downloadUrl = "";

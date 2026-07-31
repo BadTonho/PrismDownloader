@@ -69,6 +69,8 @@ private:
     QPushButton *m_navLogsBtn;
     QPushButton *m_navInfoBtn;
     QPushButton *m_openFolderBtn;
+    QPushButton *m_sidebarUpdateBtn;
+    QLabel *m_sidebarUpdateNotification;
 
     // Componentes da Tela de Downloads (Página 0 - Estilo aTube Catcher)
     QLineEdit *m_urlInput;
