@@ -50,15 +50,10 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ---
 
-### 📍 Etapa 3: Interface Gráfica e Experiência do Usuário (UI/UX)
-* [ ] **3.1. Design da Janela Principal:**
-  * Campo para colar a URL com botão "Colar & Analisar".
-  * Pré-visualização com Título do Vídeo, Duração e Capa (Thumbnail).
-  * Seletor de Formato (Vídeo MP4 / Áudio MP3) e Qualidade.
-* [ ] **3.2. Gerenciador de Downloads:**
-  * Barra de Progresso animada em tempo real com indicador de velocidade (MB/s).
-  * Botão de cancelar ou pausar/retomar downloads.
-* [ ] **3.3. Indicador Visual de Hardware:** Um pequeno ícone ou texto mostrando ao usuário: *"⚡ Acelerado via NVIDIA NVENC"* ou *"⚡ Cópia Direta Sem Perda"*, para impressionar e transmitir velocidade!
+### 📍 Etapa 3: Interface Gráfica e Experiência do Usuário (UI/UX) 🏁 (Concluído!)
+* [x] **3.1. Design da Janela Principal:** Criada interface em Qt 6 com tema moderno (Dark Tech), campos de URL, qualidade e o diferencial de Recorte de Faixa de Tempo em [MainWindow.cpp](file:///c:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/MainWindow.cpp).
+* [x] **3.2. Gerenciador de Downloads:** Implementada barra de progresso em tempo real (`QProgressBar`), velocidade em MB/s e botão de cancelamento integrados de forma thread-safe com o nosso worker C++.
+* [x] **3.3. Indicador Visual de Hardware:** Exibido na linha de frente um cartão verde brilhante de "Placa Dedicada Ativa (NVIDIA NVENC / GTX 1660 SUPER)" destacando o processamento em hardware na tela!
 
 ---
 
@@ -75,4 +70,4 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [ ] **5.3. Criar Instalador Amigo:** (Opcional) Usar *Inno Setup* para criar um instalador oficial ("Setup.exe") com ícone personalizado e atalho na Área de Trabalho.
 
 ---
-*Status do Projeto: 🏆 Etapa 2 Concluída com Sucesso! (Motor C++ nativo compilado e operante; GTX 1660 Super detectada via NVENC!). Prontos para avançar para a Etapa 3 (Interface Gráfica) quando desejar.*
+*Status do Projeto: 🏆 Etapa 3 Concluída! Janela Gráfica (UI/UX) com tema Dark Tech compilada com Qt 6.7 e executando limpa na tela do usuário com indicador NVIDIA NVENC ativo.*

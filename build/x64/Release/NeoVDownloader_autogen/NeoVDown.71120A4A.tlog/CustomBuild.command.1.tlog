@@ -1,0 +1,40 @@
+^C:\USERS\ADMIN\DESKTOP\PROJETOSCODE\PROJETOS\BAIXAR\BUILD\CMAKEFILES\2A0B6DA10B477045A57F9433A77C91B2\TIMESTAMP.RULE
+setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_autogen C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/NeoVDownloader_autogen.dir/AutogenInfo.json Release
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/timestamp
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_transform_depfile "Visual Studio 17 2022" MSBuildAdditionalInputs C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/deps C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/d/de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\ADMIN\DESKTOP\PROJETOSCODE\PROJETOS\BAIXAR\BUILD\CMAKEFILES\41D6E13792F4B23701069CF731AB3261\NEOVDOWNLOADER_AUTOGEN.RULE
+setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\ADMIN\DESKTOP\PROJETOSCODE\PROJETOS\BAIXAR\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar -BC:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build --check-stamp-file C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

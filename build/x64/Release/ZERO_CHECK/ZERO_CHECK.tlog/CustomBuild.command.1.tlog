@@ -1,6 +1,6 @@
 ^C:\USERS\ADMIN\DESKTOP\PROJETOSCODE\PROJETOS\BAIXAR\BUILD\CMAKEFILES\41D6E13792F4B23701069CF731AB3261\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar -BC:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloaderCore.sln
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar -BC:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

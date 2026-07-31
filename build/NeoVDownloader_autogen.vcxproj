@@ -3,9 +3,6 @@
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <PropertyGroup>
-    <ResolveNugetPackages>false</ResolveNugetPackages>
-  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -25,11 +22,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{C26323BF-7958-3133-8232-0E77E860D09E}</ProjectGuid>
+    <ProjectGuid>{71120A4A-A54E-3846-94B2-947A22AA9FFD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
     <Platform>x64</Platform>
-    <ProjectName>ALL_BUILD</ProjectName>
+    <ProjectName>NeoVDownloader_autogen</ProjectName>
     <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -108,6 +105,175 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CustomBuild Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\2a0b6da10b477045a57f9433a77c91b2\timestamp.rule">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Automatic MOC and UIC for target NeoVDownloader</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_autogen C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/NeoVDownloader_autogen.dir/AutogenInfo.json Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/timestamp
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_transform_depfile "Visual Studio 17 2022" MSBuildAdditionalInputs C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/deps C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/d/de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Qt\6.7.2\msvc2019_64\.\bin\moc.exe;C:\Qt\6.7.2\msvc2019_64\.\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <DepFileAdditionalInputsFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\d\de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs</DepFileAdditionalInputsFile>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Automatic MOC and UIC for target NeoVDownloader</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_autogen C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/NeoVDownloader_autogen.dir/AutogenInfo.json Release
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/timestamp
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_transform_depfile "Visual Studio 17 2022" MSBuildAdditionalInputs C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/deps C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/d/de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Qt\6.7.2\msvc2019_64\.\bin\moc.exe;C:\Qt\6.7.2\msvc2019_64\.\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <DepFileAdditionalInputsFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\d\de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs</DepFileAdditionalInputsFile>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Automatic MOC and UIC for target NeoVDownloader</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_autogen C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/NeoVDownloader_autogen.dir/AutogenInfo.json MinSizeRel
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/timestamp
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_transform_depfile "Visual Studio 17 2022" MSBuildAdditionalInputs C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/deps C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/d/de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Qt\6.7.2\msvc2019_64\.\bin\moc.exe;C:\Qt\6.7.2\msvc2019_64\.\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <DepFileAdditionalInputsFile Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\d\de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs</DepFileAdditionalInputsFile>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Automatic MOC and UIC for target NeoVDownloader</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_autogen C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/NeoVDownloader_autogen.dir/AutogenInfo.json RelWithDebInfo
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/timestamp
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_transform_depfile "Visual Studio 17 2022" MSBuildAdditionalInputs C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/deps C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/d/de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Qt\6.7.2\msvc2019_64\.\bin\moc.exe;C:\Qt\6.7.2\msvc2019_64\.\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <DepFileAdditionalInputsFile Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\d\de0b807c24bd55d5756bb66dcd52e4c881ba36596338909087e7cffb179b33de.AdditionalInputs</DepFileAdditionalInputsFile>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\41d6e13792f4b23701069cf731ab3261\NeoVDownloader_autogen.rule">
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\NeoVDownloader_autogen</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\NeoVDownloader_autogen</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</VerifyInputsAndOutputsExist>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\NeoVDownloader_autogen</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</VerifyInputsAndOutputsExist>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\NeoVDownloader_autogen</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</VerifyInputsAndOutputsExist>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/CMakeLists.txt</Message>
@@ -165,6 +331,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <None Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\CMakeFiles\NeoVDownloader_autogen">
+    </None>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
@@ -174,12 +342,15 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </ProjectReference>
-    <ProjectReference Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader.vcxproj">
-      <Project>{1470EFA4-21DE-3132-9B15-E57B6E71365C}</Project>
-      <Name>NeoVDownloader</Name>
+    <ProjectReference Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen_timestamp_deps.vcxproj">
+      <Project>{B7E5E3EA-4666-3A82-9270-38C7FA6E3BF4}</Project>
+      <Name>NeoVDownloader_autogen_timestamp_deps</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Import Project="C:\Program Files\CMake\share\cmake-4.4\Templates\MSBuild\CustomBuildDepFile.targets" />
 </Project>
