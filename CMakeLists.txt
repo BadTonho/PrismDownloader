@@ -13,7 +13,7 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
-add_executable(${PROJECT_NAME} WIN32
+add_executable(${PROJECT_NAME}
     src/main.cpp
     src/MainWindow.h
     src/MainWindow.cpp
