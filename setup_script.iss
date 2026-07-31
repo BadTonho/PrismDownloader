@@ -12,6 +12,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
+SetupIconFile=app_icon.ico
 OutputDir=dist
 OutputBaseFilename=NeoVDownloader_v{#MyAppVersion}_Setup
 Compression=lzma2/ultra64

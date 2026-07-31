@@ -14,6 +14,7 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
 
 add_executable(${PROJECT_NAME} WIN32
+    app_icon.rc
     src/main.cpp
     src/MainWindow.h
     src/MainWindow.cpp

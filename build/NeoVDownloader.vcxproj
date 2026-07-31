@@ -477,6 +477,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ResourceCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\app_icon.rc" />
     <ClCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\main.cpp" />
     <ClInclude Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\MainWindow.h" />
     <ClCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\MainWindow.cpp" />

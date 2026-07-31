@@ -47,6 +47,11 @@
     <None Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\build\NeoVDownloader_autogen\timestamp" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\app_icon.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
     <Filter Include="CMake Rules">
       <UniqueIdentifier>{9A71E224-997A-3404-811E-DBB5A6572231}</UniqueIdentifier>
     </Filter>
