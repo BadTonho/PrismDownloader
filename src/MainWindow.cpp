@@ -30,49 +30,21 @@ MainWindow::MainWindow(QWidget *parent)
     bool hasAccel = gpu->hasHardwareAcceleration();
 
     if (hasAccel) {
-        m_hardwareInfoText = QString(
-            "==========================================================\n"
-            "                 INFORMAÇÕES DO APLICATIVO                \n"
-            "==========================================================\n\n"
-            " [DADOS DO SOFTWARE]\n"
-            "  Nome Oficial: NeoVDownloader (Turbo GPU Edition)\n"
-            "  Versão atual: 1.0.0 (Estável / Release)\n"
-            "  Desenvolvimento: Núcleo em C++17 Padrão + Interface Gráfica Qt 6.7\n"
-            "  Motor do Sistema: Arquitetura Multi-Thread com Isolamento de Execução\n\n"
-            "==========================================================\n"
-            "                 DIAGNÓSTICO DE HARDWARE                  \n"
-            "==========================================================\n\n"
-            " [GPU E ACELERAÇÃO DEDICADA]\n"
-            "  Placa Gráfica Detectada: %1\n"
-            "  Codec Acelerado Recomendado: [%2]\n"
-            "  Status NVENC / Hardware Engine: ATIVO E OPERANTE EM VELOCIDADE MÁXIMA\n\n"
-            " [RECURSOS E DESEMPENHO]\n"
-            "  Mescla de Mídias: FFmpeg Nativo com tecnologia Zero-Loss Stream Copy\n"
-            "  Tempo de Junção: < 1 segundo (sem recodificação redundante de vídeo/áudio)\n"
-            "  Extrator de Streams: yt-dlp nativo compatível com alta definição."
-        ).arg(gpuName, codec);
+        if (m_gpuModelLabel) m_gpuModelLabel->setText(gpuName);
+        if (m_gpuCodecLabel) m_gpuCodecLabel->setText(codec);
+        if (m_gpuStatusLabel) {
+            m_gpuStatusLabel->setText("ATIVO E OPERANTE (NVENC Hardware Engine)");
+            m_gpuStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
+        }
         logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
     } else {
-        m_hardwareInfoText = 
-            "==========================================================\n"
-            "                 INFORMAÇÕES DO APLICATIVO                \n"
-            "==========================================================\n\n"
-            " [DADOS DO SOFTWARE]\n"
-            "  Nome Oficial: NeoVDownloader\n"
-            "  Versão atual: 1.0.0 (Estável / Release)\n"
-            "  Desenvolvimento: Núcleo em C++17 Padrão + Interface Gráfica Qt 6.7\n\n"
-            "==========================================================\n"
-            "                 DIAGNÓSTICO DE HARDWARE                  \n"
-            "==========================================================\n\n"
-            " [GPU E ACELERAÇÃO DEDICADA]\n"
-            "  Modo Atual: Fallback CPU Multi-thread\n"
-            "  Aviso: Nenhuma aceleração dedicada NVIDIA foi localizada ou ativada.\n"
-            "  O processamento ocorrerá pelas threads centrais do processador principal.";
+        if (m_gpuModelLabel) m_gpuModelLabel->setText("Nenhuma aceleração dedicada NVIDIA foi localizada");
+        if (m_gpuCodecLabel) m_gpuCodecLabel->setText("Codec Fallback CPU Padrão");
+        if (m_gpuStatusLabel) {
+            m_gpuStatusLabel->setText("MODO FALLBACK CPU (Multi-thread)");
+            m_gpuStatusLabel->setStyleSheet("color: #f59e0b; font-weight: bold; font-size: 13px;");
+        }
         logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
-    }
-
-    if (m_infoEdit) {
-        m_infoEdit->setText(m_hardwareInfoText);
     }
 
     m_engine.setProgressCallback([this](double percent, const std::string &speed, const std::string &eta) {
@@ -310,23 +282,112 @@ void MainWindow::setupUI()
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
 
-    // ---> TELA 2: INFORMAÇÕES DO APP E HARDWARE <---
+    // ---> TELA 2: INFORMAÇÕES E HARDWARE COM DESIGN MODERNO <---
     QWidget *pageInfo = new QWidget(m_stackedWidget);
     QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
-    infoLayout->setSpacing(12);
+    infoLayout->setSpacing(16);
     infoLayout->setContentsMargins(24, 20, 24, 20);
 
-    QLabel *infoTitle = new QLabel("Informações do Aplicativo e Diagnóstico de Hardware:", pageInfo);
-    infoTitle->setStyleSheet("font-weight: bold; color: #38bdf8; font-size: 14px;");
-    infoLayout->addWidget(infoTitle);
+    // Painel 1 - Informações do Aplicativo
+    QGroupBox *appInfoGroup = new QGroupBox("Informações do Aplicativo", pageInfo);
+    QGridLayout *appLayout = new QGridLayout(appInfoGroup);
+    appLayout->setSpacing(10);
+    appLayout->setContentsMargins(16, 24, 16, 16);
 
-    m_infoEdit = new QTextEdit(pageInfo);
-    m_infoEdit->setReadOnly(true);
-    m_infoEdit->setObjectName("infoArea");
-    m_infoEdit->setText(m_hardwareInfoText);
-    infoLayout->addWidget(m_infoEdit);
+    QLabel *lblAppNameKey = new QLabel("Nome Oficial:", appInfoGroup);
+    lblAppNameKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblAppNameVal = new QLabel("NeoVDownloader (Turbo GPU Edition)", appInfoGroup);
+    lblAppNameVal->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
+
+    QLabel *lblAppVerKey = new QLabel("Versão Atual:", appInfoGroup);
+    lblAppVerKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblAppVerVal = new QLabel("1.0.0 (Estável / Release)", appInfoGroup);
+    lblAppVerVal->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
+
+    QLabel *lblAppArchKey = new QLabel("Arquitetura:", appInfoGroup);
+    lblAppArchKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblAppArchVal = new QLabel("Núcleo em C++17 Padrão + Interface Gráfica Qt 6.7", appInfoGroup);
+    lblAppArchVal->setStyleSheet("color: #e2e8f0; font-size: 13px;");
+
+    QLabel *lblAppEngineKey = new QLabel("Motor de Processamento:", appInfoGroup);
+    lblAppEngineKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblAppEngineVal = new QLabel("Multi-Thread Paralelo com Isolamento de Execução", appInfoGroup);
+    lblAppEngineVal->setStyleSheet("color: #e2e8f0; font-size: 13px;");
+
+    appLayout->addWidget(lblAppNameKey, 0, 0);
+    appLayout->addWidget(lblAppNameVal, 0, 1);
+    appLayout->addWidget(lblAppVerKey, 1, 0);
+    appLayout->addWidget(lblAppVerVal, 1, 1);
+    appLayout->addWidget(lblAppArchKey, 2, 0);
+    appLayout->addWidget(lblAppArchVal, 2, 1);
+    appLayout->addWidget(lblAppEngineKey, 3, 0);
+    appLayout->addWidget(lblAppEngineVal, 3, 1);
+    appLayout->setColumnStretch(1, 1);
+    infoLayout->addWidget(appInfoGroup);
+
+    // Painel 2 - Diagnóstico de Hardware e Aceleração GPU
+    QGroupBox *hwInfoGroup = new QGroupBox("Diagnóstico de Hardware e Aceleração", pageInfo);
+    QGridLayout *hwLayout = new QGridLayout(hwInfoGroup);
+    hwLayout->setSpacing(10);
+    hwLayout->setContentsMargins(16, 24, 16, 16);
+
+    QLabel *lblGpuModelKey = new QLabel("Placa Gráfica Detectada:", hwInfoGroup);
+    lblGpuModelKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    m_gpuModelLabel = new QLabel("Sondando hardware...", hwInfoGroup);
+    m_gpuModelLabel->setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;");
+
+    QLabel *lblGpuCodecKey = new QLabel("Codec de Aceleração:", hwInfoGroup);
+    lblGpuCodecKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    m_gpuCodecLabel = new QLabel("---", hwInfoGroup);
+    m_gpuCodecLabel->setStyleSheet("color: #e2e8f0; font-size: 13px; font-family: 'Consolas', monospace;");
+
+    QLabel *lblGpuStatusKey = new QLabel("Status do Motor:", hwInfoGroup);
+    lblGpuStatusKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    m_gpuStatusLabel = new QLabel("Verificando...", hwInfoGroup);
+
+    hwLayout->addWidget(lblGpuModelKey, 0, 0);
+    hwLayout->addWidget(m_gpuModelLabel, 0, 1);
+    hwLayout->addWidget(lblGpuCodecKey, 1, 0);
+    hwLayout->addWidget(m_gpuCodecLabel, 1, 1);
+    hwLayout->addWidget(lblGpuStatusKey, 2, 0);
+    hwLayout->addWidget(m_gpuStatusLabel, 2, 1);
+    hwLayout->setColumnStretch(1, 1);
+    infoLayout->addWidget(hwInfoGroup);
+
+    // Painel 3 - Recursos e Tecnologia do Sistema
+    QGroupBox *techGroup = new QGroupBox("Tecnologias Integradas no Core", pageInfo);
+    QGridLayout *techLayout = new QGridLayout(techGroup);
+    techLayout->setSpacing(10);
+    techLayout->setContentsMargins(16, 24, 16, 16);
+
+    QLabel *lblTechMergeKey = new QLabel("Mescla de Mídias:", techGroup);
+    lblTechMergeKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblTechMergeVal = new QLabel("FFmpeg Nativo com tecnologia Zero-Loss Stream Copy", techGroup);
+    lblTechMergeVal->setStyleSheet("color: #e2e8f0; font-size: 13px;");
+
+    QLabel *lblTechTimeKey = new QLabel("Tempo de Junção:", techGroup);
+    lblTechTimeKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblTechTimeVal = new QLabel("< 1 segundo por arquivo (sem recodificação redundante de áudio/vídeo)", techGroup);
+    lblTechTimeVal->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
+
+    QLabel *lblTechExtKey = new QLabel("Engine Extrator:", techGroup);
+    lblTechExtKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblTechExtVal = new QLabel("yt-dlp nativo de alta compatibilidade com mais de 1000 plataformas", techGroup);
+    lblTechExtVal->setStyleSheet("color: #e2e8f0; font-size: 13px;");
+
+    techLayout->addWidget(lblTechMergeKey, 0, 0);
+    techLayout->addWidget(lblTechMergeVal, 0, 1);
+    techLayout->addWidget(lblTechTimeKey, 1, 0);
+    techLayout->addWidget(lblTechTimeVal, 1, 1);
+    techLayout->addWidget(lblTechExtKey, 2, 0);
+    techLayout->addWidget(lblTechExtVal, 2, 1);
+    techLayout->setColumnStretch(1, 1);
+    infoLayout->addWidget(techGroup);
+
+    infoLayout->addStretch();
     m_stackedWidget->addWidget(pageInfo);
 
+    // Conectar navegação e botões
     connect(navGroup, &QButtonGroup::idClicked, this, &MainWindow::switchPage);
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
@@ -515,15 +576,6 @@ void MainWindow::setupStyles()
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
             padding: 12px;
-        }
-        QTextEdit#infoArea {
-            background-color: #0b141a;
-            border: 1px solid #1a2c38;
-            border-radius: 5px;
-            color: #38bdf8;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 13px;
-            padding: 14px;
         }
     )";
 

@@ -58,12 +58,13 @@ private:
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
 
-    // Tela de Terminal de Logs (Página 1 do StackedWidget)
+    // Tela de Terminal de Logs
     QTextEdit *m_logEdit;
 
-    // Tela de Informações de Hardware (Página 2 do StackedWidget)
-    QTextEdit *m_infoEdit;
-    QString m_hardwareInfoText;
+    // Componentes da Tela de Informações
+    QLabel *m_gpuModelLabel;
+    QLabel *m_gpuCodecLabel;
+    QLabel *m_gpuStatusLabel;
 
     // Motor Central nativo C++
     DownloadEngine m_engine;
