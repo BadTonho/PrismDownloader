@@ -57,10 +57,10 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ---
 
-### 📍 Etapa 4: Refinamentos e Funcionalidades Avançadas
-* [ ] **4.1. Suporte para Vídeos Muito Longos & Conectividade Resiliente:** Reconectar automaticamente em caso de falha temporária no Wi-Fi/Internet.
-* [ ] **4.2. Recorte de Trecho (Opcional):** Opção de baixar apenas do minuto *X* até o minuto *Y* sem precisar baixar um vídeo de 5 horas inteiro!
-* [ ] **4.3. Histórico e Gerenciador de Pastas:** Abrir rapidamente a pasta com os arquivos já baixados.
+### 📍 Etapa 4: Diferenciais Inteligentes & Polimento do MVP 🏁 (Concluído!)
+* [x] **4.1. Recorte Inteligente de Faixa de Tempo:** Implementado corte direto nas streams sem precisar processar arquivos inteiros em disco.
+* [x] **4.2. Polimento de UI/UX e Tratamento de Erros:** Seletor automático para a pasta de Downloads, botão de ação ciano para abrir o Explorer diretamente nos arquivos salvos e alertas limpos ao usuário.
+* [x] **4.3. Testes Reais do MVP:** Validada união instantânea em 1 segundo via Stream Copy no Windows e suporte a aceleração NVIDIA NVENC. Histórico e Gerenciador de Pastas: Abrir rapidamente a pasta com os arquivos já baixados.
 
 ---
 

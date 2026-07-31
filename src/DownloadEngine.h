@@ -14,7 +14,7 @@ public:
     ~DownloadEngine();
 
     void initialize();
-    void startDownload(const std::string &url, const std::string &quality = "1080p", const std::string &timeRange = "");
+    void startDownload(const std::string &url, const std::string &quality = "1080p", const std::string &timeRange = "", const std::string &outputFolder = "");
     void cancelCurrent();
 
     bool isDownloading() const;

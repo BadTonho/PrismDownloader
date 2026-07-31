@@ -42,7 +42,7 @@ void DownloadEngine::setStatusCallback(std::function<void(DownloadStatus, const 
     m_onStatus = cb;
 }
 
-void DownloadEngine::startDownload(const std::string &url, const std::string &quality, const std::string &timeRange) {
+void DownloadEngine::startDownload(const std::string &url, const std::string &quality, const std::string &timeRange, const std::string &outputFolder) {
     if (m_isRunning.load()) {
         std::cerr << "[DownloadEngine] ERRO: Download já está em progresso!\n";
         return;
@@ -53,6 +53,9 @@ void DownloadEngine::startDownload(const std::string &url, const std::string &qu
 
     std::ostringstream cmd;
     cmd << "yt-dlp --progress --newline --no-mtime ";
+    if (!outputFolder.empty()) {
+        cmd << "-P \"" << outputFolder << "\" ";
+    }
 
     if (!timeRange.empty()) {
         std::cout << "✂️ [DownloadEngine] Aplicando recorte inteligente de tempo: " << timeRange << "\n";

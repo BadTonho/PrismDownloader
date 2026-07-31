@@ -6,12 +6,16 @@
 #include <QWidget>
 #include <QMetaObject>
 #include <QMessageBox>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QDesktopServices>
+#include <QUrl>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle("⚡ NeoVDownloader - Turbo GPU Edition");
-    resize(850, 680);
+    resize(880, 720);
 
     setupUI();
     setupStyles();
@@ -35,7 +39,6 @@ MainWindow::MainWindow(QWidget *parent)
         logMessage("ℹ️ [Hardware Engine] Usando modo fallback multi-thread na CPU.");
     }
 
-    // Atualizamos o estilo caso o objectName tenha mudado
     style()->unpolish(m_gpuBanner);
     style()->polish(m_gpuBanner);
 
@@ -59,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
                 m_cancelBtn->setEnabled(false);
                 if (status == DownloadStatus::Completed) {
                     m_progressBar->setValue(100);
-                    QMessageBox::information(this, "Sucesso", "Download finalizado com perfeição!\nArquivo processado em alta velocidade.");
+                    QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nSeus arquivos foram salvos limpos na pasta selecionada.");
                 }
             }
         }, Qt::QueuedConnection);
@@ -86,7 +89,7 @@ void MainWindow::setupUI()
     mainLayout->addWidget(m_gpuBanner);
 
     // 2. Grupo de Configurações do Download
-    QGroupBox *inputGroup = new QGroupBox("🔗 Parâmetros de Download e Recorte", this);
+    QGroupBox *inputGroup = new QGroupBox("🔗 Parâmetros de Download, Pasta e Recorte", this);
     QGridLayout *inputLayout = new QGridLayout(inputGroup);
     inputLayout->setSpacing(12);
     inputLayout->setContentsMargins(16, 24, 16, 16);
@@ -106,16 +109,33 @@ void MainWindow::setupUI()
     m_timeRangeInput = new QLineEdit(this);
     m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Deixe em branco para o vídeo completo)");
 
+    QLabel *folderLabel = new QLabel("📁 Pasta de Destino:", this);
+    m_outputDirInput = new QLineEdit(this);
+    QString defaultFolder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (defaultFolder.isEmpty()) defaultFolder = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    m_outputDirInput->setText(defaultFolder);
+
+    m_browseDirBtn = new QPushButton("📁 Escolher...", this);
+    m_browseDirBtn->setCursor(Qt::PointingHandCursor);
+    m_browseDirBtn->setMinimumHeight(35);
+    m_browseDirBtn->setObjectName("browseBtn");
+
+    QHBoxLayout *folderLayout = new QHBoxLayout();
+    folderLayout->addWidget(m_outputDirInput);
+    folderLayout->addWidget(m_browseDirBtn);
+
     inputLayout->addWidget(urlLabel, 0, 0);
     inputLayout->addWidget(m_urlInput, 0, 1);
     inputLayout->addWidget(qualityLabel, 1, 0);
     inputLayout->addWidget(m_qualityCombo, 1, 1);
     inputLayout->addWidget(timeLabel, 2, 0);
     inputLayout->addWidget(m_timeRangeInput, 2, 1);
+    inputLayout->addWidget(folderLabel, 3, 0);
+    inputLayout->addLayout(folderLayout, 3, 1);
 
     mainLayout->addWidget(inputGroup);
 
-    // 3. Botões de Ação Rápida
+    // 3. Botões de Ação Rápida e Abertura
     QHBoxLayout *btnLayout = new QHBoxLayout();
     m_startBtn = new QPushButton("⚡ INICIAR DOWNLOAD ACELERADO", this);
     m_startBtn->setObjectName("startBtn");
@@ -128,8 +148,14 @@ void MainWindow::setupUI()
     m_cancelBtn->setMinimumHeight(44);
     m_cancelBtn->setEnabled(false);
 
+    m_openFolderBtn = new QPushButton("📂 ABRIR PASTA DO DOWNLOAD", this);
+    m_openFolderBtn->setObjectName("openFolderBtn");
+    m_openFolderBtn->setCursor(Qt::PointingHandCursor);
+    m_openFolderBtn->setMinimumHeight(44);
+
     btnLayout->addWidget(m_startBtn, 3);
     btnLayout->addWidget(m_cancelBtn, 1);
+    btnLayout->addWidget(m_openFolderBtn, 2);
     mainLayout->addLayout(btnLayout);
 
     // 4. Painel de Progresso e Monitoramento ao Vivo
@@ -171,6 +197,8 @@ void MainWindow::setupUI()
 
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
+    connect(m_browseDirBtn, &QPushButton::clicked, this, &MainWindow::onBrowseClicked);
+    connect(m_openFolderBtn, &QPushButton::clicked, this, &MainWindow::onOpenFolderClicked);
 }
 
 void MainWindow::setupStyles()
@@ -274,6 +302,31 @@ void MainWindow::setupStyles()
             background-color: #242424;
             color: #666666;
         }
+        QPushButton#browseBtn {
+            background-color: #2e3b36;
+            color: #10b981;
+            font-weight: bold;
+            border: 1px solid #10b981;
+            border-radius: 6px;
+            padding: 6px 14px;
+        }
+        QPushButton#browseBtn:hover {
+            background-color: #3b4f47;
+            color: #ffffff;
+        }
+        QPushButton#openFolderBtn {
+            background-color: #1a2c38;
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 13px;
+            border: 1px solid #38bdf8;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        QPushButton#openFolderBtn:hover {
+            background-color: #38bdf8;
+            color: #061824;
+        }
         QProgressBar {
             background-color: #242424;
             border: 1px solid #363636;
@@ -305,6 +358,24 @@ void MainWindow::logMessage(const QString &msg)
     m_logArea->append(msg);
 }
 
+void MainWindow::onBrowseClicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, "Escolha a Pasta de Destino para os Downloads", m_outputDirInput->text());
+    if (!dir.isEmpty()) {
+        m_outputDirInput->setText(dir);
+        logMessage("📁 [Sistema] Nova pasta de destino definida para: " + dir);
+    }
+}
+
+void MainWindow::onOpenFolderClicked()
+{
+    QString dir = m_outputDirInput->text();
+    if (!dir.isEmpty()) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+        logMessage("📂 [Sistema] Abrindo a pasta no Windows Explorer: " + dir);
+    }
+}
+
 void MainWindow::onStartClicked()
 {
     QString url = m_urlInput->text().trimmed();
@@ -315,6 +386,7 @@ void MainWindow::onStartClicked()
 
     QString quality = m_qualityCombo->currentText();
     QString timeRange = m_timeRangeInput->text().trimmed();
+    QString outputDir = m_outputDirInput->text().trimmed();
 
     m_progressBar->setValue(0);
     m_startBtn->setEnabled(false);
@@ -323,10 +395,11 @@ void MainWindow::onStartClicked()
     logMessage("\n========================================================");
     logMessage("⚡ [ACELERADOR] Preparando acionamento dos motores C++...");
     if (!timeRange.isEmpty()) {
-        logMessage("✂️ [RECORTA INTELIGENTE] Faixa de tempo programada: " + timeRange);
+        logMessage("✂️ [RECORTE INTELIGENTE] Faixa de tempo programada: " + timeRange);
     }
+    logMessage("📁 [DESTINO] Arquivos serão salvos em: " + outputDir);
     
-    m_engine.startDownload(url.toStdString(), quality.toStdString(), timeRange.toStdString());
+    m_engine.startDownload(url.toStdString(), quality.toStdString(), timeRange.toStdString(), outputDir.toStdString());
 }
 
 void MainWindow::onCancelClicked()

@@ -20,6 +20,8 @@ public:
 private slots:
     void onStartClicked();
     void onCancelClicked();
+    void onBrowseClicked();
+    void onOpenFolderClicked();
 
 private:
     void setupUI();
@@ -30,8 +32,13 @@ private:
     QLineEdit *m_urlInput;
     QComboBox *m_qualityCombo;
     QLineEdit *m_timeRangeInput;
+    QLineEdit *m_outputDirInput;
+    QPushButton *m_browseDirBtn;
+    
+    // Botões de Ação
     QPushButton *m_startBtn;
     QPushButton *m_cancelBtn;
+    QPushButton *m_openFolderBtn;
 
     // Indicadores e Monitoramento ao vivo
     QLabel *m_gpuBanner;
