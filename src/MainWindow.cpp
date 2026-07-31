@@ -33,7 +33,7 @@ static const QString NEOV_VERSION_NUMBER = "1.1.1";  // Número de exibição
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr), m_networkManager(new QNetworkAccessManager(this))
 {
-    setWindowTitle("NeoVDownloader - Studio Suite");
+    setWindowTitle("Prism Downloader - Studio Suite");
     resize(980, 620);
 
     setupUI();
@@ -148,7 +148,7 @@ MainWindow::MainWindow(QWidget *parent)
     refreshLibrary();
 
     // Carregar configurações do Auto-Updater e iniciar checagem silenciosa ao start (se habilitado)
-    QSettings settings("Tonho Studios", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "PrismDownloader");
     bool checkOnStart = settings.value("checkUpdatesOnStart", true).toBool(); // Por padrão ATIVADO
     bool autoDownload = settings.value("autoDownloadUpdates", false).toBool(); // Por padrão DESATIVADO
     if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
@@ -166,7 +166,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    QSettings settings("Tonho Studios", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "PrismDownloader");
     settings.setValue("outputFolder", m_outputDirInput->text().trimmed());
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
@@ -330,7 +330,7 @@ void MainWindow::setupUI()
     saveLayout->addWidget(m_outputDirInput, 1);
     saveLayout->addWidget(m_browseDirBtn, 0);
 
-    QSettings settings("Tonho Studios", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "PrismDownloader");
     QString savedFolder = settings.value("outputFolder", "").toString();
     if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
         savedFolder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
@@ -575,7 +575,7 @@ void MainWindow::setupUI()
 
     QLabel *lblAppNameKey = new QLabel("Nome Oficial:", appInfoGroup);
     lblAppNameKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    QLabel *lblAppNameVal = new QLabel("NeoVDownloader (Studio Suite Edition)", appInfoGroup);
+    QLabel *lblAppNameVal = new QLabel("Prism Downloader (Studio Suite Edition)", appInfoGroup);
     lblAppNameVal->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
 
     QLabel *lblAppVerKey = new QLabel("Versão Atual:", appInfoGroup);
@@ -970,7 +970,7 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
 bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir)
 {
     QDialog dlg(this);
-    dlg.setWindowTitle("Selecione o formato da fonte - NeoV Studio Suite");
+    dlg.setWindowTitle("Selecione o formato da fonte - Prism Studio Suite");
     dlg.resize(780, 580);
     dlg.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
 
@@ -1128,7 +1128,7 @@ void MainWindow::onBrowseClicked()
     QString dir = QFileDialog::getExistingDirectory(this, "Escolha a Pasta de Destino Padrão para os Downloads", m_outputDirInput->text());
     if (!dir.isEmpty()) {
         m_outputDirInput->setText(dir);
-        QSettings settings("Tonho Studios", "NeoVDownloader");
+        QSettings settings("Tonho Studios", "PrismDownloader");
         settings.setValue("outputFolder", dir);
         logMessage("[System] Nova pasta de destino padrão salva: " + dir);
         refreshLibrary();
@@ -1165,7 +1165,7 @@ void MainWindow::onStartClicked()
     m_currentDownloadDir = customOutputDir;
 
     QString defaultOutputDir = m_outputDirInput->text().trimmed();
-    QSettings settings("Tonho Studios", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "PrismDownloader");
     settings.setValue("outputFolder", defaultOutputDir); // Conserva a pasta padrão inalterada!
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
@@ -1447,7 +1447,7 @@ void MainWindow::checkForUpdates(bool silent)
 
     QUrl url("https://api.github.com/repos/BadTonho/Baixar/releases/latest");
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, "NeoVDownloader-Updater/1.0 (Windows; Qt)");
+    request.setHeader(QNetworkRequest::UserAgentHeader, "PrismDownloader-Updater/1.0 (Windows; Qt)");
     
     QNetworkReply *reply = m_networkManager->get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, silent]() {
@@ -1468,7 +1468,7 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
             }
             logMessage("[Updater] Resposta 404: Repositório sem releases públicas criadas no GitHub. O software local está atualizado.");
             if (!silent) {
-                QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do NeoVDownloader (" + NEOV_VERSION_TAG + ")!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
+                QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do Prism Downloader (" + NEOV_VERSION_TAG + ")!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
             }
         } else {
             m_updateStatusLabel->setText("Falha de conexão ou offline. (Versão " + NEOV_VERSION_TAG + " em uso).");
@@ -1514,7 +1514,7 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
         }
         logMessage("[Updater] A versão instalada já é a mais recente disponível.");
         if (!silent) {
-            QMessageBox::information(this, "Atualizado", "O seu aplicativo NeoVDownloader já está na versão mais atualizada (" + localVersion + ")!");
+            QMessageBox::information(this, "Atualizado", "O seu aplicativo Prism Downloader já está na versão mais atualizada (" + localVersion + ")!");
         }
         return;
     }
@@ -1529,7 +1529,7 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
 
     QJsonArray assets = obj.value("assets").toArray();
     QString downloadUrl = "";
-    QString assetName = "NeoVDownloader_Setup.exe";
+    QString assetName = "PrismDownloader_Setup.exe";
     for (int i = 0; i < assets.size(); ++i) {
         QJsonObject asset = assets.at(i).toObject();
         QString name = asset.value("name").toString();
@@ -1554,7 +1554,7 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     } else {
         // PERGUNTA AO USUÁRIO SE QUER ATUALIZAR (Nunca obrigatório)
         QMessageBox::StandardButton res = QMessageBox::question(this, "Nova Versão Disponível",
-            QString("Uma nova versão do NeoVDownloader (%1) foi disponibilizada no GitHub!\n\nVersão Atual: %2\nNova Versão: %1\n\nNovidades da Release:\n%3\n\nDeseja baixar e atualizar o aplicativo agora?")
+            QString("Uma nova versão do Prism Downloader (%1) foi disponibilizada no GitHub!\n\nVersão Atual: %2\nNova Versão: %1\n\nNovidades da Release:\n%3\n\nDeseja baixar e atualizar o aplicativo agora?")
             .arg(tagName, localVersion, body.left(300)),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
 
@@ -1580,7 +1580,7 @@ void MainWindow::startUpdateDownload(const QString &url, const QString &fileName
 
     QUrl targetUrl(url);
     QNetworkRequest req(targetUrl);
-    req.setHeader(QNetworkRequest::UserAgentHeader, "NeoVDownloader-Updater/1.0");
+    req.setHeader(QNetworkRequest::UserAgentHeader, "PrismDownloader-Updater/1.0");
     QNetworkReply *reply = m_networkManager->get(req);
     
     connect(reply, &QNetworkReply::finished, this, [this, reply, fileName]() {
@@ -1612,7 +1612,7 @@ void MainWindow::onUpdateDownloadFinished(QNetworkReply *reply, const QString &f
 
         if (savePath.endsWith(".exe", Qt::CaseInsensitive)) {
             QMessageBox::StandardButton ask = QMessageBox::question(this, "Instalar Atualização",
-                "A atualização foi baixada com sucesso no computador!\n\nDeseja fechar o NeoVDownloader e iniciar o instalador agora?",
+                "A atualização foi baixada com sucesso no computador!\n\nDeseja fechar o Prism Downloader e iniciar o instalador agora?",
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
             if (ask == QMessageBox::Yes) {
                 logMessage("[Updater] Executando instalador da nova versão...");

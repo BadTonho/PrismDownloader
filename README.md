@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="app_icon.png" width="140" alt="NeoVDownloader Icon Logo" style="border-radius: 24px; box-shadow: 0px 4px 20px rgba(0,255,150,0.2);"/>
+  <img src="app_icon.png" width="140" alt="Prism Downloader Icon Logo" style="border-radius: 24px; box-shadow: 0px 4px 20px rgba(0,255,150,0.2);"/>
 </p>
 
-<h1 align="center">💎 NeoVDownloader — Tonho Studios Suite</h1>
+<h1 align="center">💎 Prism Downloader — Tonho Studios Suite</h1>
 
 <p align="center">
   <b>A mais completa, rápida e inteligente suíte desktop para download, recorte e conversão de mídias do mercado.</b><br>
@@ -19,9 +19,9 @@
 
 ---
 
-## ⚡ O que é o NeoVDownloader?
+## ⚡ O que é o Prism Downloader?
 
-Desenvolvido pela **Tonho Studios**, o **NeoVDownloader** nasceu com o objetivo de revolucionar a experiência de download e processamento de áudio e vídeo em desktops Windows. Abandonando interfaces pesadas e lentas, a suíte combina o poder da linguagem de programação de alta performance **C++17** com motores consagrados na indústria (`yt-dlp` e `FFmpeg`) para oferecer um fluxo ultrarápido, limpo e totalmente silencioso.
+Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetivo de revolucionar a experiência de download e processamento de áudio e vídeo em desktops Windows. Como um prisma óptico que deforma e organiza feixes de dados, a suíte combina o poder da linguagem de programação de alta performance **C++17** com motores consagrados na indústria (`yt-dlp` e `FFmpeg`) para oferecer um fluxo ultrarápido, limpo e totalmente silencioso.
 
 ---
 
@@ -51,8 +51,8 @@ Acesse a nossa aba de [Releases Oficiais (Clique Aqui)](https://github.com/BadTo
 
 | Pacote Disponível | O que oferece? |
 | :--- | :--- |
-| ⭐ **`NeoVDownloader_vX.X.X_Setup.exe`** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
-| 💼 **`NeoVDownloader_vX.X.X_Portable.zip`** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
+| ⭐ **`PrismDownloader_vX.X.X_Setup.exe`** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
+| 💼 **`PrismDownloader_vX.X.X_Portable.zip`** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
 
 ---
 
@@ -80,8 +80,8 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 
 # 4. (Opcional) Injete as dependências do Qt e execute
-C:\Qt\6.7.2\msvc2019_64\bin\windeployqt.exe --release --no-translations .\build\Release\NeoVDownloader.exe
-.\build\Release\NeoVDownloader.exe
+C:\Qt\6.7.2\msvc2019_64\bin\windeployqt.exe --release --no-translations .\build\Release\PrismDownloader.exe
+.\build\Release\PrismDownloader.exe
 ```
 
 ---

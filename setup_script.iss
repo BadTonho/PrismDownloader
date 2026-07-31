@@ -1,7 +1,7 @@
-#define MyAppName "NeoVDownloader"
+#define MyAppName "Prism Downloader"
 #define MyAppVersion "1.1.1"
 #define MyAppPublisher "Tonho Studios"
-#define MyAppExeName "NeoVDownloader.exe"
+#define MyAppExeName "PrismDownloader.exe"
 
 [Setup]
 ; AppId único para o sistema de desinstalação e registro do Windows
@@ -14,7 +14,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 SetupIconFile=app_icon.ico
 OutputDir=dist
-OutputBaseFilename=NeoVDownloader_v{#MyAppVersion}_Setup
+OutputBaseFilename=PrismDownloader_v{#MyAppVersion}_Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
