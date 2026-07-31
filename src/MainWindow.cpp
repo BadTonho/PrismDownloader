@@ -32,27 +32,42 @@ MainWindow::MainWindow(QWidget *parent)
     if (hasAccel) {
         m_hardwareInfoText = QString(
             "==========================================================\n"
-            "         NEOVDOWNLOADER - SYSTEM & HARDWARE INFO          \n"
+            "                 INFORMAÇÕES DO APLICATIVO                \n"
             "==========================================================\n\n"
-            "[GPU E ACELERAÇÃO NATIVE]\n"
-            " Modelo Detectado na Placa-Mãe: %1\n"
-            " Codec Acelerado Recomendado: [%2]\n"
-            " Status NVENC / Hardware Engine: ATIVO E OPERANTE\n\n"
-            "[ARQUITETURA DE SOFTWARES]\n"
-            " Motor de Alta Performance: C++17 Padrão + Qt 6.7\n"
-            " Processamento de Áudio/Vídeo: FFmpeg Nativo Embeddado\n"
-            " Mescla de Streams: Zero-Loss Stream Copy (Sem perda de qualidade e junção instantânea em < 1 segundo)."
+            " [DADOS DO SOFTWARE]\n"
+            "  Nome Oficial: NeoVDownloader (Turbo GPU Edition)\n"
+            "  Versão atual: 1.0.0 (Estável / Release)\n"
+            "  Desenvolvimento: Núcleo em C++17 Padrão + Interface Gráfica Qt 6.7\n"
+            "  Motor do Sistema: Arquitetura Multi-Thread com Isolamento de Execução\n\n"
+            "==========================================================\n"
+            "                 DIAGNÓSTICO DE HARDWARE                  \n"
+            "==========================================================\n\n"
+            " [GPU E ACELERAÇÃO DEDICADA]\n"
+            "  Placa Gráfica Detectada: %1\n"
+            "  Codec Acelerado Recomendado: [%2]\n"
+            "  Status NVENC / Hardware Engine: ATIVO E OPERANTE EM VELOCIDADE MÁXIMA\n\n"
+            " [RECURSOS E DESEMPENHO]\n"
+            "  Mescla de Mídias: FFmpeg Nativo com tecnologia Zero-Loss Stream Copy\n"
+            "  Tempo de Junção: < 1 segundo (sem recodificação redundante de vídeo/áudio)\n"
+            "  Extrator de Streams: yt-dlp nativo compatível com alta definição."
         ).arg(gpuName, codec);
         logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
     } else {
         m_hardwareInfoText = 
             "==========================================================\n"
-            "         NEOVDOWNLOADER - SYSTEM & HARDWARE INFO          \n"
+            "                 INFORMAÇÕES DO APLICATIVO                \n"
             "==========================================================\n\n"
-            "[GPU E ACELERAÇÃO NATIVE]\n"
-            " Modo Atual: Fallback CPU Multi-thread\n"
-            " Aviso: Nenhuma aceleração dedicada NVIDIA foi localizada ou ativada no Driver.\n"
-            " O processamento ocorrerá pelas threads centrais do processador principal.";
+            " [DADOS DO SOFTWARE]\n"
+            "  Nome Oficial: NeoVDownloader\n"
+            "  Versão atual: 1.0.0 (Estável / Release)\n"
+            "  Desenvolvimento: Núcleo em C++17 Padrão + Interface Gráfica Qt 6.7\n\n"
+            "==========================================================\n"
+            "                 DIAGNÓSTICO DE HARDWARE                  \n"
+            "==========================================================\n\n"
+            " [GPU E ACELERAÇÃO DEDICADA]\n"
+            "  Modo Atual: Fallback CPU Multi-thread\n"
+            "  Aviso: Nenhuma aceleração dedicada NVIDIA foi localizada ou ativada.\n"
+            "  O processamento ocorrerá pelas threads centrais do processador principal.";
         logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
     }
 
@@ -136,7 +151,7 @@ void MainWindow::setupUI()
     m_navLogsBtn->setCheckable(true);
     m_navLogsBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navInfoBtn = new QPushButton("Hardware & Info", sidebar);
+    m_navInfoBtn = new QPushButton("Informações", sidebar);
     m_navInfoBtn->setObjectName("navBtn");
     m_navInfoBtn->setCheckable(true);
     m_navInfoBtn->setCursor(Qt::PointingHandCursor);
@@ -152,7 +167,6 @@ void MainWindow::setupUI()
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
 
-    // Botão prático no fundo da barra lateral
     m_openFolderBtn = new QPushButton("Abrir Pasta", sidebar);
     m_openFolderBtn->setObjectName("openFolderSideBtn");
     m_openFolderBtn->setCursor(Qt::PointingHandCursor);
@@ -296,13 +310,13 @@ void MainWindow::setupUI()
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
 
-    // ---> TELA 2: HARDWARE & INFO <---
+    // ---> TELA 2: INFORMAÇÕES DO APP E HARDWARE <---
     QWidget *pageInfo = new QWidget(m_stackedWidget);
     QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
     infoLayout->setSpacing(12);
     infoLayout->setContentsMargins(24, 20, 24, 20);
 
-    QLabel *infoTitle = new QLabel("Diagnóstico do Sistema e Motor Gráfico:", pageInfo);
+    QLabel *infoTitle = new QLabel("Informações do Aplicativo e Diagnóstico de Hardware:", pageInfo);
     infoTitle->setStyleSheet("font-weight: bold; color: #38bdf8; font-size: 14px;");
     infoLayout->addWidget(infoTitle);
 
@@ -313,10 +327,7 @@ void MainWindow::setupUI()
     infoLayout->addWidget(m_infoEdit);
     m_stackedWidget->addWidget(pageInfo);
 
-    // Conexão dos eventos dos botões da Sidebar com a troca de telas no StackedWidget
     connect(navGroup, &QButtonGroup::idClicked, this, &MainWindow::switchPage);
-
-    // Conectar botões de ação e pastas
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
     connect(m_browseDirBtn, &QPushButton::clicked, this, &MainWindow::onBrowseClicked);
