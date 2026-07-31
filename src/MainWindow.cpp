@@ -20,7 +20,7 @@
 #include <QTableWidgetItem>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_convertProcess(nullptr)
+    : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr)
 {
     setWindowTitle("NeoVDownloader - Studio Suite");
     resize(980, 620);
@@ -80,12 +80,32 @@ MainWindow::MainWindow(QWidget *parent)
                 m_cancelBtn->setEnabled(false);
                 if (status == DownloadStatus::Completed) {
                     m_progressBar->setValue(100);
-                    m_statusLabel->setText("Status: Concluído e salvo com sucesso na biblioteca!");
-                    logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
                     refreshLibrary();
 
-                    if (m_notifyCheckBox->isChecked()) {
-                        QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na sua pasta de destino.");
+                    if (m_autoConvertAfterDownload && m_libraryTable->rowCount() > 0) {
+                        m_statusLabel->setText("Status: Baixado! Iniciando conversão automática para " + m_autoConvertFormat + "...");
+                        logMessage("[Auto-Conversão] Download concluído! Acionando conversão automática no arquivo recém-baixado...");
+                        
+                        QDir dir(m_outputDirInput->text());
+                        QString newestFileName = m_libraryTable->item(0, 0)->text();
+                        QString newestFilePath = dir.absoluteFilePath(newestFileName);
+                        
+                        m_convertInput->setText(newestFilePath);
+                        m_convertFormatCombo->setCurrentText(m_autoConvertFormat);
+                        
+                        m_autoConvertAfterDownload = false; // Resetar flag
+                        onStartConvertClicked(); // Acionar motor de conversão FFmpeg acelerado
+                        
+                        if (m_notifyCheckBox->isChecked()) {
+                            QMessageBox::information(this, "Download Concluído", "O arquivo foi baixado! O conversor foi iniciado automaticamente para transformá-lo em:\n" + m_autoConvertFormat);
+                        }
+                    } else {
+                        m_statusLabel->setText("Status: Concluído e salvo com sucesso na biblioteca!");
+                        logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
+
+                        if (m_notifyCheckBox->isChecked()) {
+                            QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na sua pasta de destino.");
+                        }
                     }
                 }
             }
@@ -674,6 +694,9 @@ void MainWindow::onStartConvertClicked()
 
     m_convertProgressBar->setRange(0, 0);
     m_convertStatusLabel->setText("Status: Convertendo mídia em alta velocidade...");
+    if (m_stackedWidget->currentIndex() == 0) {
+        m_statusLabel->setText("Status: Conversão Automática acionada em alta velocidade...");
+    }
     m_startConvertBtn->setEnabled(false);
     m_cancelConvertBtn->setEnabled(true);
 
@@ -718,6 +741,9 @@ void MainWindow::onConvertProcessOutput()
             if (pos != -1) {
                 QString sub = errStr.mid(pos, 25);
                 m_convertStatusLabel->setText("Status: Convertendo (" + sub + ")...");
+                if (m_stackedWidget->currentIndex() == 0) {
+                    m_statusLabel->setText("Status da Conversão Automática: " + sub);
+                }
             }
         }
     }
@@ -732,6 +758,9 @@ void MainWindow::onConvertProcessFinished(int exitCode)
     if (exitCode == 0) {
         m_convertProgressBar->setValue(100);
         m_convertStatusLabel->setText("Status: Conversão finalizada com sucesso! Salvo na sua Biblioteca.");
+        if (m_stackedWidget->currentIndex() == 0) {
+            m_statusLabel->setText("Status: Conversão Automática concluída e salva na sua Biblioteca!");
+        }
         logMessage("[Sucesso] Arquivo convertido e salvo na pasta com sucesso!");
         refreshLibrary();
 
@@ -812,11 +841,11 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
 // ==========================================
 // DIÁLOGO MODAL ESTILO ATUBE CATCHER (FOTO 3)
 // ==========================================
-bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange)
+bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat)
 {
     QDialog dlg(this);
     dlg.setWindowTitle("Selecione o formato da fonte - NeoV Studio Suite");
-    dlg.resize(720, 480);
+    dlg.resize(760, 540);
     dlg.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
 
     QVBoxLayout *dlgLayout = new QVBoxLayout(&dlg);
@@ -840,7 +869,7 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setAlternatingRowColors(true);
     table->setObjectName("libraryTable");
-    table->setMinimumHeight(200);
+    table->setMinimumHeight(180);
 
     struct Prof { QString q; QString f; QString r; };
     Prof profs[4] = {
@@ -865,14 +894,29 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
 
     dlgLayout->addWidget(table);
 
-    // Opções de tempo e destino no modal
+    // Opções de tempo, conversão e destino no modal
     QGridLayout *optLayout = new QGridLayout();
-    optLayout->setSpacing(10);
+    optLayout->setSpacing(12);
+    
     QLabel *lblTimeOpt = new QLabel("Recorte de Tempo (Opcional):", &dlg);
     lblTimeOpt->setStyleSheet("color: #a3a3a3; font-weight: bold;");
     QLineEdit *editTime = new QLineEdit(&dlg);
     editTime->setText(m_timeRangeInput->text());
     editTime->setPlaceholderText("Ex: 00:01:15-00:03:00 (Vazio = baixar completo)");
+
+    QCheckBox *chkConv = new QCheckBox("Converter para outro formato após concluir o download", &dlg);
+    chkConv->setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;");
+    chkConv->setCursor(Qt::PointingHandCursor);
+    
+    QComboBox *comboConv = new QComboBox(&dlg);
+    comboConv->addItem("MP4 (H.264 / NVENC - Compatibilidade Universal)");
+    comboConv->addItem("MP4 (HEVC / H.265 - Compressão de Alta Densidade)");
+    comboConv->addItem("MKV (Matroska - Container Sem Perdas)");
+    comboConv->addItem("MP3 (Áudio MP3 Alta Fidelidade - 320kbps)");
+    comboConv->addItem("WAV (Áudio Sem Compressão / Estúdios)");
+    comboConv->addItem("WEBM (Otimizado para Web e Redes Sociais)");
+    comboConv->setEnabled(false);
+    connect(chkConv, &QCheckBox::toggled, comboConv, &QComboBox::setEnabled);
 
     QLabel *lblFolderOpt = new QLabel("Salvar download em:", &dlg);
     lblFolderOpt->setStyleSheet("color: #a3a3a3; font-weight: bold;");
@@ -881,8 +925,12 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
 
     optLayout->addWidget(lblTimeOpt, 0, 0);
     optLayout->addWidget(editTime, 0, 1);
-    optLayout->addWidget(lblFolderOpt, 1, 0);
-    optLayout->addWidget(lblFolderVal, 1, 1);
+    optLayout->addWidget(chkConv, 1, 0);
+    optLayout->addWidget(comboConv, 1, 1);
+    optLayout->addWidget(lblFolderOpt, 2, 0);
+    optLayout->addWidget(lblFolderVal, 2, 1);
+    optLayout->setColumnStretch(1, 1);
+
     dlgLayout->addLayout(optLayout);
     dlgLayout->addStretch();
 
@@ -921,6 +969,9 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
         }
         outTimeRange = editTime->text().trimmed();
         m_timeRangeInput->setText(outTimeRange);
+        
+        outDoConvert = chkConv->isChecked();
+        outConvertFormat = comboConv->currentText();
         return true;
     }
     return false;
@@ -955,13 +1006,16 @@ void MainWindow::onStartClicked()
         return;
     }
 
-    // Acionar a janela modal de opções (Foto 3) assim como no aTube Catcher!
-    QString selectedQuality, timeRange;
-    if (!showFormatSelectionDialog(selectedQuality, timeRange)) {
-        // Usuário fechou ou cancelou o modal
+    // Acionar a janela modal de opções (Foto 3) com suporte à conversão automática pós-download!
+    QString selectedQuality, timeRange, convertFormat;
+    bool doConvert = false;
+    if (!showFormatSelectionDialog(selectedQuality, timeRange, doConvert, convertFormat)) {
         logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
         return;
     }
+
+    m_autoConvertAfterDownload = doConvert;
+    m_autoConvertFormat = convertFormat;
 
     QString outputDir = m_outputDirInput->text().trimmed();
     QSettings settings("NeoV Dev Studio", "NeoVDownloader");
@@ -978,6 +1032,9 @@ void MainWindow::onStartClicked()
     logMessage("[DownloadEngine] Acionando motor acelerado de extração e junção...");
     if (!timeRange.isEmpty()) {
         logMessage("[Recorte] Faixa de tempo programada: " + timeRange);
+    }
+    if (m_autoConvertAfterDownload) {
+        logMessage("[Auto-Conversão] Programado para converter automaticamente para: " + m_autoConvertFormat);
     }
     logMessage("[Destino] Mídia será salva em: " + outputDir);
     
