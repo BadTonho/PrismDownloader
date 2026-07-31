@@ -10,6 +10,9 @@
 #include <QProcess>
 #include <QString>
 #include <QStringList>
+#include <QCoreApplication>
+#include <QFile>
+#include <QDir>
 
 DownloadEngine::DownloadEngine() {}
 
@@ -54,8 +57,14 @@ void DownloadEngine::startDownload(const std::string &url, const std::string &qu
     m_currentItem = MediaItem{url, "Analisando...", quality, "0 MB/s", "00:00", 0.0, DownloadStatus::Queued};
     m_isRunning.store(true);
 
+    QString ytdlpPath = QCoreApplication::applicationDirPath() + "/yt-dlp.exe";
+    std::string ytdlpCmd = "yt-dlp";
+    if (QFile::exists(ytdlpPath)) {
+        ytdlpCmd = "\"" + ytdlpPath.toStdString() + "\"";
+    }
+
     std::ostringstream cmd;
-    cmd << "yt-dlp --progress --newline --no-mtime ";
+    cmd << ytdlpCmd << " --progress --newline --no-mtime ";
     if (!outputFolder.empty()) {
         cmd << "-P \"" << outputFolder << "\" ";
     }
@@ -98,6 +107,7 @@ void DownloadEngine::workerLoop(const std::string &command) {
     if (m_onLog) m_onLog("[Processo Motor] Acionando linha de comando no Windows: " + command);
     
     QProcess process;
+    process.setWorkingDirectory(QCoreApplication::applicationDirPath());
 #ifdef _WIN32
     process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
         args->flags |= 0x08000000; // CREATE_NO_WINDOW (Impede qualquer tela de terminal/conhost de surgir no Windows)
@@ -134,10 +144,21 @@ void DownloadEngine::workerLoop(const std::string &command) {
         }
     }
 
+    int exitCode = process.exitCode();
+    QProcess::ExitStatus exitStatus = process.exitStatus();
+
     m_isRunning.store(false);
-    if (m_currentItem.status != DownloadStatus::Cancelled) {
+    if (m_currentItem.status == DownloadStatus::Cancelled) {
+        if (m_onStatus) m_onStatus(DownloadStatus::Cancelled, "Download Cancelado.");
+    } else if (exitStatus == QProcess::CrashExit || exitCode != 0) {
+        m_currentItem.status = DownloadStatus::Error;
+        std::string errMsg = "Falha no download (Código de Erro: " + std::to_string(exitCode) + "). Consulte a aba Terminal de Logs para o diagnóstico exacto.";
+        if (m_onStatus) m_onStatus(DownloadStatus::Error, errMsg);
+        if (m_onLog) m_onLog("[Erro no Motor] O processo do yt-dlp/ffmpeg encerrou com erro (código " + std::to_string(exitCode) + "). Verifique acima nos logs o motivo exato da recusa do comando.");
+    } else {
         m_currentItem.status = DownloadStatus::Completed;
         if (m_onStatus) m_onStatus(DownloadStatus::Completed, "Download finalizado com sucesso!");
+        if (m_onLog) m_onLog("[Sucesso] Mídia baixada, processada e salva em 100% no disco.");
     }
 }
 
