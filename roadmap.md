@@ -43,10 +43,10 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ---
 
-### 📍 Etapa 2: Motor Core & Inteligência de Hardware em C++ (Em Andamento 🏁)
-* [ ] **2.1. Integração C++ <> Motores de Mídia:** Criar classe gerenciadora em C++ (via `QProcess` ou pipes) para invocar os binários otimizados de `yt-dlp` e `ffmpeg` em background, capturando velocidade, progresso e miniatura sem congelar a interface.
-* [ ] **2.2. Módulo de Detecção de GPU:** Lógica que verifica placas NVIDIA (ex: GTX 1660 Super), AMD ou Intel na máquina do usuário para selecionar o codec mais rápido.
-* [ ] **2.3. Mídia Sem Perda (*Stream Copy*):** Estratégia para apenas juntar streams originais e evitar qualquer processamento de CPU sempre que possível.
+### 📍 Etapa 2: Motor Core & Inteligência de Hardware em C++ 🏁 (Concluído!)
+* [x] **2.1. Integração C++ <> Motores de Mídia:** Criada a classe [DownloadEngine.cpp](file:///c:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/DownloadEngine.cpp) em C++17 puro (via `std::thread` e pipes assíncronos) com callbacks para progresso em tempo real e suporte a recorte de faixa de tempo.
+* [x] **2.2. Módulo de Detecção de GPU:** Criado o [GPUDetector.cpp](file:///c:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/GPUDetector.cpp) em C++ nativo com sondagem universal de hardware (identificando com perfeição a **NVIDIA GeForce GTX 1660 SUPER** e selecionando o codec `h264_nvenc`).
+* [x] **2.3. Mídia Sem Perda (*Stream Copy*):** Estruturado o motor de download para união instantânea de faixas sem sobrecarga de processador.
 
 ---
 
@@ -75,4 +75,4 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [ ] **5.3. Criar Instalador Amigo:** (Opcional) Usar *Inno Setup* para criar um instalador oficial ("Setup.exe") com ícone personalizado e atalho na Área de Trabalho.
 
 ---
-*Status do Projeto: 🟡 Etapa 2 Em Andamento: Construindo a arquitetura em C++ e Qt para Detecção de GPU e Motor de Download (QProcess).*
+*Status do Projeto: 🏆 Etapa 2 Concluída com Sucesso! (Motor C++ nativo compilado e operante; GTX 1660 Super detectada via NVENC!). Prontos para avançar para a Etapa 3 (Interface Gráfica) quando desejar.*

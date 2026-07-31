@@ -97,7 +97,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=NeoVDownloader
+CMAKE_PROJECT_NAME:STATIC=NeoVDownloaderCore
 
 //Value Computed by CMake
 CMAKE_PROJECT_SPDX_LICENSE:STATIC=
@@ -172,6 +172,15 @@ CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 // during the make.  This is useful for debugging only. With Visual
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
+
+//Value Computed by CMake
+NeoVDownloaderCore_BINARY_DIR:STATIC=C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build
+
+//Value Computed by CMake
+NeoVDownloaderCore_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+NeoVDownloaderCore_SOURCE_DIR:STATIC=C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar
 
 //Value Computed by CMake
 NeoVDownloader_BINARY_DIR:STATIC=C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build

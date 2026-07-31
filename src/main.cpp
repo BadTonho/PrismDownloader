@@ -1,30 +1,31 @@
-#include <QCoreApplication>
-#include <QTimer>
-#include <QDebug>
+#include <iostream>
 #include "DownloadEngine.h"
 
-int main(int argc, char *argv[]) {
-    QCoreApplication app(argc, argv);
-
-    qDebug() << "========================================================";
-    qDebug() << "   🚀 NeoVDownloader Core (C++ & Qt Engine v1.0)     ";
-    qDebug() << "========================================================";
+int main() {
+    std::cout << "========================================================\n";
+    std::cout << "   🚀 NeoVDownloader Core (C++17 Puro & Nativo v1.0)   \n";
+    std::cout << "========================================================\n\n";
 
     DownloadEngine engine;
     
-    // Inicializa o motor e realiza a sondagem de GPU nativa
+    // Teste dos Callbacks C++ limpos
+    engine.setStatusCallback([](DownloadStatus status, const std::string &msg) {
+        std::cout << "  >>> [STATUS] " << msg << "\n";
+    });
+
+    // Inicializa a detecção nativa de GPU sem dependências externas
     engine.initialize();
 
     GPUDetector *gpu = engine.gpuDetector();
-    qDebug() << "\n[RESULTADO DA SONDAGEM DE HARDWARE]:";
-    qDebug() << "  -> Placa de Vídeo Identificada:" << gpu->getGPUName();
-    qDebug() << "  -> Codec de Aceleração:" << gpu->getRecommendedCodec();
-    qDebug() << "  -> Aceleração GPU Ativa:" << (gpu->hasHardwareAcceleration() ? "SIM ⚡ (Pronto para alta performance)" : "NÃO (Fallback CPU Multi-Thread)");
+    std::cout << "\n========================================================\n";
+    std::cout << "       🎯 RESULTADO DA SONDAGEM DE HARDWARE NATIVO      \n";
+    std::cout << "========================================================\n";
+    std::cout << "  -> Placa Detectada:    " << gpu->getGPUName() << "\n";
+    std::cout << "  -> Codec Selecionado:  " << gpu->getRecommendedCodec() << "\n";
+    std::cout << "  -> Aceleração Ativada: " << (gpu->hasHardwareAcceleration() ? "SIM ⚡ (Hardware Turbo)" : "NÃO (CPU Fallback)") << "\n";
+    std::cout << "========================================================\n\n";
 
-    qDebug() << "\n✅ Teste da Etapa 2 finalizado! Motor C++ estruturado e afiado para acoplarmos à Janela Gráfica (Etapa 3).";
+    std::cout << "✅ SUCESSO ABSOLUTO DA ETAPA 2! Motor C++17 compilado e operante!\n";
 
-    // Encerra graciosamente após 500ms
-    QTimer::singleShot(500, &app, &QCoreApplication::quit);
-
-    return app.exec();
+    return 0;
 }

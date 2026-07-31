@@ -1,0 +1,3 @@
+C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/NeoVDownloaderCore.dir
+C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/ZERO_CHECK.dir

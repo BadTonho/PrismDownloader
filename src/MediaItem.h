@@ -1,8 +1,8 @@
 #ifndef MEDIAITEM_H
 #define MEDIAITEM_H
 
-#include <QString>
-#include <QMetaType>
+#include <string>
+#include <algorithm>
 
 enum class DownloadStatus {
     Queued,
@@ -15,21 +15,21 @@ enum class DownloadStatus {
 };
 
 struct MediaItem {
-    QString url;
-    QString title;
-    QString quality;        // ex: "1080p", "4K", "MP3"
-    QString speed;          // ex: "12.5 MB/s"
-    QString eta;            // ex: "01:30"
-    double progress = 0.0;  // 0.0 a 100.0
+    std::string url;
+    std::string title;
+    std::string quality;        // ex: "1080p", "4K", "MP3"
+    std::string speed;          // ex: "12.5 MB/s"
+    std::string eta;            // ex: "01:30"
+    double progress = 0.0;      // 0.0 a 100.0
     DownloadStatus status = DownloadStatus::Queued;
 
     bool isAudioOnly() const {
-        return quality.contains("MP3", Qt::CaseInsensitive) || 
-               quality.contains("FLAC", Qt::CaseInsensitive) || 
-               quality.contains("Audio", Qt::CaseInsensitive);
+        std::string upper = quality;
+        std::transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
+        return upper.find("MP3") != std::string::npos || 
+               upper.find("FLAC") != std::string::npos || 
+               upper.find("AUDIO") != std::string::npos;
     }
 };
-
-Q_DECLARE_METATYPE(MediaItem)
 
 #endif // MEDIAITEM_H

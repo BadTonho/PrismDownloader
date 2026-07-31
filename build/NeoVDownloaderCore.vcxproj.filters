@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\GPUDetector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\DownloadEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\MediaItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\GPUDetector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\src\DownloadEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Admin\Desktop\ProjetosCode\projetos\Baixar\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{9D99DD69-7C38-33F0-8C52-48EB0A0C62D6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{050FACD5-815F-3B52-974B-A4276E5D74E8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

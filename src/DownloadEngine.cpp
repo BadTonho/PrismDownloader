@@ -1,131 +1,136 @@
 #include "DownloadEngine.h"
-#include <QDebug>
-#include <QRegularExpression>
+#include <iostream>
+#include <sstream>
+#include <array>
+#include <regex>
 
-DownloadEngine::DownloadEngine(QObject *parent) 
-    : QObject(parent), m_process(new QProcess(this)), m_gpuDetector(new GPUDetector(this)) {
-    
-    connect(m_process, &QProcess::readyReadStandardOutput, this, &DownloadEngine::onProcessReadyRead);
-    connect(m_process, &QProcess::readyReadStandardError, this, &DownloadEngine::onProcessReadyRead);
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), 
-            this, &DownloadEngine::onProcessFinished);
-    connect(m_process, &QProcess::errorOccurred, this, &DownloadEngine::onProcessError);
-}
+#ifdef _WIN32
+#define POPEN _popen
+#define PCLOSE _pclose
+#else
+#define POPEN popen
+#define PCLOSE pclose
+#endif
+
+DownloadEngine::DownloadEngine() {}
 
 DownloadEngine::~DownloadEngine() {
-    if (m_process->state() != QProcess::NotRunning) {
-        m_process->kill();
-        m_process->waitForFinished(1000);
+    cancelCurrent();
+    if (m_workerThread.joinable()) {
+        m_workerThread.join();
     }
 }
 
 void DownloadEngine::initialize() {
-    qDebug() << "[DownloadEngine] Inicializando motor C++ e verificando GPU...";
-    m_gpuDetector->detect();
+    std::cout << "[DownloadEngine] Inicializando Motor Nativo C++17...\n";
+    m_gpuDetector.detect();
 }
 
 GPUDetector* DownloadEngine::gpuDetector() {
-    return m_gpuDetector;
+    return &m_gpuDetector;
 }
 
 bool DownloadEngine::isDownloading() const {
-    return m_isRunning;
+    return m_isRunning.load();
 }
 
-void DownloadEngine::startDownload(const QString &url, const QString &quality, const QString &timeRange) {
-    if (m_isRunning) {
-        qWarning() << "[DownloadEngine] Já existe um download em progresso!";
+void DownloadEngine::setProgressCallback(std::function<void(double, const std::string&, const std::string&)> cb) {
+    m_onProgress = cb;
+}
+
+void DownloadEngine::setStatusCallback(std::function<void(DownloadStatus, const std::string&)> cb) {
+    m_onStatus = cb;
+}
+
+void DownloadEngine::startDownload(const std::string &url, const std::string &quality, const std::string &timeRange) {
+    if (m_isRunning.load()) {
+        std::cerr << "[DownloadEngine] ERRO: Download já está em progresso!\n";
         return;
     }
 
     m_currentItem = MediaItem{url, "Analisando...", quality, "0 MB/s", "00:00", 0.0, DownloadStatus::Queued};
-    m_isRunning = true;
+    m_isRunning.store(true);
 
-    QStringList args;
-    
-    // Configurações base otimizadas do yt-dlp para parseamento fluido
-    args << "--progress" << "--newline" << "--no-mtime";
+    std::ostringstream cmd;
+    cmd << "yt-dlp --progress --newline --no-mtime ";
 
-    // Suporte ao recorte de tempo
-    if (!timeRange.isEmpty()) {
-        qDebug() << "✂️ [DownloadEngine] Aplicando recorte inteligente de tempo:" << timeRange;
-        args << "--download-sections" << QString("*%1").arg(timeRange);
+    if (!timeRange.empty()) {
+        std::cout << "✂️ [DownloadEngine] Aplicando recorte inteligente de tempo: " << timeRange << "\n";
+        cmd << "--download-sections \"*" << timeRange << "\" ";
     }
 
-    // Áudio ou Vídeo com Aceleração/Stream Copy
     if (m_currentItem.isAudioOnly()) {
-        args << "-x" << "--audio-format" << "mp3" << "--audio-quality" << "0";
-        emit statusChanged(DownloadStatus::ConvertingGPU, "Extraindo Áudio Puro...");
+        cmd << "-x --audio-format mp3 --audio-quality 0 ";
+        if (m_onStatus) m_onStatus(DownloadStatus::ConvertingGPU, "Extraindo Áudio Puro em alta velocidade...");
     } else {
-        args << "-f" << "bestvideo+bestaudio/best" << "--merge-output-format" << "mp4";
-        
-        // Aplicação dos codecs detectadas da GPU (ex: h264_nvenc)
-        if (m_gpuDetector->hasHardwareAcceleration()) {
-            qDebug() << "⚡ [DownloadEngine] Conectando acelerador na linha de processamento:" << m_gpuDetector->getRecommendedCodec();
-            args << "--postprocessor-args" << QString("ffmpeg:-vcodec %1").arg(m_gpuDetector->getRecommendedCodec());
+        cmd << "-f \"bestvideo+bestaudio/best\" --merge-output-format mp4 ";
+        if (m_gpuDetector.hasHardwareAcceleration()) {
+            std::cout << "⚡ [DownloadEngine] Ativando processamento na placa: " << m_gpuDetector.getRecommendedCodec() << "\n";
+            cmd << "--postprocessor-args \"ffmpeg:-vcodec " << m_gpuDetector.getRecommendedCodec() << "\" ";
         }
-        
-        emit statusChanged(DownloadStatus::Downloading, "Baixando e Juntando com Aceleração...");
+        if (m_onStatus) m_onStatus(DownloadStatus::Downloading, "Baixando e Juntando streams em alta velocidade...");
     }
 
-    args << url;
+    cmd << "\"" << url << "\" 2>&1";
 
-    qDebug() << "[DownloadEngine] Disparando QProcess silencioso com yt-dlp:" << args.join(" ");
-    m_process->start("yt-dlp", args);
+    if (m_workerThread.joinable()) {
+        m_workerThread.join();
+    }
+
+    // Disparamos thread separada nativa em C++
+    m_workerThread = std::thread(&DownloadEngine::workerLoop, this, cmd.str());
 }
 
 void DownloadEngine::cancelCurrent() {
-    if (m_isRunning && m_process->state() != QProcess::NotRunning) {
-        qDebug() << "[DownloadEngine] Cancelado pelo usuário.";
-        m_process->kill();
-        m_isRunning = false;
+    if (m_isRunning.load()) {
+        std::cout << "[DownloadEngine] Cancelando operação...\n";
+        m_isRunning.store(false);
         m_currentItem.status = DownloadStatus::Cancelled;
-        emit statusChanged(DownloadStatus::Cancelled, "Download Cancelado");
+        if (m_onStatus) m_onStatus(DownloadStatus::Cancelled, "Download Cancelado.");
     }
 }
 
-void DownloadEngine::onProcessReadyRead() {
-    QString output = QString::fromUtf8(m_process->readAllStandardOutput()) + 
-                     QString::fromUtf8(m_process->readAllStandardError());
+void DownloadEngine::workerLoop(const std::string &command) {
+    std::cout << "[DownloadEngine Worker] Executando comando nativo: " << command << "\n";
+    std::array<char, 256> buffer;
     
-    QStringList lines = output.split('\n', Qt::SkipEmptyParts);
-    for (const QString &line : lines) {
-        parseYtDlpOutput(line.trimmed());
+    std::unique_ptr<FILE, decltype(&PCLOSE)> pipe(POPEN(command.c_str(), "r"), PCLOSE);
+    if (!pipe) {
+        std::cerr << "[DownloadEngine] Falha ao abrir pipe com yt-dlp.\n";
+        m_isRunning.store(false);
+        if (m_onStatus) m_onStatus(DownloadStatus::Error, "Falha ao acionar binários do yt-dlp/ffmpeg.");
+        return;
     }
-}
 
-void DownloadEngine::parseYtDlpOutput(const QString &line) {
-    qDebug() << "[Output]" << line;
-
-    QRegularExpression rx("\\[download\\]\\s+([0-9.]+)%.*at\\s+([0-9a-zA-Z./]+)\\s+ETA\\s+([0-9:]+)");
-    QRegularExpressionMatch match = rx.match(line);
-    
-    if (match.hasMatch()) {
-        double percent = match.captured(1).toDouble();
-        QString speed = match.captured(2);
-        QString eta = match.captured(3);
-        
-        m_currentItem.progress = percent;
-        m_currentItem.speed = speed;
-        m_currentItem.eta = eta;
-        
-        emit progressUpdated(percent, speed, eta);
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr && m_isRunning.load()) {
+        std::string line(buffer.data());
+        parseYtDlpOutput(line);
     }
-}
 
-void DownloadEngine::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    m_isRunning = false;
-    if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+    m_isRunning.store(false);
+    if (m_currentItem.status != DownloadStatus::Cancelled) {
         m_currentItem.status = DownloadStatus::Completed;
-        emit statusChanged(DownloadStatus::Completed, "Download Concluído com Sucesso!");
-    } else {
-        m_currentItem.status = DownloadStatus::Error;
-        emit statusChanged(DownloadStatus::Error, "Falha durante o processo de download.");
+        if (m_onStatus) m_onStatus(DownloadStatus::Completed, "Download finalizado com sucesso!");
     }
 }
 
-void DownloadEngine::onProcessError(QProcess::ProcessError error) {
-    m_isRunning = false;
-    qDebug() << "[DownloadEngine] Erro no processo:" << error;
-    emit statusChanged(DownloadStatus::Error, "Não foi possível iniciar o binário do yt-dlp ou ffmpeg.");
+void DownloadEngine::parseYtDlpOutput(const std::string &line) {
+    std::cout << "[Output] " << line;
+    try {
+        std::regex rx("\\[download\\]\\s+([0-9.]+)%.*at\\s+([0-9a-zA-Z./]+)\\s+ETA\\s+([0-9:]+)");
+        std::smatch match;
+        if (std::regex_search(line, match, rx) && match.size() >= 4) {
+            double percent = std::stod(match.str(1));
+            std::string speed = match.str(2);
+            std::string eta = match.str(3);
+
+            m_currentItem.progress = percent;
+            m_currentItem.speed = speed;
+            m_currentItem.eta = eta;
+
+            if (m_onProgress) m_onProgress(percent, speed, eta);
+        }
+    } catch (...) {
+        // Ignora possíveis exceções de formatação do terminal
+    }
 }

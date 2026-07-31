@@ -1,8 +1,7 @@
 #ifndef GPUDETECTOR_H
 #define GPUDETECTOR_H
 
-#include <QObject>
-#include <QString>
+#include <string>
 
 enum class GPUType {
     NVIDIA,
@@ -11,26 +10,24 @@ enum class GPUType {
     CPU_ONLY
 };
 
-class GPUDetector : public QObject {
-    Q_OBJECT
+class GPUDetector {
 public:
-    explicit GPUDetector(QObject *parent = nullptr);
+    GPUDetector() = default;
 
-    // Roda a detecção de forma segura sem travar via QProcess
+    // Sondagem nativa de hardware em C++ puro
     void detect();
     
     GPUType getGPUType() const;
-    QString getGPUName() const;
-    QString getRecommendedCodec() const;
+    std::string getGPUName() const;
+    std::string getRecommendedCodec() const;
     bool hasHardwareAcceleration() const;
-
-signals:
-    void detectionCompleted(GPUType type, const QString &name, const QString &codec);
 
 private:
     GPUType m_type = GPUType::CPU_ONLY;
-    QString m_name = "CPU Multi-Thread Fallback";
-    QString m_codec = "libx264";
+    std::string m_name = "CPU Multi-Thread Fallback";
+    std::string m_codec = "libx264";
+
+    std::string execCommand(const char* cmd);
 };
 
 #endif // GPUDETECTOR_H

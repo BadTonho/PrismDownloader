@@ -1,41 +1,40 @@
 #ifndef DOWNLOADENGINE_H
 #define DOWNLOADENGINE_H
 
-#include <QObject>
-#include <QProcess>
-#include <QList>
+#include <string>
+#include <functional>
+#include <thread>
+#include <atomic>
 #include "MediaItem.h"
 #include "GPUDetector.h"
 
-class DownloadEngine : public QObject {
-    Q_OBJECT
+class DownloadEngine {
 public:
-    explicit DownloadEngine(QObject *parent = nullptr);
+    DownloadEngine();
     ~DownloadEngine();
 
     void initialize();
-    void startDownload(const QString &url, const QString &quality = "1080p", const QString &timeRange = "");
+    void startDownload(const std::string &url, const std::string &quality = "1080p", const std::string &timeRange = "");
     void cancelCurrent();
 
     bool isDownloading() const;
     GPUDetector* gpuDetector();
 
-signals:
-    void progressUpdated(double percentage, const QString &speed, const QString &eta);
-    void statusChanged(DownloadStatus status, const QString &message);
-
-private slots:
-    void onProcessReadyRead();
-    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void onProcessError(QProcess::ProcessError error);
+    // Callbacks C++ nativos para eventos em tempo real
+    void setProgressCallback(std::function<void(double, const std::string&, const std::string&)> cb);
+    void setStatusCallback(std::function<void(DownloadStatus, const std::string&)> cb);
 
 private:
-    QProcess *m_process;
-    GPUDetector *m_gpuDetector;
+    GPUDetector m_gpuDetector;
     MediaItem m_currentItem;
-    bool m_isRunning = false;
+    std::atomic<bool> m_isRunning{false};
+    std::thread m_workerThread;
 
-    void parseYtDlpOutput(const QString &line);
+    std::function<void(double, const std::string&, const std::string&)> m_onProgress;
+    std::function<void(DownloadStatus, const std::string&)> m_onStatus;
+
+    void parseYtDlpOutput(const std::string &line);
+    void workerLoop(const std::string &command);
 };
 
 #endif // DOWNLOADENGINE_H
