@@ -14,12 +14,16 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QCoreApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QHeaderView>
+#include <QTableWidgetItem>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_convertProcess(nullptr)
 {
-    setWindowTitle("NeoVDownloader - Turbo Edition");
-    resize(960, 600);
+    setWindowTitle("NeoVDownloader - Studio Suite");
+    resize(980, 620);
 
     setupUI();
     setupStyles();
@@ -60,7 +64,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_engine.setProgressCallback([this](double percent, const std::string &speed, const std::string &eta) {
         QMetaObject::invokeMethod(this, [this, percent, speed, eta]() {
             m_progressBar->setValue(static_cast<int>(percent));
-            m_speedLabel->setText(QString("Velocidade: %1").arg(QString::fromStdString(speed)));
+            m_speedLabel->setText(QString("Velocidade de Download: %1").arg(QString::fromStdString(speed)));
             m_etaLabel->setText(QString("Tempo Restante: %1").arg(QString::fromStdString(eta)));
         }, Qt::QueuedConnection);
     });
@@ -76,19 +80,18 @@ MainWindow::MainWindow(QWidget *parent)
                 m_cancelBtn->setEnabled(false);
                 if (status == DownloadStatus::Completed) {
                     m_progressBar->setValue(100);
-                    m_statusLabel->setText("Status: Concluído e salvo na pasta com sucesso!");
+                    m_statusLabel->setText("Status: Concluído e salvo com sucesso na biblioteca!");
                     logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
                     refreshLibrary();
 
                     if (m_notifyCheckBox->isChecked()) {
-                        QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na pasta de destino.");
+                        QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na sua pasta de destino.");
                     }
                 }
             }
         }, Qt::QueuedConnection);
     });
 
-    // Configurar o QProcess para conversões nativas via FFmpeg
     m_convertProcess = new QProcess(this);
     connect(m_convertProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::onConvertProcessOutput);
     connect(m_convertProcess, &QProcess::readyReadStandardError, this, &MainWindow::onConvertProcessOutput);
@@ -106,6 +109,7 @@ MainWindow::~MainWindow()
     settings.setValue("outputFolder", m_outputDirInput->text().trimmed());
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
+    settings.setValue("defaultTimeRange", m_timeRangeInput->text().trimmed());
 
     m_engine.cancelCurrent();
     if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
@@ -124,18 +128,18 @@ void MainWindow::setupUI()
     rootLayout->setContentsMargins(0, 0, 0, 0);
 
     // ==========================================
-    // 1. BARRA LATERAL (SIDEBAR NAVIGATION)
+    // 1. BARRA LATERAL (SIDEBAR NAVIGATION) - ESTILO ATUBE
     // ==========================================
     QFrame *sidebar = new QFrame(this);
     sidebar->setObjectName("sidebar");
-    sidebar->setFixedWidth(200);
+    sidebar->setFixedWidth(220);
     QVBoxLayout *sidebarLayout = new QVBoxLayout(sidebar);
-    sidebarLayout->setSpacing(8);
-    sidebarLayout->setContentsMargins(0, 16, 0, 16);
+    sidebarLayout->setSpacing(10);
+    sidebarLayout->setContentsMargins(0, 20, 0, 20);
 
-    QLabel *brandLabel = new QLabel("NeoV Studio", sidebar);
+    QLabel *brandLabel = new QLabel("Studio Suite", sidebar);
     brandLabel->setAlignment(Qt::AlignCenter);
-    brandLabel->setStyleSheet("font-weight: bold; font-size: 15px; color: #10b981; margin-bottom: 12px;");
+    brandLabel->setStyleSheet("font-weight: bold; font-size: 16px; color: #10b981; margin-bottom: 14px;");
     sidebarLayout->addWidget(brandLabel);
 
     m_navDownloadBtn = new QPushButton("Downloads", sidebar);
@@ -144,22 +148,22 @@ void MainWindow::setupUI()
     m_navDownloadBtn->setChecked(true);
     m_navDownloadBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navLibraryBtn = new QPushButton("Biblioteca", sidebar);
+    m_navLibraryBtn = new QPushButton("Minha biblioteca de mídia", sidebar);
     m_navLibraryBtn->setObjectName("navBtn");
     m_navLibraryBtn->setCheckable(true);
     m_navLibraryBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navConverterBtn = new QPushButton("Conversor", sidebar);
+    m_navConverterBtn = new QPushButton("Conversor de vídeo", sidebar);
     m_navConverterBtn->setObjectName("navBtn");
     m_navConverterBtn->setCheckable(true);
     m_navConverterBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navLogsBtn = new QPushButton("Terminal de Logs", sidebar);
+    m_navLogsBtn = new QPushButton("Terminal de logs", sidebar);
     m_navLogsBtn->setObjectName("navBtn");
     m_navLogsBtn->setCheckable(true);
     m_navLogsBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navInfoBtn = new QPushButton("Informações", sidebar);
+    m_navInfoBtn = new QPushButton("Informações e hardware", sidebar);
     m_navInfoBtn->setObjectName("navBtn");
     m_navInfoBtn->setCheckable(true);
     m_navInfoBtn->setCursor(Qt::PointingHandCursor);
@@ -193,35 +197,63 @@ void MainWindow::setupUI()
     m_stackedWidget->setObjectName("mainArea");
     rootLayout->addWidget(m_stackedWidget);
 
-    // ---> TELA 0: DOWNLOADS <---
+    // ---> TELA 0: DOWNLOADS (LINHA ATUBE CATCHER) <---
     QWidget *pageDownloads = new QWidget(m_stackedWidget);
     QVBoxLayout *downloadsLayout = new QVBoxLayout(pageDownloads);
-    downloadsLayout->setSpacing(16);
-    downloadsLayout->setContentsMargins(24, 20, 24, 20);
+    downloadsLayout->setSpacing(20);
+    downloadsLayout->setContentsMargins(28, 26, 28, 24);
 
-    QGroupBox *inputGroup = new QGroupBox("Parâmetros do Download", pageDownloads);
-    QGridLayout *inputLayout = new QGridLayout(inputGroup);
-    inputLayout->setSpacing(12);
-    inputLayout->setContentsMargins(16, 24, 16, 16);
+    // LINHA SUPERIOR: INPUT DA URL + BOTÃO BAIXAR EM DESTAQUE
+    QHBoxLayout *topInputLayout = new QHBoxLayout();
+    topInputLayout->setSpacing(12);
 
-    QLabel *urlLabel = new QLabel("URL da Mídia:", pageDownloads);
     m_urlInput = new QLineEdit(pageDownloads);
-    m_urlInput->setPlaceholderText("Cole aqui o link do vídeo ou stream (YouTube, Vimeo, etc)...");
+    m_urlInput->setPlaceholderText("Insira nesta caixa o URL completo do seu vídeo (exemplo: https://youtube.com/watch?v=...)");
+    m_urlInput->setMinimumHeight(44);
+    m_urlInput->setStyleSheet("font-size: 14px; padding: 10px 14px;");
 
-    QLabel *qualityLabel = new QLabel("Qualidade / Resolução:", pageDownloads);
+    m_startBtn = new QPushButton("BAIXAR", pageDownloads);
+    m_startBtn->setObjectName("startBtn");
+    m_startBtn->setCursor(Qt::PointingHandCursor);
+    m_startBtn->setMinimumHeight(44);
+    m_startBtn->setFixedWidth(140);
+    m_startBtn->setStyleSheet("font-size: 15px; font-weight: bold;");
+
+    topInputLayout->addWidget(m_urlInput, 1);
+    topInputLayout->addWidget(m_startBtn, 0);
+    downloadsLayout->addLayout(topInputLayout);
+
+    // LINHA SECUNDÁRIA: PERFIL DE SAÍDA E PASTA (ESTILO ATUBE)
+    QGridLayout *paramLayout = new QGridLayout();
+    paramLayout->setSpacing(12);
+    paramLayout->setContentsMargins(0, 0, 0, 8);
+
+    QLabel *lblProfile = new QLabel("Perfil de saída padrão:", pageDownloads);
+    lblProfile->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
     m_qualityCombo = new QComboBox(pageDownloads);
-    m_qualityCombo->addItem("4K (Melhor Disponível no Servidor)");
-    m_qualityCombo->addItem("1080p Full HD");
-    m_qualityCombo->addItem("720p HD");
-    m_qualityCombo->addItem("Áudio MP3 (Extração Direta)");
+    m_qualityCombo->addItem("4K / Melhor Disponível no Servidor (Original)");
+    m_qualityCombo->addItem("1080p Full HD (Vídeo MP4 Alta Definição)");
+    m_qualityCombo->addItem("720p HD (Vídeo MP4 Qualidade Padrão)");
+    m_qualityCombo->addItem("Áudio MP3 (Obter apenas o áudio 320 kbps)");
 
-    QLabel *timeLabel = new QLabel("Recorte de Tempo (Opcional):", pageDownloads);
+    QLabel *lblTime = new QLabel("Recorte de tempo (opcional):", pageDownloads);
+    lblTime->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
     m_timeRangeInput = new QLineEdit(pageDownloads);
-    m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Deixe em branco para o vídeo completo)");
+    m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Vazio = baixar completo)");
 
-    QLabel *folderLabel = new QLabel("Pasta de Destino:", pageDownloads);
-    m_outputDirInput = new QLineEdit(pageDownloads);
+    QLabel *lblSave = new QLabel("Salvar downloads em:", pageDownloads);
+    lblSave->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
     
+    QHBoxLayout *saveLayout = new QHBoxLayout();
+    m_outputDirInput = new QLineEdit(pageDownloads);
+    m_outputDirInput->setReadOnly(false);
+    m_browseDirBtn = new QPushButton("Alterar...", pageDownloads);
+    m_browseDirBtn->setObjectName("browseBtn");
+    m_browseDirBtn->setCursor(Qt::PointingHandCursor);
+    m_browseDirBtn->setMinimumHeight(32);
+    saveLayout->addWidget(m_outputDirInput, 1);
+    saveLayout->addWidget(m_browseDirBtn, 0);
+
     QSettings settings("NeoV Dev Studio", "NeoVDownloader");
     QString savedFolder = settings.value("outputFolder", "").toString();
     if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
@@ -235,75 +267,65 @@ void MainWindow::setupUI()
         m_qualityCombo->setCurrentIndex(savedQualityIndex);
     }
 
-    m_browseDirBtn = new QPushButton("Escolher...", pageDownloads);
-    m_browseDirBtn->setCursor(Qt::PointingHandCursor);
-    m_browseDirBtn->setMinimumHeight(34);
-    m_browseDirBtn->setObjectName("browseBtn");
+    paramLayout->addWidget(lblProfile, 0, 0);
+    paramLayout->addWidget(m_qualityCombo, 0, 1);
+    paramLayout->addWidget(lblTime, 1, 0);
+    paramLayout->addWidget(m_timeRangeInput, 1, 1);
+    paramLayout->addWidget(lblSave, 2, 0);
+    paramLayout->addLayout(saveLayout, 2, 1);
+    paramLayout->setColumnStretch(1, 1);
 
-    QHBoxLayout *folderLayout = new QHBoxLayout();
-    folderLayout->addWidget(m_outputDirInput);
-    folderLayout->addWidget(m_browseDirBtn);
+    downloadsLayout->addLayout(paramLayout);
+
+    // PAINEL CENTRAL DE PROCESSAMENTO E MONITORAMENTO AO VIVO
+    QGroupBox *centralPanel = new QGroupBox("Área de Processamento e Monitoramento de Download", pageDownloads);
+    QVBoxLayout *centerLayout = new QVBoxLayout(centralPanel);
+    centerLayout->setSpacing(16);
+    centerLayout->setContentsMargins(20, 30, 20, 24);
+
+    m_statusLabel = new QLabel("Status: Pronto. Aguardando você inserir uma URL acima para começar...", pageDownloads);
+    m_statusLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #10b981;");
+
+    m_progressBar = new QProgressBar(pageDownloads);
+    m_progressBar->setRange(0, 100);
+    m_progressBar->setValue(0);
+    m_progressBar->setTextVisible(true);
+    m_progressBar->setMinimumHeight(28);
+    m_progressBar->setStyleSheet("font-size: 14px;");
+
+    QHBoxLayout *statsLayout = new QHBoxLayout();
+    m_speedLabel = new QLabel("Velocidade de Download: 0.0 MB/s", pageDownloads);
+    m_speedLabel->setStyleSheet("font-size: 13px; color: #cbd5e1;");
+    m_etaLabel = new QLabel("Tempo Restante: --:--", pageDownloads);
+    m_etaLabel->setStyleSheet("font-size: 13px; color: #cbd5e1;");
+    statsLayout->addWidget(m_speedLabel);
+    statsLayout->addStretch();
+    statsLayout->addWidget(m_etaLabel);
+
+    QHBoxLayout *actionBottomLayout = new QHBoxLayout();
+    m_cancelBtn = new QPushButton("CANCELAR OPERAÇÃO ATUAL", pageDownloads);
+    m_cancelBtn->setObjectName("cancelBtn");
+    m_cancelBtn->setCursor(Qt::PointingHandCursor);
+    m_cancelBtn->setMinimumHeight(40);
+    m_cancelBtn->setFixedWidth(230);
+    m_cancelBtn->setEnabled(false);
 
     m_notifyCheckBox = new QCheckBox("Exibir aviso pop-up ao concluir o download (Desativado por padrão)", pageDownloads);
     bool notifyPref = settings.value("showNotifications", false).toBool();
     m_notifyCheckBox->setChecked(notifyPref);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
 
-    inputLayout->addWidget(urlLabel, 0, 0);
-    inputLayout->addWidget(m_urlInput, 0, 1);
-    inputLayout->addWidget(qualityLabel, 1, 0);
-    inputLayout->addWidget(m_qualityCombo, 1, 1);
-    inputLayout->addWidget(timeLabel, 2, 0);
-    inputLayout->addWidget(m_timeRangeInput, 2, 1);
-    inputLayout->addWidget(folderLabel, 3, 0);
-    inputLayout->addLayout(folderLayout, 3, 1);
-    inputLayout->addWidget(m_notifyCheckBox, 4, 0, 1, 2);
+    actionBottomLayout->addWidget(m_notifyCheckBox);
+    actionBottomLayout->addStretch();
+    actionBottomLayout->addWidget(m_cancelBtn);
 
-    downloadsLayout->addWidget(inputGroup);
+    centerLayout->addWidget(m_statusLabel);
+    centerLayout->addWidget(m_progressBar);
+    centerLayout->addLayout(statsLayout);
+    centerLayout->addStretch();
+    centerLayout->addLayout(actionBottomLayout);
 
-    QHBoxLayout *mainBtnLayout = new QHBoxLayout();
-    m_startBtn = new QPushButton("INICIAR DOWNLOAD ACELERADO", pageDownloads);
-    m_startBtn->setObjectName("startBtn");
-    m_startBtn->setCursor(Qt::PointingHandCursor);
-    m_startBtn->setMinimumHeight(44);
-
-    m_cancelBtn = new QPushButton("CANCELAR", pageDownloads);
-    m_cancelBtn->setObjectName("cancelBtn");
-    m_cancelBtn->setCursor(Qt::PointingHandCursor);
-    m_cancelBtn->setMinimumHeight(44);
-    m_cancelBtn->setEnabled(false);
-
-    mainBtnLayout->addWidget(m_startBtn, 3);
-    mainBtnLayout->addWidget(m_cancelBtn, 1);
-    downloadsLayout->addLayout(mainBtnLayout);
-
-    QGroupBox *monitorGroup = new QGroupBox("Monitor de Progresso", pageDownloads);
-    QVBoxLayout *monitorLayout = new QVBoxLayout(monitorGroup);
-    monitorLayout->setSpacing(12);
-    monitorLayout->setContentsMargins(16, 24, 16, 16);
-
-    m_statusLabel = new QLabel("Status: Pronto para iniciar...", pageDownloads);
-    m_statusLabel->setStyleSheet("font-weight: bold; font-size: 13px; color: #10b981;");
-
-    m_progressBar = new QProgressBar(pageDownloads);
-    m_progressBar->setRange(0, 100);
-    m_progressBar->setValue(0);
-    m_progressBar->setTextVisible(true);
-    m_progressBar->setMinimumHeight(22);
-
-    QHBoxLayout *statsLayout = new QHBoxLayout();
-    m_speedLabel = new QLabel("Velocidade: 0.0 MB/s", pageDownloads);
-    m_etaLabel = new QLabel("Tempo Restante: --:--", pageDownloads);
-    statsLayout->addWidget(m_speedLabel);
-    statsLayout->addStretch();
-    statsLayout->addWidget(m_etaLabel);
-
-    monitorLayout->addWidget(m_statusLabel);
-    monitorLayout->addWidget(m_progressBar);
-    monitorLayout->addLayout(statsLayout);
-
-    downloadsLayout->addWidget(monitorGroup);
-    downloadsLayout->addStretch();
+    downloadsLayout->addWidget(centralPanel, 1);
     m_stackedWidget->addWidget(pageDownloads);
 
     // ---> TELA 1: BIBLIOTECA DE MÍDIAS <---
@@ -313,8 +335,8 @@ void MainWindow::setupUI()
     libLayout->setContentsMargins(24, 20, 24, 20);
 
     QHBoxLayout *libTopLayout = new QHBoxLayout();
-    QLabel *libTitle = new QLabel("Minha Biblioteca (Arquivos na Pasta de Destino):", pageLibrary);
-    libTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 14px;");
+    QLabel *libTitle = new QLabel("Minha biblioteca de mídia (Arquivos na Pasta de Destino):", pageLibrary);
+    libTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 15px;");
     libTopLayout->addWidget(libTitle);
     libTopLayout->addStretch();
 
@@ -452,8 +474,8 @@ void MainWindow::setupUI()
     logsLayout->setSpacing(12);
     logsLayout->setContentsMargins(24, 20, 24, 20);
 
-    QLabel *logsTitle = new QLabel("Terminal de Processamento Nativo e Diagnóstico em Tempo Real:", pageLogs);
-    logsTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 14px;");
+    QLabel *logsTitle = new QLabel("Terminal de logs do processador e telemetria:", pageLogs);
+    logsTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 15px;");
     logsLayout->addWidget(logsTitle);
 
     m_logEdit = new QTextEdit(pageLogs);
@@ -462,7 +484,7 @@ void MainWindow::setupUI()
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
 
-    // ---> TELA 4: INFORMAÇÕES E HARDWARE COM DESIGN MODERNO <---
+    // ---> TELA 4: INFORMAÇÕES E HARDWARE <---
     QWidget *pageInfo = new QWidget(m_stackedWidget);
     QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
     infoLayout->setSpacing(16);
@@ -475,7 +497,7 @@ void MainWindow::setupUI()
 
     QLabel *lblAppNameKey = new QLabel("Nome Oficial:", appInfoGroup);
     lblAppNameKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    QLabel *lblAppNameVal = new QLabel("NeoVDownloader (Turbo GPU Edition)", appInfoGroup);
+    QLabel *lblAppNameVal = new QLabel("NeoVDownloader (Studio Suite Edition)", appInfoGroup);
     lblAppNameVal->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
 
     QLabel *lblAppVerKey = new QLabel("Versão Atual:", appInfoGroup);
@@ -630,7 +652,7 @@ void MainWindow::onStartConvertClicked()
         }
     } else if (formatText.startsWith("MKV")) {
         ext = "_convertido.mkv";
-        args << "-c" << "copy"; // Troca ultrarrápida de container
+        args << "-c" << "copy";
     } else if (formatText.startsWith("MP3")) {
         ext = "_audio.mp3";
         args << "-vn" << "-c:a" << "libmp3lame" << "-b:a" << "320k";
@@ -650,7 +672,7 @@ void MainWindow::onStartConvertClicked()
         ffmpegPath = "ffmpeg";
     }
 
-    m_convertProgressBar->setRange(0, 0); // Modo indeterminado (animado) durante a conversão
+    m_convertProgressBar->setRange(0, 0);
     m_convertStatusLabel->setText("Status: Convertendo mídia em alta velocidade...");
     m_startConvertBtn->setEnabled(false);
     m_cancelConvertBtn->setEnabled(true);
@@ -691,7 +713,6 @@ void MainWindow::onConvertProcessOutput()
     if (!out.isEmpty()) logMessage(QString::fromUtf8(out).trimmed());
     if (!err.isEmpty()) {
         QString errStr = QString::fromUtf8(err).trimmed();
-        // Não flodar com todas as linhas, mas exibir progresso se houver tempo
         if (errStr.contains("time=") || errStr.contains("size=") || errStr.contains("speed=")) {
             int pos = errStr.indexOf("time=");
             if (pos != -1) {
@@ -788,219 +809,121 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
     }
 }
 
-void MainWindow::setupStyles()
+// ==========================================
+// DIÁLOGO MODAL ESTILO ATUBE CATCHER (FOTO 3)
+// ==========================================
+bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange)
 {
-    QString qss = R"(
-        QMainWindow {
-            background-color: #121212;
-            color: #dedede;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 13px;
-        }
-        QWidget {
-            color: #dedede;
-        }
-        QFrame#sidebar {
-            background-color: #181818;
-            border-right: 1px solid #262626;
-        }
-        QStackedWidget#mainArea {
-            background-color: #121212;
-        }
-        QPushButton#navBtn {
-            background-color: transparent;
-            color: #909090;
-            border: none;
-            border-left: 3px solid transparent;
-            padding: 12px 18px;
-            text-align: left;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        QPushButton#navBtn:hover {
-            background-color: #222222;
-            color: #ffffff;
-        }
-        QPushButton#navBtn:checked {
-            background-color: #1f2a24;
-            color: #10b981;
-            border-left: 3px solid #10b981;
-        }
-        QPushButton#openFolderSideBtn {
-            background-color: #1c2e3a;
-            color: #38bdf8;
-            font-weight: bold;
-            font-size: 13px;
-            border: 1px solid #38bdf8;
-            border-radius: 5px;
-            padding: 8px;
-            margin: 0 14px;
-        }
-        QPushButton#openFolderSideBtn:hover {
-            background-color: #38bdf8;
-            color: #061824;
-        }
-        QGroupBox {
-            background-color: #191919;
-            border: 1px solid #262626;
-            border-radius: 6px;
-            margin-top: 14px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            padding: 0 8px;
-            color: #10b981;
-        }
-        QLineEdit, QComboBox {
-            background-color: #222222;
-            border: 1px solid #333333;
-            border-radius: 5px;
-            padding: 7px 12px;
-            color: #ffffff;
-            font-size: 13px;
-        }
-        QLineEdit:focus, QComboBox:focus {
-            border: 1px solid #10b981;
-            background-color: #262626;
-        }
-        QComboBox::drop-down {
-            border: none;
-        }
-        QComboBox QAbstractItemView {
-            background-color: #222222;
-            color: white;
-            selection-background-color: #10b981;
-            selection-color: black;
-        }
-        QCheckBox {
-            font-size: 13px;
-            color: #b5b5b5;
-            padding-top: 4px;
-        }
-        QCheckBox::indicator {
-            width: 17px;
-            height: 17px;
-            border: 1px solid #3e3e3e;
-            border-radius: 4px;
-            background-color: #222222;
-        }
-        QCheckBox::indicator:hover {
-            border: 1px solid #10b981;
-        }
-        QCheckBox::indicator:checked {
-            background-color: #10b981;
-            border: 1px solid #ffffff;
-        }
-        QLabel {
-            font-size: 13px;
-        }
-        QPushButton#startBtn {
-            background-color: #10b981;
-            color: #031c12;
-            font-weight: bold;
-            font-size: 14px;
-            border-radius: 5px;
-            border: none;
-            padding: 10px;
-        }
-        QPushButton#startBtn:hover {
-            background-color: #059669;
-            color: #ffffff;
-        }
-        QPushButton#startBtn:disabled {
-            background-color: #242424;
-            color: #666666;
-        }
-        QPushButton#cancelBtn {
-            background-color: #dc2626;
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 13px;
-            border-radius: 5px;
-            border: none;
-            padding: 10px;
-        }
-        QPushButton#cancelBtn:hover {
-            background-color: #b91c1c;
-        }
-        QPushButton#cancelBtn:disabled {
-            background-color: #242424;
-            color: #666666;
-        }
-        QPushButton#browseBtn {
-            background-color: #263530;
-            color: #10b981;
-            font-weight: bold;
-            border: 1px solid #10b981;
-            border-radius: 5px;
-            padding: 6px 14px;
-        }
-        QPushButton#browseBtn:hover {
-            background-color: #354a43;
-            color: #ffffff;
-        }
-        QProgressBar {
-            background-color: #222222;
-            border: 1px solid #333333;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        QProgressBar::chunk {
-            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #10b981, stop:1 #047857);
-            border-radius: 4px;
-        }
-        QTableWidget#libraryTable {
-            background-color: #1a1a1a;
-            border: 1px solid #262626;
-            border-radius: 6px;
-            color: #ffffff;
-            gridline-color: #262626;
-            font-size: 13px;
-            selection-background-color: #10b981;
-            selection-color: #031c12;
-        }
-        QTableWidget#libraryTable QHeaderView::section {
-            background-color: #242424;
-            color: #10b981;
-            font-weight: bold;
-            border: none;
-            border-bottom: 2px solid #10b981;
-            padding: 8px 10px;
-            font-size: 13px;
-        }
-        QTableWidget#libraryTable::item {
-            padding: 6px 10px;
-            border-bottom: 1px solid #222222;
-        }
-        QTableWidget#libraryTable::item:selected {
-            background-color: #10b981;
-            color: #031c12;
-            font-weight: bold;
-        }
-        QTextEdit#logArea {
-            background-color: #0a0e0b;
-            border: 1px solid #1a241c;
-            border-radius: 5px;
-            color: #10b981;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            padding: 12px;
-        }
-    )";
+    QDialog dlg(this);
+    dlg.setWindowTitle("Selecione o formato da fonte - NeoV Studio Suite");
+    dlg.resize(720, 480);
+    dlg.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
 
-    setStyleSheet(qss);
-}
+    QVBoxLayout *dlgLayout = new QVBoxLayout(&dlg);
+    dlgLayout->setSpacing(16);
+    dlgLayout->setContentsMargins(24, 24, 24, 24);
 
-void MainWindow::logMessage(const QString &msg)
-{
-    if (m_logEdit) {
-        m_logEdit->append(msg);
+    QLabel *lblTitle = new QLabel("Selecione o formato da fonte e opções do download:", &dlg);
+    lblTitle->setStyleSheet("font-weight: bold; font-size: 18px; color: #ffffff;");
+    dlgLayout->addWidget(lblTitle);
+
+    QTableWidget *table = new QTableWidget(4, 3, &dlg);
+    QStringList headers;
+    headers << "Título / Qualidade" << "Formato e Codec" << "Resolução / Modo";
+    table->setHorizontalHeaderLabels(headers);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    table->verticalHeader()->setVisible(false);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setSelectionMode(QAbstractItemView::SingleSelection);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setAlternatingRowColors(true);
+    table->setObjectName("libraryTable");
+    table->setMinimumHeight(200);
+
+    struct Prof { QString q; QString f; QString r; };
+    Prof profs[4] = {
+        {"4K / Melhor Disponível no Servidor", "MP4 / Container Original", "Ultra HD / Máxima"},
+        {"1080p Full HD", "H.264 / NVENC Acelerado", "1920x1080 (60/30 fps)"},
+        {"720p HD", "H.264 / NVENC Otimizado", "1280x720 (Balanceado)"},
+        {"Áudio MP3 (Extração Direta)", "MP3 Estéreo Alta Fidelidade", "320 kbps (Apenas Áudio)"}
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        table->setItem(i, 0, new QTableWidgetItem(profs[i].q));
+        table->setItem(i, 1, new QTableWidgetItem(profs[i].f));
+        table->setItem(i, 2, new QTableWidgetItem(profs[i].r));
     }
+
+    int defaultIdx = m_qualityCombo->currentIndex();
+    if (defaultIdx >= 0 && defaultIdx < 4) {
+        table->selectRow(defaultIdx);
+    } else {
+        table->selectRow(1);
+    }
+
+    dlgLayout->addWidget(table);
+
+    // Opções de tempo e destino no modal
+    QGridLayout *optLayout = new QGridLayout();
+    optLayout->setSpacing(10);
+    QLabel *lblTimeOpt = new QLabel("Recorte de Tempo (Opcional):", &dlg);
+    lblTimeOpt->setStyleSheet("color: #a3a3a3; font-weight: bold;");
+    QLineEdit *editTime = new QLineEdit(&dlg);
+    editTime->setText(m_timeRangeInput->text());
+    editTime->setPlaceholderText("Ex: 00:01:15-00:03:00 (Vazio = baixar completo)");
+
+    QLabel *lblFolderOpt = new QLabel("Salvar download em:", &dlg);
+    lblFolderOpt->setStyleSheet("color: #a3a3a3; font-weight: bold;");
+    QLabel *lblFolderVal = new QLabel(m_outputDirInput->text(), &dlg);
+    lblFolderVal->setStyleSheet("color: #10b981; font-weight: bold;");
+
+    optLayout->addWidget(lblTimeOpt, 0, 0);
+    optLayout->addWidget(editTime, 0, 1);
+    optLayout->addWidget(lblFolderOpt, 1, 0);
+    optLayout->addWidget(lblFolderVal, 1, 1);
+    dlgLayout->addLayout(optLayout);
+    dlgLayout->addStretch();
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    QPushButton *btnOk = new QPushButton("BAIXAR MÍDIA", &dlg);
+    btnOk->setObjectName("startBtn");
+    btnOk->setCursor(Qt::PointingHandCursor);
+    btnOk->setMinimumHeight(42);
+    btnOk->setFixedWidth(160);
+    btnOk->setStyleSheet("font-size: 15px; font-weight: bold;");
+    connect(btnOk, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    QPushButton *btnCancel = new QPushButton("CANCELAR", &dlg);
+    btnCancel->setObjectName("cancelBtn");
+    btnCancel->setCursor(Qt::PointingHandCursor);
+    btnCancel->setMinimumHeight(42);
+    btnCancel->setFixedWidth(140);
+    connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
+
+    QLabel *lblAccel = new QLabel("⚡ Motor NVIDIA NVENC Operante", &dlg);
+    lblAccel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
+
+    btnLayout->addWidget(btnOk);
+    btnLayout->addWidget(btnCancel);
+    btnLayout->addStretch();
+    btnLayout->addWidget(lblAccel);
+    dlgLayout->addLayout(btnLayout);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        int r = table->currentRow();
+        if (r >= 0 && r < 4) {
+            outQuality = m_qualityCombo->itemText(r);
+            m_qualityCombo->setCurrentIndex(r);
+        } else {
+            outQuality = m_qualityCombo->currentText();
+        }
+        outTimeRange = editTime->text().trimmed();
+        m_timeRangeInput->setText(outTimeRange);
+        return true;
+    }
+    return false;
 }
 
 void MainWindow::onBrowseClicked()
@@ -1028,31 +951,37 @@ void MainWindow::onStartClicked()
 {
     QString url = m_urlInput->text().trimmed();
     if (url.isEmpty()) {
-        QMessageBox::warning(this, "Atenção", "Por favor, cole um link válido da mídia antes de iniciar o download.");
+        QMessageBox::warning(this, "Atenção", "Por favor, insira ou cole o link do vídeo na caixa de URL antes de prosseguir.");
         return;
     }
 
-    QString quality = m_qualityCombo->currentText();
-    QString timeRange = m_timeRangeInput->text().trimmed();
-    QString outputDir = m_outputDirInput->text().trimmed();
+    // Acionar a janela modal de opções (Foto 3) assim como no aTube Catcher!
+    QString selectedQuality, timeRange;
+    if (!showFormatSelectionDialog(selectedQuality, timeRange)) {
+        // Usuário fechou ou cancelou o modal
+        logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
+        return;
+    }
 
+    QString outputDir = m_outputDirInput->text().trimmed();
     QSettings settings("NeoV Dev Studio", "NeoVDownloader");
     settings.setValue("outputFolder", outputDir);
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
+    settings.setValue("defaultTimeRange", timeRange);
 
     m_progressBar->setValue(0);
     m_startBtn->setEnabled(false);
     m_cancelBtn->setEnabled(true);
     
     logMessage("\n========================================================");
-    logMessage("[DownloadEngine] Preparando acionamento dos motores C++...");
+    logMessage("[DownloadEngine] Acionando motor acelerado de extração e junção...");
     if (!timeRange.isEmpty()) {
         logMessage("[Recorte] Faixa de tempo programada: " + timeRange);
     }
     logMessage("[Destino] Mídia será salva em: " + outputDir);
     
-    m_engine.startDownload(url.toStdString(), quality.toStdString(), timeRange.toStdString(), outputDir.toStdString());
+    m_engine.startDownload(url.toStdString(), selectedQuality.toStdString(), timeRange.toStdString(), outputDir.toStdString());
 }
 
 void MainWindow::onCancelClicked()
@@ -1061,4 +990,220 @@ void MainWindow::onCancelClicked()
     m_engine.cancelCurrent();
     m_startBtn->setEnabled(true);
     m_cancelBtn->setEnabled(false);
+}
+
+void MainWindow::logMessage(const QString &msg)
+{
+    if (m_logEdit) {
+        m_logEdit->append(msg);
+    }
+}
+
+void MainWindow::setupStyles()
+{
+    QString qss = R"(
+        QMainWindow {
+            background-color: #121212;
+            color: #dedede;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+        }
+        QWidget {
+            color: #dedede;
+        }
+        QFrame#sidebar {
+            background-color: #181818;
+            border-right: 1px solid #262626;
+        }
+        QStackedWidget#mainArea {
+            background-color: #121212;
+        }
+        QPushButton#navBtn {
+            background-color: transparent;
+            color: #909090;
+            border: none;
+            border-left: 3px solid transparent;
+            padding: 13px 18px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton#navBtn:hover {
+            background-color: #222222;
+            color: #ffffff;
+        }
+        QPushButton#navBtn:checked {
+            background-color: #1f2a24;
+            color: #10b981;
+            border-left: 3px solid #10b981;
+        }
+        QPushButton#openFolderSideBtn {
+            background-color: #1c2e3a;
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 13px;
+            border: 1px solid #38bdf8;
+            border-radius: 5px;
+            padding: 9px;
+            margin: 0 14px;
+        }
+        QPushButton#openFolderSideBtn:hover {
+            background-color: #38bdf8;
+            color: #061824;
+        }
+        QGroupBox {
+            background-color: #1a1a1a;
+            border: 1px solid #282828;
+            border-radius: 8px;
+            margin-top: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            font-size: 13px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 8px;
+            color: #10b981;
+        }
+        QLineEdit, QComboBox {
+            background-color: #202020;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #ffffff;
+            font-size: 13px;
+        }
+        QLineEdit:focus, QComboBox:focus {
+            border: 1px solid #10b981;
+            background-color: #262626;
+        }
+        QComboBox::drop-down {
+            border: none;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #222222;
+            color: white;
+            selection-background-color: #10b981;
+            selection-color: black;
+        }
+        QCheckBox {
+            font-size: 13px;
+            color: #a3a3a3;
+            padding-top: 4px;
+        }
+        QCheckBox::indicator {
+            width: 17px;
+            height: 17px;
+            border: 1px solid #3e3e3e;
+            border-radius: 4px;
+            background-color: #222222;
+        }
+        QCheckBox::indicator:hover {
+            border: 1px solid #10b981;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #10b981;
+            border: 1px solid #ffffff;
+        }
+        QLabel {
+            font-size: 13px;
+        }
+        QPushButton#startBtn {
+            background-color: #10b981;
+            color: #021810;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 6px;
+            border: none;
+            padding: 10px;
+        }
+        QPushButton#startBtn:hover {
+            background-color: #059669;
+            color: #ffffff;
+        }
+        QPushButton#startBtn:disabled {
+            background-color: #242424;
+            color: #666666;
+        }
+        QPushButton#cancelBtn {
+            background-color: #dc2626;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 13px;
+            border-radius: 6px;
+            border: none;
+            padding: 10px;
+        }
+        QPushButton#cancelBtn:hover {
+            background-color: #b91c1c;
+        }
+        QPushButton#cancelBtn:disabled {
+            background-color: #242424;
+            color: #666666;
+        }
+        QPushButton#browseBtn {
+            background-color: #263530;
+            color: #10b981;
+            font-weight: bold;
+            border: 1px solid #10b981;
+            border-radius: 6px;
+            padding: 6px 14px;
+        }
+        QPushButton#browseBtn:hover {
+            background-color: #354a43;
+            color: #ffffff;
+        }
+        QProgressBar {
+            background-color: #202020;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        QProgressBar::chunk {
+            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #10b981, stop:1 #047857);
+            border-radius: 5px;
+        }
+        QTableWidget#libraryTable {
+            background-color: #1a1a1a;
+            border: 1px solid #282828;
+            border-radius: 6px;
+            color: #ffffff;
+            gridline-color: #282828;
+            font-size: 13px;
+            selection-background-color: #10b981;
+            selection-color: #021810;
+        }
+        QTableWidget#libraryTable QHeaderView::section {
+            background-color: #242424;
+            color: #10b981;
+            font-weight: bold;
+            border: none;
+            border-bottom: 2px solid #10b981;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        QTableWidget#libraryTable::item {
+            padding: 8px 10px;
+            border-bottom: 1px solid #222222;
+        }
+        QTableWidget#libraryTable::item:selected {
+            background-color: #10b981;
+            color: #021810;
+            font-weight: bold;
+        }
+        QTextEdit#logArea {
+            background-color: #0a0e0b;
+            border: 1px solid #1a241c;
+            border-radius: 6px;
+            color: #10b981;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            padding: 12px;
+        }
+    )";
+
+    setStyleSheet(qss);
 }

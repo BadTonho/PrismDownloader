@@ -166,6 +166,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QButtonGroup \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QCheckBox \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QComboBox \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QDialog \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QFrame \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QHeaderView \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QLabel \
@@ -185,6 +186,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qbuttongroup.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcheckbox.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcombobox.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qdialog.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qframe.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qheaderview.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qlabel.h \

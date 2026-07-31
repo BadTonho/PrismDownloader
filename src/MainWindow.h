@@ -16,6 +16,7 @@
 #include <QHeaderView>
 #include <QFileInfoList>
 #include <QProcess>
+#include <QDialog>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -48,6 +49,7 @@ private:
     void setupUI();
     void setupStyles();
     void logMessage(const QString &msg);
+    bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange);
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -58,7 +60,7 @@ private:
     QPushButton *m_navInfoBtn;
     QPushButton *m_openFolderBtn;
 
-    // Componentes da Tela de Downloads (Página 0)
+    // Componentes da Tela de Downloads (Página 0 - Estilo aTube Catcher)
     QLineEdit *m_urlInput;
     QComboBox *m_qualityCombo;
     QLineEdit *m_timeRangeInput;

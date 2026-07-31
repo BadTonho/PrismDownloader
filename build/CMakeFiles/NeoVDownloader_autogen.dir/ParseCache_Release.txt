@@ -170,6 +170,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/MainWindow.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QButtonGroup
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QCheckBox
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QComboBox
+ mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QDialog
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QFrame
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QHeaderView
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QLabel
@@ -189,6 +190,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/MainWindow.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qbuttongroup.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcheckbox.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcombobox.h
+ mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qdialog.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qframe.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qheaderview.h
  mdp:C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qlabel.h
