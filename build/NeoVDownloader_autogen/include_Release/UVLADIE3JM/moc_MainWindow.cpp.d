@@ -1,5 +1,6 @@
 C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/include_Release/UVLADIE3JM/moc_MainWindow.cpp: C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/MainWindow.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/QFileInfoList \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/QProcess \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/q20functional.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/q20memory.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/q20type_traits.h \
@@ -76,6 +77,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qoverload.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qpair.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qpoint.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qprocess.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qprocessordetection.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qrect.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qrefcount.h \

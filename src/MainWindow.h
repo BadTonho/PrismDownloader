@@ -15,6 +15,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QFileInfoList>
+#include <QProcess>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -30,9 +31,18 @@ private slots:
     void onBrowseClicked();
     void onOpenFolderClicked();
     void switchPage(int index);
+    
+    // Slots da Biblioteca de Mídia
     void refreshLibrary();
     void onPlaySelectedMedia();
     void onLibraryDoubleClicked(int row, int column);
+
+    // Slots do Conversor de Mídia
+    void onConvertBrowseClicked();
+    void onStartConvertClicked();
+    void onCancelConvertClicked();
+    void onConvertProcessOutput();
+    void onConvertProcessFinished(int exitCode);
 
 private:
     void setupUI();
@@ -43,11 +53,12 @@ private:
     QStackedWidget *m_stackedWidget;
     QPushButton *m_navDownloadBtn;
     QPushButton *m_navLibraryBtn;
+    QPushButton *m_navConverterBtn;
     QPushButton *m_navLogsBtn;
     QPushButton *m_navInfoBtn;
     QPushButton *m_openFolderBtn;
 
-    // Componentes da Tela de Downloads
+    // Componentes da Tela de Downloads (Página 0)
     QLineEdit *m_urlInput;
     QComboBox *m_qualityCombo;
     QLineEdit *m_timeRangeInput;
@@ -65,13 +76,24 @@ private:
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
 
-    // Tela de Biblioteca de Mídias (Página 1 do StackedWidget)
+    // Tela de Biblioteca de Mídias (Página 1)
     QTableWidget *m_libraryTable;
 
-    // Tela de Terminal de Logs (Página 2 do StackedWidget)
+    // Tela de Conversão de Vídeo (Página 2)
+    QLineEdit *m_convertInput;
+    QComboBox *m_convertFormatCombo;
+    QPushButton *m_convertBrowseBtn;
+    QPushButton *m_startConvertBtn;
+    QPushButton *m_cancelConvertBtn;
+    QProgressBar *m_convertProgressBar;
+    QLabel *m_convertStatusLabel;
+    QLabel *m_convertEngineLabel;
+    QProcess *m_convertProcess;
+
+    // Tela de Terminal de Logs (Página 3)
     QTextEdit *m_logEdit;
 
-    // Componentes da Tela de Informações (Página 3 do StackedWidget)
+    // Componentes da Tela de Informações (Página 4)
     QLabel *m_gpuModelLabel;
     QLabel *m_gpuCodecLabel;
     QLabel *m_gpuStatusLabel;

@@ -13,12 +13,13 @@
 #include <QSettings>
 #include <QDir>
 #include <QFileInfo>
+#include <QCoreApplication>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent), m_convertProcess(nullptr)
 {
     setWindowTitle("NeoVDownloader - Turbo Edition");
-    resize(960, 580);
+    resize(960, 600);
 
     setupUI();
     setupStyles();
@@ -37,6 +38,10 @@ MainWindow::MainWindow(QWidget *parent)
             m_gpuStatusLabel->setText("ATIVO E OPERANTE (NVENC Hardware Engine)");
             m_gpuStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
         }
+        if (m_convertEngineLabel) {
+            m_convertEngineLabel->setText("Acelerado por Hardware (" + gpuName + " / NVENC)");
+            m_convertEngineLabel->setStyleSheet("color: #10b981; font-weight: bold;");
+        }
         logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
     } else {
         if (m_gpuModelLabel) m_gpuModelLabel->setText("Nenhuma aceleração dedicada NVIDIA foi localizada");
@@ -44,6 +49,10 @@ MainWindow::MainWindow(QWidget *parent)
         if (m_gpuStatusLabel) {
             m_gpuStatusLabel->setText("MODO FALLBACK CPU (Multi-thread)");
             m_gpuStatusLabel->setStyleSheet("color: #f59e0b; font-weight: bold; font-size: 13px;");
+        }
+        if (m_convertEngineLabel) {
+            m_convertEngineLabel->setText("Modo Fallback CPU Padrão (Multi-thread)");
+            m_convertEngineLabel->setStyleSheet("color: #f59e0b; font-weight: bold;");
         }
         logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
     }
@@ -69,7 +78,7 @@ MainWindow::MainWindow(QWidget *parent)
                     m_progressBar->setValue(100);
                     m_statusLabel->setText("Status: Concluído e salvo na pasta com sucesso!");
                     logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
-                    refreshLibrary(); // Atualizar a biblioteca automaticamente ao terminar o download!
+                    refreshLibrary();
 
                     if (m_notifyCheckBox->isChecked()) {
                         QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na pasta de destino.");
@@ -79,7 +88,15 @@ MainWindow::MainWindow(QWidget *parent)
         }, Qt::QueuedConnection);
     });
 
-    // Carregar a biblioteca inicial
+    // Configurar o QProcess para conversões nativas via FFmpeg
+    m_convertProcess = new QProcess(this);
+    connect(m_convertProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::onConvertProcessOutput);
+    connect(m_convertProcess, &QProcess::readyReadStandardError, this, &MainWindow::onConvertProcessOutput);
+    connect(m_convertProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            [this](int exitCode, QProcess::ExitStatus /*exitStatus*/) {
+                onConvertProcessFinished(exitCode);
+            });
+
     refreshLibrary();
 }
 
@@ -91,6 +108,10 @@ MainWindow::~MainWindow()
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
 
     m_engine.cancelCurrent();
+    if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
+        m_convertProcess->kill();
+        m_convertProcess->waitForFinished();
+    }
 }
 
 void MainWindow::setupUI()
@@ -128,6 +149,11 @@ void MainWindow::setupUI()
     m_navLibraryBtn->setCheckable(true);
     m_navLibraryBtn->setCursor(Qt::PointingHandCursor);
 
+    m_navConverterBtn = new QPushButton("Conversor", sidebar);
+    m_navConverterBtn->setObjectName("navBtn");
+    m_navConverterBtn->setCheckable(true);
+    m_navConverterBtn->setCursor(Qt::PointingHandCursor);
+
     m_navLogsBtn = new QPushButton("Terminal de Logs", sidebar);
     m_navLogsBtn->setObjectName("navBtn");
     m_navLogsBtn->setCheckable(true);
@@ -142,11 +168,13 @@ void MainWindow::setupUI()
     navGroup->setExclusive(true);
     navGroup->addButton(m_navDownloadBtn, 0);
     navGroup->addButton(m_navLibraryBtn, 1);
-    navGroup->addButton(m_navLogsBtn, 2);
-    navGroup->addButton(m_navInfoBtn, 3);
+    navGroup->addButton(m_navConverterBtn, 2);
+    navGroup->addButton(m_navLogsBtn, 3);
+    navGroup->addButton(m_navInfoBtn, 4);
 
     sidebarLayout->addWidget(m_navDownloadBtn);
     sidebarLayout->addWidget(m_navLibraryBtn);
+    sidebarLayout->addWidget(m_navConverterBtn);
     sidebarLayout->addWidget(m_navLogsBtn);
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
@@ -335,7 +363,90 @@ void MainWindow::setupUI()
 
     m_stackedWidget->addWidget(pageLibrary);
 
-    // ---> TELA 2: TERMINAL DE LOGS <---
+    // ---> TELA 2: CONVERSOR DE VÍDEO E ÁUDIO <---
+    QWidget *pageConverter = new QWidget(m_stackedWidget);
+    QVBoxLayout *convLayout = new QVBoxLayout(pageConverter);
+    convLayout->setSpacing(16);
+    convLayout->setContentsMargins(24, 20, 24, 20);
+
+    QGroupBox *convGroup = new QGroupBox("Conversor Nativo de Mídia", pageConverter);
+    QGridLayout *convGrid = new QGridLayout(convGroup);
+    convGrid->setSpacing(14);
+    convGrid->setContentsMargins(16, 26, 16, 18);
+
+    QLabel *lblConvFile = new QLabel("Arquivo de Origem:", pageConverter);
+    m_convertInput = new QLineEdit(pageConverter);
+    m_convertInput->setPlaceholderText("Selecione um vídeo ou música no seu computador...");
+    m_convertBrowseBtn = new QPushButton("Selecionar...", pageConverter);
+    m_convertBrowseBtn->setObjectName("browseBtn");
+    m_convertBrowseBtn->setCursor(Qt::PointingHandCursor);
+    m_convertBrowseBtn->setMinimumHeight(34);
+    connect(m_convertBrowseBtn, &QPushButton::clicked, this, &MainWindow::onConvertBrowseClicked);
+
+    QHBoxLayout *convFileLayout = new QHBoxLayout();
+    convFileLayout->addWidget(m_convertInput);
+    convFileLayout->addWidget(m_convertBrowseBtn);
+
+    QLabel *lblConvFormat = new QLabel("Formato de Saída:", pageConverter);
+    m_convertFormatCombo = new QComboBox(pageConverter);
+    m_convertFormatCombo->addItem("MP4 (H.264 / NVENC - Compatibilidade Universal)");
+    m_convertFormatCombo->addItem("MP4 (HEVC / H.265 - Compressão de Alta Densidade)");
+    m_convertFormatCombo->addItem("MKV (Matroska - Container Sem Perdas)");
+    m_convertFormatCombo->addItem("MP3 (Áudio MP3 Alta Fidelidade - 320kbps)");
+    m_convertFormatCombo->addItem("WAV (Áudio Sem Compressão / Estúdios)");
+    m_convertFormatCombo->addItem("WEBM (Otimizado para Web e Redes Sociais)");
+
+    QLabel *lblConvEngineTitle = new QLabel("Motor de Aceleração:", pageConverter);
+    m_convertEngineLabel = new QLabel("Sondando GPU...", pageConverter);
+
+    convGrid->addWidget(lblConvFile, 0, 0);
+    convGrid->addLayout(convFileLayout, 0, 1);
+    convGrid->addWidget(lblConvFormat, 1, 0);
+    convGrid->addWidget(m_convertFormatCombo, 1, 1);
+    convGrid->addWidget(lblConvEngineTitle, 2, 0);
+    convGrid->addWidget(m_convertEngineLabel, 2, 1);
+
+    convLayout->addWidget(convGroup);
+
+    QHBoxLayout *convBtnLayout = new QHBoxLayout();
+    m_startConvertBtn = new QPushButton("INICIAR CONVERSÃO RÁPIDA", pageConverter);
+    m_startConvertBtn->setObjectName("startBtn");
+    m_startConvertBtn->setCursor(Qt::PointingHandCursor);
+    m_startConvertBtn->setMinimumHeight(44);
+    connect(m_startConvertBtn, &QPushButton::clicked, this, &MainWindow::onStartConvertClicked);
+
+    m_cancelConvertBtn = new QPushButton("CANCELAR", pageConverter);
+    m_cancelConvertBtn->setObjectName("cancelBtn");
+    m_cancelConvertBtn->setCursor(Qt::PointingHandCursor);
+    m_cancelConvertBtn->setMinimumHeight(44);
+    m_cancelConvertBtn->setEnabled(false);
+    connect(m_cancelConvertBtn, &QPushButton::clicked, this, &MainWindow::onCancelConvertClicked);
+
+    convBtnLayout->addWidget(m_startConvertBtn, 3);
+    convBtnLayout->addWidget(m_cancelConvertBtn, 1);
+    convLayout->addLayout(convBtnLayout);
+
+    QGroupBox *convMonGroup = new QGroupBox("Progresso da Conversão", pageConverter);
+    QVBoxLayout *convMonLayout = new QVBoxLayout(convMonGroup);
+    convMonLayout->setSpacing(12);
+    convMonLayout->setContentsMargins(16, 24, 16, 16);
+
+    m_convertStatusLabel = new QLabel("Status do Conversor: Aguardando seleção do arquivo...", pageConverter);
+    m_convertStatusLabel->setStyleSheet("font-weight: bold; font-size: 13px; color: #38bdf8;");
+
+    m_convertProgressBar = new QProgressBar(pageConverter);
+    m_convertProgressBar->setRange(0, 100);
+    m_convertProgressBar->setValue(0);
+    m_convertProgressBar->setMinimumHeight(22);
+
+    convMonLayout->addWidget(m_convertStatusLabel);
+    convMonLayout->addWidget(m_convertProgressBar);
+
+    convLayout->addWidget(convMonGroup);
+    convLayout->addStretch();
+    m_stackedWidget->addWidget(pageConverter);
+
+    // ---> TELA 3: TERMINAL DE LOGS <---
     QWidget *pageLogs = new QWidget(m_stackedWidget);
     QVBoxLayout *logsLayout = new QVBoxLayout(pageLogs);
     logsLayout->setSpacing(12);
@@ -351,7 +462,7 @@ void MainWindow::setupUI()
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
 
-    // ---> TELA 3: INFORMAÇÕES E HARDWARE COM DESIGN MODERNO <---
+    // ---> TELA 4: INFORMAÇÕES E HARDWARE COM DESIGN MODERNO <---
     QWidget *pageInfo = new QWidget(m_stackedWidget);
     QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
     infoLayout->setSpacing(16);
@@ -453,7 +564,7 @@ void MainWindow::setupUI()
     infoLayout->addStretch();
     m_stackedWidget->addWidget(pageInfo);
 
-    // Conectar navegação e botões
+    // Conectar navegação e botões principais
     connect(navGroup, &QButtonGroup::idClicked, this, &MainWindow::switchPage);
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
@@ -465,9 +576,151 @@ void MainWindow::switchPage(int index)
 {
     if (m_stackedWidget) {
         m_stackedWidget->setCurrentIndex(index);
-        if (index == 1) { // Se abriu a aba Biblioteca, revigorar a lista de vídeos baixados!
+        if (index == 1) { // Se abriu a aba Biblioteca, atualizar a tabela
             refreshLibrary();
         }
+    }
+}
+
+void MainWindow::onConvertBrowseClicked()
+{
+    QString file = QFileDialog::getOpenFileName(this, "Selecione a Mídia para Converter", m_outputDirInput->text(),
+                                                "Arquivos de Mídia (*.mp4 *.mkv *.avi *.mov *.webm *.flv *.mp3 *.m4a *.wav);;Todos os Arquivos (*.*)");
+    if (!file.isEmpty()) {
+        m_convertInput->setText(file);
+        m_convertStatusLabel->setText("Status do Conversor: Arquivo selecionado! Pronto para converter.");
+        logMessage("[Conversor] Arquivo de origem selecionado: " + file);
+    }
+}
+
+void MainWindow::onStartConvertClicked()
+{
+    QString inFile = m_convertInput->text().trimmed();
+    if (inFile.isEmpty() || !QFile::exists(inFile)) {
+        QMessageBox::warning(this, "Atenção", "Selecione um arquivo de mídia existente no computador para converter.");
+        return;
+    }
+
+    QString formatText = m_convertFormatCombo->currentText();
+    QFileInfo fileInfo(inFile);
+    QString baseName = fileInfo.completeBaseName();
+    QString outFolder = m_outputDirInput->text().trimmed();
+    QDir dir(outFolder);
+    if (!dir.exists()) dir.mkpath(".");
+
+    QString ext = ".mp4";
+    QStringList args;
+    args << "-y" << "-i" << inFile;
+
+    bool hasAccel = m_engine.gpuDetector()->hasHardwareAcceleration();
+
+    if (formatText.startsWith("MP4 (H.264")) {
+        ext = "_convertido.mp4";
+        if (hasAccel) {
+            args << "-c:v" << "h264_nvenc" << "-preset" << "p4" << "-cq" << "23" << "-c:a" << "aac" << "-b:a" << "192k";
+        } else {
+            args << "-c:v" << "libx264" << "-crf" << "23" << "-c:a" << "aac";
+        }
+    } else if (formatText.startsWith("MP4 (HEVC")) {
+        ext = "_hevc.mp4";
+        if (hasAccel) {
+            args << "-c:v" << "hevc_nvenc" << "-preset" << "p4" << "-cq" << "25" << "-c:a" << "aac" << "-b:a" << "192k";
+        } else {
+            args << "-c:v" << "libx265" << "-crf" << "25" << "-c:a" << "aac";
+        }
+    } else if (formatText.startsWith("MKV")) {
+        ext = "_convertido.mkv";
+        args << "-c" << "copy"; // Troca ultrarrápida de container
+    } else if (formatText.startsWith("MP3")) {
+        ext = "_audio.mp3";
+        args << "-vn" << "-c:a" << "libmp3lame" << "-b:a" << "320k";
+    } else if (formatText.startsWith("WAV")) {
+        ext = "_audio.wav";
+        args << "-vn" << "-c:a" << "pcm_s16le";
+    } else if (formatText.startsWith("WEBM")) {
+        ext = "_convertido.webm";
+        args << "-c:v" << "libvpx-vp9" << "-b:v" << "2M" << "-c:a" << "libopus";
+    }
+
+    QString outFile = dir.absoluteFilePath(baseName + ext);
+    args << outFile;
+
+    QString ffmpegPath = QCoreApplication::applicationDirPath() + "/ffmpeg.exe";
+    if (!QFile::exists(ffmpegPath)) {
+        ffmpegPath = "ffmpeg";
+    }
+
+    m_convertProgressBar->setRange(0, 0); // Modo indeterminado (animado) durante a conversão
+    m_convertStatusLabel->setText("Status: Convertendo mídia em alta velocidade...");
+    m_startConvertBtn->setEnabled(false);
+    m_cancelConvertBtn->setEnabled(true);
+
+    logMessage("\n========================================================");
+    logMessage(QString("[Conversor] Iniciando conversão para %1").arg(outFile));
+    logMessage("[Conversor] Comando: " + ffmpegPath + " " + args.join(" "));
+
+    m_convertProcess->start(ffmpegPath, args);
+    if (!m_convertProcess->waitForStarted()) {
+        QMessageBox::critical(this, "Erro", "Não foi possível acionar o executável do FFmpeg.");
+        m_convertProgressBar->setRange(0, 100);
+        m_convertProgressBar->setValue(0);
+        m_startConvertBtn->setEnabled(true);
+        m_cancelConvertBtn->setEnabled(false);
+    }
+}
+
+void MainWindow::onCancelConvertClicked()
+{
+    if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
+        m_convertProcess->kill();
+        logMessage("[Conversor] Conversão interrompida pelo usuário.");
+        m_convertStatusLabel->setText("Status do Conversor: Operação cancelada.");
+        m_convertProgressBar->setRange(0, 100);
+        m_convertProgressBar->setValue(0);
+        m_startConvertBtn->setEnabled(true);
+        m_cancelConvertBtn->setEnabled(false);
+    }
+}
+
+void MainWindow::onConvertProcessOutput()
+{
+    if (!m_convertProcess) return;
+    QByteArray out = m_convertProcess->readAllStandardOutput();
+    QByteArray err = m_convertProcess->readAllStandardError();
+
+    if (!out.isEmpty()) logMessage(QString::fromUtf8(out).trimmed());
+    if (!err.isEmpty()) {
+        QString errStr = QString::fromUtf8(err).trimmed();
+        // Não flodar com todas as linhas, mas exibir progresso se houver tempo
+        if (errStr.contains("time=") || errStr.contains("size=") || errStr.contains("speed=")) {
+            int pos = errStr.indexOf("time=");
+            if (pos != -1) {
+                QString sub = errStr.mid(pos, 25);
+                m_convertStatusLabel->setText("Status: Convertendo (" + sub + ")...");
+            }
+        }
+    }
+}
+
+void MainWindow::onConvertProcessFinished(int exitCode)
+{
+    m_convertProgressBar->setRange(0, 100);
+    m_startConvertBtn->setEnabled(true);
+    m_cancelConvertBtn->setEnabled(false);
+
+    if (exitCode == 0) {
+        m_convertProgressBar->setValue(100);
+        m_convertStatusLabel->setText("Status: Conversão finalizada com sucesso! Salvo na sua Biblioteca.");
+        logMessage("[Sucesso] Arquivo convertido e salvo na pasta com sucesso!");
+        refreshLibrary();
+
+        if (m_notifyCheckBox->isChecked()) {
+            QMessageBox::information(this, "Conversão Concluída", "O arquivo foi convertido e salvo na sua pasta de destino com sucesso!");
+        }
+    } else {
+        m_convertProgressBar->setValue(0);
+        m_convertStatusLabel->setText("Status: Erro na conversão ou processo interrompido.");
+        logMessage(QString("[Erro] Conversor encerrou com código %1").arg(exitCode));
     }
 }
 
