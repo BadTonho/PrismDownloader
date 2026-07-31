@@ -155,6 +155,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtGui/qwindowdefs_win.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QCheckBox \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QComboBox \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QDialog \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QLabel \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QLineEdit \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QMainWindow \
@@ -168,6 +169,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractspinbox.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcheckbox.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcombobox.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qdialog.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qframe.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qlabel.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qlineedit.h \

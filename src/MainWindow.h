@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QCheckBox>
+#include <QDialog>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -24,6 +25,7 @@ private slots:
     void onBrowseClicked();
     void onOpenFolderClicked();
     void onInfoClicked();
+    void onLogsClicked();
 
 private:
     void setupUI();
@@ -38,20 +40,24 @@ private:
     QPushButton *m_browseDirBtn;
     QCheckBox *m_notifyCheckBox;
     
-    // Botões de Ação
+    // Botões de Ação Principal e Ferramentas
     QPushButton *m_startBtn;
     QPushButton *m_cancelBtn;
     QPushButton *m_openFolderBtn;
     QPushButton *m_infoBtn;
+    QPushButton *m_logsBtn;
 
     // Indicadores e Monitoramento ao vivo
     QProgressBar *m_progressBar;
     QLabel *m_speedLabel;
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
-    QTextEdit *m_logArea;
 
-    // Dados de Hardware memorizados para exibição no botão de Informações
+    // Janela flutuante dedicada para o Terminal de Logs
+    QDialog *m_logDialog;
+    QTextEdit *m_logEdit;
+
+    // Dados de Hardware memorizados
     QString m_hardwareInfoText;
 
     // Motor Central nativo C++

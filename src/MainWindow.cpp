@@ -17,14 +17,13 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle("NeoVDownloader - Turbo Edition");
-    resize(860, 700);
+    resize(820, 480); // Janela agora é ultracompatada, moderna e limpa sem o blocão de logs ocupando o fundo!
 
     setupUI();
     setupStyles();
 
     m_engine.initialize();
 
-    // Sondar placa e preparar texto para o botão de Informações de Hardware
     GPUDetector *gpu = m_engine.gpuDetector();
     QString gpuName = QString::fromStdString(gpu->getGPUName());
     QString codec = QString::fromStdString(gpu->getRecommendedCodec());
@@ -90,6 +89,7 @@ MainWindow::~MainWindow()
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
 
     m_engine.cancelCurrent();
+    if (m_logDialog) m_logDialog->close();
 }
 
 void MainWindow::setupUI()
@@ -101,7 +101,7 @@ void MainWindow::setupUI()
     mainLayout->setSpacing(16);
     mainLayout->setContentsMargins(20, 20, 20, 20);
 
-    // 1. Grupo de Configurações e Parâmetros (Sem emojis poluentes)
+    // 1. Grupo de Configurações e Parâmetros
     QGroupBox *inputGroup = new QGroupBox("Parâmetros do Download", this);
     QGridLayout *inputLayout = new QGridLayout(inputGroup);
     inputLayout->setSpacing(12);
@@ -164,36 +164,45 @@ void MainWindow::setupUI()
 
     mainLayout->addWidget(inputGroup);
 
-    // 2. Botões de Ação Principal e Informações
-    QHBoxLayout *btnLayout = new QHBoxLayout();
-    m_startBtn = new QPushButton("INICIAR DOWNLOAD", this);
+    // 2. Duas linhas organizadas de Botões: Controles Principais (Superior) e Ferramentas/Utilitários (Inferior)
+    QHBoxLayout *mainBtnLayout = new QHBoxLayout();
+    m_startBtn = new QPushButton("INICIAR DOWNLOAD ACELERADO", this);
     m_startBtn->setObjectName("startBtn");
     m_startBtn->setCursor(Qt::PointingHandCursor);
-    m_startBtn->setMinimumHeight(42);
+    m_startBtn->setMinimumHeight(44);
 
     m_cancelBtn = new QPushButton("CANCELAR", this);
     m_cancelBtn->setObjectName("cancelBtn");
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
-    m_cancelBtn->setMinimumHeight(42);
+    m_cancelBtn->setMinimumHeight(44);
     m_cancelBtn->setEnabled(false);
 
+    mainBtnLayout->addWidget(m_startBtn, 3);
+    mainBtnLayout->addWidget(m_cancelBtn, 1);
+    mainLayout->addLayout(mainBtnLayout);
+
+    QHBoxLayout *toolsLayout = new QHBoxLayout();
     m_openFolderBtn = new QPushButton("ABRIR PASTA", this);
     m_openFolderBtn->setObjectName("openFolderBtn");
     m_openFolderBtn->setCursor(Qt::PointingHandCursor);
-    m_openFolderBtn->setMinimumHeight(42);
+    m_openFolderBtn->setMinimumHeight(36);
+
+    m_logsBtn = new QPushButton("TERMINAL DE LOGS", this);
+    m_logsBtn->setObjectName("toolBtn");
+    m_logsBtn->setCursor(Qt::PointingHandCursor);
+    m_logsBtn->setMinimumHeight(36);
 
     m_infoBtn = new QPushButton("INFO / HARDWARE", this);
-    m_infoBtn->setObjectName("infoBtn");
+    m_infoBtn->setObjectName("toolBtn");
     m_infoBtn->setCursor(Qt::PointingHandCursor);
-    m_infoBtn->setMinimumHeight(42);
+    m_infoBtn->setMinimumHeight(36);
 
-    btnLayout->addWidget(m_startBtn, 4);
-    btnLayout->addWidget(m_cancelBtn, 2);
-    btnLayout->addWidget(m_openFolderBtn, 3);
-    btnLayout->addWidget(m_infoBtn, 3);
-    mainLayout->addLayout(btnLayout);
+    toolsLayout->addWidget(m_openFolderBtn, 2);
+    toolsLayout->addWidget(m_logsBtn, 2);
+    toolsLayout->addWidget(m_infoBtn, 2);
+    mainLayout->addLayout(toolsLayout);
 
-    // 3. Monitoramento em Tempo Real
+    // 3. Monitor de Progresso
     QGroupBox *monitorGroup = new QGroupBox("Monitor de Progresso", this);
     QVBoxLayout *monitorLayout = new QVBoxLayout(monitorGroup);
     monitorLayout->setSpacing(12);
@@ -221,26 +230,42 @@ void MainWindow::setupUI()
 
     mainLayout->addWidget(monitorGroup);
 
-    // 4. Terminal de Log
-    QLabel *logLabel = new QLabel("Terminal de Log do Sistema:", this);
-    mainLayout->addWidget(logLabel);
-
-    m_logArea = new QTextEdit(this);
-    m_logArea->setReadOnly(true);
-    m_logArea->setObjectName("logArea");
-    mainLayout->addWidget(m_logArea);
-
+    // 4. Conectar todos os botões aos seus respectivos slots
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
     connect(m_browseDirBtn, &QPushButton::clicked, this, &MainWindow::onBrowseClicked);
     connect(m_openFolderBtn, &QPushButton::clicked, this, &MainWindow::onOpenFolderClicked);
     connect(m_infoBtn, &QPushButton::clicked, this, &MainWindow::onInfoClicked);
+    connect(m_logsBtn, &QPushButton::clicked, this, &MainWindow::onLogsClicked);
+
+    // 5. Configurar a Janela Flutuante de Terminal de Logs (oculta até que o usuário clique em TERMINAL DE LOGS)
+    m_logDialog = new QDialog(this);
+    m_logDialog->setWindowTitle("Terminal de Processamento Nativo (Logs)");
+    m_logDialog->resize(720, 420);
+    QVBoxLayout *dlgLayout = new QVBoxLayout(m_logDialog);
+    dlgLayout->setContentsMargins(14, 14, 14, 14);
+
+    QLabel *dlgTitle = new QLabel("Saída em Tempo Real dos Motores C++ e Extratores:", m_logDialog);
+    dlgTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 13px;");
+    dlgLayout->addWidget(dlgTitle);
+
+    m_logEdit = new QTextEdit(m_logDialog);
+    m_logEdit->setReadOnly(true);
+    m_logEdit->setObjectName("logArea");
+    dlgLayout->addWidget(m_logEdit);
+
+    QPushButton *closeDlgBtn = new QPushButton("FECHAR TERMINAL", m_logDialog);
+    closeDlgBtn->setCursor(Qt::PointingHandCursor);
+    closeDlgBtn->setMinimumHeight(34);
+    closeDlgBtn->setObjectName("cancelBtn");
+    connect(closeDlgBtn, &QPushButton::clicked, m_logDialog, &QDialog::hide);
+    dlgLayout->addWidget(closeDlgBtn);
 }
 
 void MainWindow::setupStyles()
 {
     QString qss = R"(
-        QMainWindow {
+        QMainWindow, QDialog {
             background-color: #141414;
             color: #dedede;
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -310,7 +335,7 @@ void MainWindow::setupStyles()
             background-color: #10b981;
             color: #031c12;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 14px;
             border-radius: 5px;
             border: none;
             padding: 8px;
@@ -364,18 +389,19 @@ void MainWindow::setupStyles()
             background-color: #38bdf8;
             color: #061824;
         }
-        QPushButton#infoBtn {
-            background-color: #262626;
+        QPushButton#toolBtn {
+            background-color: #222222;
             color: #e2e8f0;
             font-weight: bold;
             font-size: 13px;
-            border: 1px solid #64748b;
+            border: 1px solid #525252;
             border-radius: 5px;
             padding: 8px;
         }
-        QPushButton#infoBtn:hover {
-            background-color: #64748b;
+        QPushButton#toolBtn:hover {
+            background-color: #383838;
             color: #ffffff;
+            border: 1px solid #10b981;
         }
         QProgressBar {
             background-color: #222222;
@@ -401,11 +427,14 @@ void MainWindow::setupStyles()
     )";
 
     setStyleSheet(qss);
+    if (m_logDialog) m_logDialog->setStyleSheet(qss);
 }
 
 void MainWindow::logMessage(const QString &msg)
 {
-    m_logArea->append(msg);
+    if (m_logEdit) {
+        m_logEdit->append(msg);
+    }
 }
 
 void MainWindow::onBrowseClicked()
@@ -432,6 +461,15 @@ void MainWindow::onInfoClicked()
 {
     QMessageBox::information(this, "Informações de Hardware e Sistema", m_hardwareInfoText);
     logMessage("[System] Exibindo janela de Informações e Hardware.");
+}
+
+void MainWindow::onLogsClicked()
+{
+    if (m_logDialog) {
+        m_logDialog->show();
+        m_logDialog->raise();
+        m_logDialog->activateWindow();
+    }
 }
 
 void MainWindow::onStartClicked()
