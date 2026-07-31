@@ -33,10 +33,13 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [x] **1.1. Definição da Stack Principal & Visual:** **C++ com Qt / QML** 🏆 (Escolhida)
   * **Por que essa escolha?** Combina a velocidade extrema de inicialização e baixo consumo do C++ com a engine visual mais conceituada do mercado (Qt/QML), permitindo animações suaves fluidas na GPU sem parecer um software clássico dos anos 2000.
   * Além disso, é nativa, fantástica para distribuição sem exigir instalação de interpretadores terceiros (como Python ou Node).
-* [ ] **1.2. Definição de Recursos MVP (Versão 1.0):**
-  * Baixar vídeo único em alta resolução (4K, 1080p, 720p).
-  * Baixar apenas o Áudio (MP3 / FLAC - Ideal para podcasts/músicas).
-  * Suporte a Playlists inteiras ou vídeos longos (Lives).
+* [x] **1.2. Definição de Recursos MVP (Versão 1.0):** 🏁 (Concluído e Alinhado!)
+  * ⚡ **Download Multiresolução:** Baixar vídeos em alta qualidade (4K, 2K, 1080p, 720p, 60fps) do YouTube e outras plataformas.
+  * 🎵 **Extração de Áudio Direto:** Modo de conversão instantânea para MP3 ou FLAC em máxima qualidade (ideal para músicas, podcasts e áudio aulas).
+  * 🏎️ **Motor "Zero-Lag" para Vídeos Longos (Stream Copy):** Evitar o grande problema do aTube Catcher alavancando junção instantânea (*muxing*) sem sobrecarregar a CPU.
+  * 🚀 **Aceleração por Hardware em GPU:** Acionar chips dedicados de vídeo nas conversões de arquivos (NVIDIA NVENC para a sua GTX 1660 Super, e detecção limpa para AMD/Intel).
+  * 📚 **Suporte a Playlists e Vídeos Longos:** Gerenciador estável de fila, mostrando velocidade real (MB/s) e tempo restante.
+  * ✂️ **Recorte Inteligente de Faixa de Tempo:** Poder recortar e baixar apenas um trecho específico de um vídeo ou live (Ex: das `10:15` às `18:40`) sem descarregar horas inteiras desnecessariamente.
 
 ---
 
@@ -72,4 +75,4 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [ ] **5.3. Criar Instalador Amigo:** (Opcional) Usar *Inno Setup* para criar um instalador oficial ("Setup.exe") com ícone personalizado e atalho na Área de Trabalho.
 
 ---
-*Status do Projeto: 🟢 Stack C++ & Qt definida! Discutindo escopo de funcionalidades da Versão 1.0 (Etapa 1.2).*
+*Status do Projeto: 🏆 Etapa 1 Concluída com Sucesso! (Stack C++ & Qt sacramentada + Recursos da Versão 1.0 alinhados). Prontos para discutir a Etapa 2 (Motor Core em C++) quando quiser!*
