@@ -1445,7 +1445,7 @@ void MainWindow::checkForUpdates(bool silent)
     }
     logMessage("[Updater] Consultando API pública do GitHub para release mais recente...");
 
-    QUrl url("https://api.github.com/repos/BadTonho/Baixar/releases/latest");
+    QUrl url("https://api.github.com/repos/BadTonho/PrismDownloader/releases/latest");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, "PrismDownloader-Updater/1.0 (Windows; Qt)");
     

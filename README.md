@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/BadTonho/Baixar?color=00e676&label=Release%20Oficial&style=for-the-badge&logo=github" alt="GitHub Release">
+  <img src="https://img.shields.io/github/v/release/BadTonho/PrismDownloader?color=00e676&label=Release%20Oficial&style=for-the-badge&logo=github" alt="GitHub Release">
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17">
   <img src="https://img.shields.io/badge/Qt_GUI-6.7%20Dark%20Tech-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Qt 6">
   <img src="https://img.shields.io/badge/NVIDIA-NVENC%20Hardware-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="NVIDIA NVENC">
@@ -48,7 +48,7 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetiv
 
 ## 📦 Como Instalar e Usar
 
-Acesse a nossa aba de [Releases Oficiais (Clique Aqui)](https://github.com/BadTonho/Baixar/releases/latest) no GitHub para baixar os pacotes completos prontos para uso no Windows (já acompanham motores FFmpeg e yt-dlp embutidos no binário):
+Acesse a nossa aba de [Releases Oficiais (Clique Aqui)](https://github.com/BadTonho/PrismDownloader/releases/latest) no GitHub para baixar os pacotes completos prontos para uso no Windows (já acompanham motores FFmpeg e yt-dlp embutidos no binário):
 
 | Pacote Disponível | O que oferece? |
 | :--- | :--- |
@@ -71,8 +71,8 @@ Se você deseja compilar este projeto nativo em sua própria estação de trabal
 ### Passos Rápido para Build via CMake (PowerShell)
 ```powershell
 # 1. Clone o repositório oficial
-git clone https://github.com/BadTonho/Baixar.git
-cd Baixar
+git clone https://github.com/BadTonho/PrismDownloader.git
+cd PrismDownloader
 
 # 2. Gere os arquivos de projeto apontando para o seu compilador Visual Studio
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64

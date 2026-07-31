@@ -9,7 +9,7 @@ Seja você um programador experiente em C++, um designer de interfaces em Qt ou 
 ## 📋 Como Abertura de Issues (Relatório de Bugs e Sugestões)
 
 Ao encontrar um comportamento anormal ou desejar sugerir uma funcionalidade:
-1. Verifique na nossa lista de [Issues Permanentes](https://github.com/BadTonho/Baixar/issues) se alguém já reportou o mesmo tema.
+1. Verifique na nossa lista de [Issues Permanentes](https://github.com/BadTonho/PrismDownloader/issues) se alguém já reportou o mesmo tema.
 2. Utilize títulos claros, por exemplo: `[Bug] Janela piscando no Windows Terminal preview 1.18` ou `[Sugestão] Atalho de teclado para limpar biblioteca`.
 3. Anexe capturas de tela e o log de execução sempre que possível.
 
