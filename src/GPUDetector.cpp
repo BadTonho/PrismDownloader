@@ -4,12 +4,20 @@
 #include <memory>
 #include <algorithm>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <QProcess>
 #include <QString>
 #include <QStringList>
 
 std::string GPUDetector::execCommand(const char* cmd) {
     QProcess process;
+#ifdef _WIN32
+    process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
+        args->flags |= 0x08000000; // CREATE_NO_WINDOW
+    });
+#endif
     process.setProcessChannelMode(QProcess::MergedChannels);
     process.start("cmd.exe", QStringList() << "/c" << QString::fromUtf8(cmd));
     process.waitForFinished(10000);
@@ -18,15 +26,21 @@ std::string GPUDetector::execCommand(const char* cmd) {
 }
 
 void GPUDetector::detect() {
-    std::cout << "[GPUDetector] Iniciando sondagem nativa de hardware em C++ puro...\n";
+    std::cout << "[GPUDetector] Iniciando sondagem nativa de hardware em C++ puro via API Win32...\n";
 
-    std::string output = execCommand("ffmpeg -hwaccels 2>&1");
-    // No Windows 11 o comando wmic foi descontinuado pela Microsoft, então usamos o padrão moderno do PowerShell CIM:
-    std::string winGPU = execCommand("powershell -NoProfile -Command \"(Get-CimInstance -ClassName Win32_VideoController).Name\" 2>&1");
-    
-    std::string totalDump = output + " \n " + winGPU;
-    
-    std::cout << "[GPUDetector] Resposta Bruta da Sondagem de Hardware (Placa de Vídeo Localizada):\n  -> " << winGPU << "\n";
+    std::string totalDump = "";
+#ifdef _WIN32
+    DISPLAY_DEVICEA dd;
+    dd.cb = sizeof(dd);
+    DWORD devNum = 0;
+    while (EnumDisplayDevicesA(NULL, devNum, &dd, 0)) {
+        totalDump += dd.DeviceString;
+        totalDump += " ";
+        devNum++;
+    }
+#endif
+
+    std::cout << "[GPUDetector] Resposta Bruta da Sondagem Win32 (Placas Localizadas):\n  -> " << totalDump << "\n";
 
     std::string lower = totalDump;
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);

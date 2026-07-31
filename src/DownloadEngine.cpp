@@ -4,6 +4,9 @@
 #include <array>
 #include <regex>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <QProcess>
 #include <QString>
 #include <QStringList>
@@ -90,6 +93,11 @@ void DownloadEngine::workerLoop(const std::string &command) {
     std::cout << "[DownloadEngine Worker] Executando comando nativo (Modo Silencioso/GUI): " << command << "\n";
     
     QProcess process;
+#ifdef _WIN32
+    process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
+        args->flags |= 0x08000000; // CREATE_NO_WINDOW (Impede qualquer tela de terminal/conhost de surgir no Windows)
+    });
+#endif
     process.setProcessChannelMode(QProcess::MergedChannels);
     process.start("cmd.exe", QStringList() << "/c" << QString::fromUtf8(command.c_str()));
     

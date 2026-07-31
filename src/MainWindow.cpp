@@ -133,6 +133,11 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     m_convertProcess = new QProcess(this);
+#ifdef _WIN32
+    m_convertProcess->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
+        args->flags |= 0x08000000; // CREATE_NO_WINDOW
+    });
+#endif
     connect(m_convertProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::onConvertProcessOutput);
     connect(m_convertProcess, &QProcess::readyReadStandardError, this, &MainWindow::onConvertProcessOutput);
     connect(m_convertProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
@@ -1635,6 +1640,11 @@ void MainWindow::updateYtdlpEngine()
     m_updateStatusLabel->setText("Atualizando motor extrator yt-dlp em segundo plano...");
 
     QProcess *proc = new QProcess(this);
+#ifdef _WIN32
+    proc->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
+        args->flags |= 0x08000000; // CREATE_NO_WINDOW
+    });
+#endif
     connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this, proc](int code, QProcess::ExitStatus status) {
         proc->deleteLater();
         QString out = QString::fromUtf8(proc->readAllStandardOutput()).trimmed();
