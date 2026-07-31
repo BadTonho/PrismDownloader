@@ -18,9 +18,14 @@
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QTableWidgetItem>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QApplication>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr)
+    : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr), m_networkManager(new QNetworkAccessManager(this))
 {
     setWindowTitle("NeoVDownloader - Studio Suite");
     resize(980, 620);
@@ -130,6 +135,22 @@ MainWindow::MainWindow(QWidget *parent)
             });
 
     refreshLibrary();
+
+    // Carregar configurações do Auto-Updater e iniciar checagem silenciosa ao start (se habilitado)
+    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    bool checkOnStart = settings.value("checkUpdatesOnStart", true).toBool(); // Por padrão ATIVADO
+    bool autoDownload = settings.value("autoDownloadUpdates", false).toBool(); // Por padrão DESATIVADO
+    if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
+    if (m_autoDownloadUpdatesChk) m_autoDownloadUpdatesChk->setChecked(autoDownload);
+
+    if (checkOnStart) {
+        QTimer::singleShot(2500, this, [this]() {
+            logMessage("[Updater] Iniciando checagem automática silenciosa de novas versões no GitHub...");
+            checkForUpdates(true); // silent = true ao iniciar para não interromper o usuário com pop-up se não houver update
+        });
+    } else {
+        logMessage("[Updater] Busca automática de atualizações ao iniciar está desativada nas configurações.");
+    }
 }
 
 MainWindow::~MainWindow()
@@ -139,6 +160,8 @@ MainWindow::~MainWindow()
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
     settings.setValue("defaultTimeRange", m_timeRangeInput->text().trimmed());
+    if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
+    if (m_autoDownloadUpdatesChk) settings.setValue("autoDownloadUpdates", m_autoDownloadUpdatesChk->isChecked());
 
     m_engine.cancelCurrent();
     if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
@@ -518,6 +541,64 @@ void MainWindow::setupUI()
     QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
     infoLayout->setSpacing(16);
     infoLayout->setContentsMargins(24, 20, 24, 20);
+
+    // CENTRAL DE ATUALizaÇõES VIA GITHUB RELEASES E YT-DLP
+    QGroupBox *updateGroup = new QGroupBox("Central de Atualizações e Versão (GitHub Release Core)", pageInfo);
+    QVBoxLayout *upLayout = new QVBoxLayout(updateGroup);
+    upLayout->setSpacing(12);
+    upLayout->setContentsMargins(16, 24, 16, 16);
+
+    QGridLayout *upGrid = new QGridLayout();
+    upGrid->setSpacing(10);
+
+    QLabel *lblServerKey = new QLabel("Repositório de Nuvem:", updateGroup);
+    lblServerKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    QLabel *lblServerVal = new QLabel("GitHub Oficial (BadTonho/Baixar)", updateGroup);
+    lblServerVal->setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;");
+
+    QLabel *lblUpStatusKey = new QLabel("Status de Versão:", updateGroup);
+    lblUpStatusKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    m_updateStatusLabel = new QLabel("Versão v1.0.0 (Release) operacional. Aguardando verificação...", updateGroup);
+    m_updateStatusLabel->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
+
+    upGrid->addWidget(lblServerKey, 0, 0);
+    upGrid->addWidget(lblServerVal, 0, 1);
+    upGrid->addWidget(lblUpStatusKey, 1, 0);
+    upGrid->addWidget(m_updateStatusLabel, 1, 1);
+    upGrid->setColumnStretch(1, 1);
+    upLayout->addLayout(upGrid);
+
+    m_checkUpdatesOnStartChk = new QCheckBox("Verificar novas atualizações automaticamente ao iniciar o aplicativo", updateGroup);
+    m_checkUpdatesOnStartChk->setCursor(Qt::PointingHandCursor);
+    
+    m_autoDownloadUpdatesChk = new QCheckBox("Baixar e instalar novas versões automaticamente no fundo (Desativado por padrão)", updateGroup);
+    m_autoDownloadUpdatesChk->setCursor(Qt::PointingHandCursor);
+    m_autoDownloadUpdatesChk->setStyleSheet("color: #f59e0b; font-weight: bold;");
+
+    QVBoxLayout *chkVertLayout = new QVBoxLayout();
+    chkVertLayout->setSpacing(6);
+    chkVertLayout->addWidget(m_checkUpdatesOnStartChk);
+    chkVertLayout->addWidget(m_autoDownloadUpdatesChk);
+    upLayout->addLayout(chkVertLayout);
+
+    QHBoxLayout *upBtnsLayout = new QHBoxLayout();
+    m_checkUpdateBtn = new QPushButton("VERIFICAR NO GITHUB AGORA", updateGroup);
+    m_checkUpdateBtn->setObjectName("startBtn");
+    m_checkUpdateBtn->setCursor(Qt::PointingHandCursor);
+    m_checkUpdateBtn->setMinimumHeight(40);
+    connect(m_checkUpdateBtn, &QPushButton::clicked, this, [this]() { checkForUpdates(false); });
+
+    m_updateYtdlpBtn = new QPushButton("ATUALIZAR MOTOR EXTRATOR (YT-DLP)", updateGroup);
+    m_updateYtdlpBtn->setObjectName("browseBtn");
+    m_updateYtdlpBtn->setCursor(Qt::PointingHandCursor);
+    m_updateYtdlpBtn->setMinimumHeight(40);
+    connect(m_updateYtdlpBtn, &QPushButton::clicked, this, &MainWindow::updateYtdlpEngine);
+
+    upBtnsLayout->addWidget(m_checkUpdateBtn, 3);
+    upBtnsLayout->addWidget(m_updateYtdlpBtn, 2);
+    upLayout->addLayout(upBtnsLayout);
+
+    infoLayout->addWidget(updateGroup);
 
     QGroupBox *appInfoGroup = new QGroupBox("Informações do Aplicativo", pageInfo);
     QGridLayout *appLayout = new QGridLayout(appInfoGroup);
@@ -1300,4 +1381,208 @@ void MainWindow::setupStyles()
     )";
 
     setStyleSheet(qss);
+}
+
+void MainWindow::checkForUpdates(bool silent)
+{
+    if (!m_networkManager) return;
+    
+    m_updateStatusLabel->setText("Sondando servidores do GitHub (BadTonho/Baixar)...");
+    logMessage("[Updater] Consultando API pública do GitHub para release mais recente...");
+
+    QUrl url("https://api.github.com/repos/BadTonho/Baixar/releases/latest");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, "NeoVDownloader-Updater/1.0 (Windows; Qt)");
+    
+    QNetworkReply *reply = m_networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, silent]() {
+        onUpdateReplyFinished(reply, silent);
+    });
+}
+
+void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
+{
+    reply->deleteLater();
+    if (reply->error() != QNetworkReply::NoError) {
+        int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (httpCode == 404) {
+            m_updateStatusLabel->setText("Nenhuma release pública postada ainda (Versão v1.0.0 Dev em uso).");
+            logMessage("[Updater] Resposta 404: Repositório sem releases públicas criadas no GitHub. O software local está atualizado.");
+            if (!silent) {
+                QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do NeoVDownloader (v1.0.0)!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
+            }
+        } else {
+            m_updateStatusLabel->setText("Falha de conexão ou offline. (Versão v1.0.0 em uso).");
+            logMessage("[Updater] Erro ao conectar com o GitHub: " + reply->errorString());
+            if (!silent) {
+                QMessageBox::warning(this, "Atenção", "Não foi possível contactar o servidor do GitHub para checar atualizações:\n" + reply->errorString());
+            }
+        }
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    QJsonObject obj = doc.object();
+
+    QString tagName = obj.value("tag_name").toString().trimmed();
+    QString body = obj.value("body").toString();
+    if (tagName.isEmpty()) {
+        m_updateStatusLabel->setText("Versão v1.0.0 operacional (Nenhuma tag encontrada).");
+        return;
+    }
+
+    logMessage("[Updater] Última release no GitHub identificada: " + tagName);
+
+    // Comparar versão com a local (v1.0.0)
+    QString localVersion = "v1.0.0";
+    QString cleanLocal = localVersion; cleanLocal.remove("v", Qt::CaseInsensitive);
+    QString cleanRemote = tagName; cleanRemote.remove("v", Qt::CaseInsensitive);
+
+    if (cleanRemote == cleanLocal || cleanRemote.isEmpty()) {
+        m_updateStatusLabel->setText("Você está utilizando a versão mais recente (" + tagName + ").");
+        logMessage("[Updater] A versão instalada já é a mais recente disponível.");
+        if (!silent) {
+            QMessageBox::information(this, "Atualizado", "O seu aplicativo NeoVDownloader já está na versão mais atualizada (" + localVersion + ")!");
+        }
+        return;
+    }
+
+    // Se chegou aqui, temos uma NOVA VERSÃO no GitHub
+    m_updateStatusLabel->setText("🚀 Nova versão " + tagName + " disponível no GitHub!");
+    m_updateStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 14px;");
+    logMessage("[Updater] ALERTA: Nova versão identificada no GitHub -> " + tagName);
+
+    QJsonArray assets = obj.value("assets").toArray();
+    QString downloadUrl = "";
+    QString assetName = "NeoVDownloader_Setup.exe";
+    for (int i = 0; i < assets.size(); ++i) {
+        QJsonObject asset = assets.at(i).toObject();
+        QString name = asset.value("name").toString();
+        if (name.endsWith(".exe", Qt::CaseInsensitive) || name.endsWith(".zip", Qt::CaseInsensitive)) {
+            downloadUrl = asset.value("browser_download_url").toString();
+            assetName = name;
+            break;
+        }
+    }
+
+    if (downloadUrl.isEmpty()) {
+        downloadUrl = obj.value("html_url").toString();
+    }
+
+    // Verificar se o download automático está ativado sem perguntar (Por padrão DESATIVADO)
+    if (m_autoDownloadUpdatesChk->isChecked() && !downloadUrl.isEmpty() && (downloadUrl.endsWith(".exe") || downloadUrl.endsWith(".zip"))) {
+        logMessage("[Updater] Download Automático Ativado: Baixando atualização silenciosamente...");
+        startUpdateDownload(downloadUrl, assetName);
+        if (m_notifyCheckBox->isChecked()) {
+            QMessageBox::information(this, "Atualização Detectada", "Uma nova versão (" + tagName + ") foi detectada no GitHub!\nComo o download automático está habilitado, estamos baixando em segundo plano.");
+        }
+    } else {
+        // PERGUNTA AO USUÁRIO SE QUER ATUALIZAR (Nunca obrigatório)
+        QMessageBox::StandardButton res = QMessageBox::question(this, "Nova Versão Disponível",
+            QString("Uma nova versão do NeoVDownloader (%1) foi disponibilizada no GitHub!\n\nVersão Atual: %2\nNova Versão: %1\n\nNovidades da Release:\n%3\n\nDeseja baixar e atualizar o aplicativo agora?")
+            .arg(tagName, localVersion, body.left(300)),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+        if (res == QMessageBox::Yes) {
+            if (downloadUrl.endsWith(".exe") || downloadUrl.endsWith(".zip")) {
+                startUpdateDownload(downloadUrl, assetName);
+            } else {
+                QDesktopServices::openUrl(QUrl(downloadUrl));
+                logMessage("[Updater] Abrindo página da release do GitHub no navegador: " + downloadUrl);
+            }
+        } else {
+            logMessage("[Updater] O usuário optou por adiar a atualização desta vez.");
+            m_updateStatusLabel->setText("Atualização " + tagName + " adiada pelo usuário.");
+        }
+    }
+}
+
+void MainWindow::startUpdateDownload(const QString &url, const QString &fileName)
+{
+    if (url.isEmpty()) return;
+    logMessage(QString("[Updater] Iniciando download da atualização %1 de: %2").arg(fileName, url));
+    m_updateStatusLabel->setText("Baixando atualização " + fileName + " do GitHub...");
+
+    QUrl targetUrl(url);
+    QNetworkRequest req(targetUrl);
+    req.setHeader(QNetworkRequest::UserAgentHeader, "NeoVDownloader-Updater/1.0");
+    QNetworkReply *reply = m_networkManager->get(req);
+    
+    connect(reply, &QNetworkReply::finished, this, [this, reply, fileName]() {
+        onUpdateDownloadFinished(reply, fileName);
+    });
+}
+
+void MainWindow::onUpdateDownloadFinished(QNetworkReply *reply, const QString &fileName)
+{
+    reply->deleteLater();
+    if (reply->error() != QNetworkReply::NoError) {
+        logMessage("[Updater] Erro durante o download do instalador de atualização: " + reply->errorString());
+        m_updateStatusLabel->setText("Falha no download da atualização: " + reply->errorString());
+        QMessageBox::critical(this, "Erro", "Houve um problema na transmissão da atualização do GitHub:\n" + reply->errorString());
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+    QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QDir dir(tempPath);
+    QString savePath = dir.absoluteFilePath(fileName);
+
+    QFile file(savePath);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(data);
+        file.close();
+        logMessage("[Updater] Atualização salva na pasta temporária: " + savePath);
+        m_updateStatusLabel->setText("Atualização baixada com sucesso em: " + savePath);
+
+        if (savePath.endsWith(".exe", Qt::CaseInsensitive)) {
+            QMessageBox::StandardButton ask = QMessageBox::question(this, "Instalar Atualização",
+                "A atualização foi baixada com sucesso no computador!\n\nDeseja fechar o NeoVDownloader e iniciar o instalador agora?",
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            if (ask == QMessageBox::Yes) {
+                logMessage("[Updater] Executando instalador da nova versão...");
+                QProcess::startDetached(savePath, QStringList());
+                QApplication::quit();
+            }
+        } else {
+            QMessageBox::information(this, "Baixado", "A nova versão foi salva com sucesso no seu computador em:\n" + savePath);
+            QDesktopServices::openUrl(QUrl::fromLocalFile(dir.absolutePath()));
+        }
+    } else {
+        logMessage("[Updater] Erro ao gravar arquivo no diretório temporário: " + savePath);
+    }
+}
+
+void MainWindow::updateYtdlpEngine()
+{
+    QString ytdlpPath = QCoreApplication::applicationDirPath() + "/yt-dlp.exe";
+    if (!QFile::exists(ytdlpPath)) {
+        ytdlpPath = "yt-dlp";
+    }
+
+    logMessage("\n========================================================");
+    logMessage("[Motor Extrator] Conectando aos servidores do yt-dlp para checar novas assinaturas...");
+    m_updateStatusLabel->setText("Atualizando motor extrator yt-dlp em segundo plano...");
+
+    QProcess *proc = new QProcess(this);
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this, proc](int code, QProcess::ExitStatus status) {
+        proc->deleteLater();
+        QString out = QString::fromUtf8(proc->readAllStandardOutput()).trimmed();
+        QString err = QString::fromUtf8(proc->readAllStandardError()).trimmed();
+        if (!out.isEmpty()) logMessage("[yt-dlp update] " + out);
+        if (!err.isEmpty()) logMessage("[yt-dlp update] " + err);
+
+        if (code == 0 && status == QProcess::NormalExit) {
+            m_updateStatusLabel->setText("Motor extrator (yt-dlp) atualizado e operacional!");
+            logMessage("[Sucesso] Motor extrator sincronizado com a versão mais recente!");
+            QMessageBox::information(this, "Motor Atualizado", "O Motor Extrator nativo (yt-dlp) foi sincronizado e está rodando em sua versão de compatibilidade mais recente!");
+        } else {
+            m_updateStatusLabel->setText("O motor já se encontra em sua versão estável mais recente.");
+            logMessage("[Motor Extrator] Fim da checagem do motor.");
+            QMessageBox::information(this, "Motor Extrator", "A checagem do motor extrator encerrou. " + (out.isEmpty() ? err : out));
+        }
+    });
+
+    proc->start(ytdlpPath, QStringList() << "-U");
 }

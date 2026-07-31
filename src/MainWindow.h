@@ -17,6 +17,9 @@
 #include <QFileInfoList>
 #include <QProcess>
 #include <QDialog>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QTimer>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -45,11 +48,18 @@ private slots:
     void onConvertProcessOutput();
     void onConvertProcessFinished(int exitCode);
 
+    // Slots do Sistema de Atualização via GitHub e yt-dlp
+    void checkForUpdates(bool silent = false);
+    void onUpdateReplyFinished(QNetworkReply *reply, bool silent);
+    void updateYtdlpEngine();
+    void onUpdateDownloadFinished(QNetworkReply *reply, const QString &fileName);
+
 private:
     void setupUI();
     void setupStyles();
     void logMessage(const QString &msg);
     bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir);
+    void startUpdateDownload(const QString &url, const QString &fileName);
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -100,10 +110,18 @@ private:
     // Tela de Terminal de Logs (Página 3)
     QTextEdit *m_logEdit;
 
-    // Componentes da Tela de Informações (Página 4)
+    // Componentes da Tela de Informações e Hardware (Página 4)
     QLabel *m_gpuModelLabel;
     QLabel *m_gpuCodecLabel;
     QLabel *m_gpuStatusLabel;
+
+    // Módulo de Rede e Central de Atualizações (GitHub Core)
+    QNetworkAccessManager *m_networkManager;
+    QCheckBox *m_checkUpdatesOnStartChk;
+    QCheckBox *m_autoDownloadUpdatesChk;
+    QLabel *m_updateStatusLabel;
+    QPushButton *m_checkUpdateBtn;
+    QPushButton *m_updateYtdlpBtn;
 
     // Motor Central nativo C++
     DownloadEngine m_engine;

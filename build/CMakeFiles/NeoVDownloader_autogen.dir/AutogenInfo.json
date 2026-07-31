@@ -246,7 +246,42 @@
 		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets.cmake",
 		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets-debug.cmake",
 		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets-relwithdebinfo.cmake",
-		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginAdditionalTargetInfo.cmake"
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginAdditionalTargetInfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkConfigVersion.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkConfigVersionImpl.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkConfig.cmake",
+		"C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindDependencyMacro.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkDependencies.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkTargets.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkTargets-debug.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkTargets-relwithdebinfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkAdditionalTargetInfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkVersionlessTargets.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkPlugins.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginConfig.cmake",
+		"C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindDependencyMacro.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargets.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargets-debug.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargets-relwithdebinfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginAdditionalTargetInfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginConfig.cmake",
+		"C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindDependencyMacro.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargets.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargets-debug.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargets-relwithdebinfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginAdditionalTargetInfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginConfig.cmake",
+		"C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindDependencyMacro.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargets.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargets-debug.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargets-relwithdebinfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginAdditionalTargetInfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginConfig.cmake",
+		"C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindDependencyMacro.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargets.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargets-debug.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargets-relwithdebinfo.cmake",
+		"C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginAdditionalTargetInfo.cmake"
 	],
 	"CMAKE_SOURCE_DIR" : "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar",
 	"CROSS_CONFIG" : false,
@@ -295,6 +330,7 @@
 	[
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
+		"QT_NETWORK_LIB",
 		"QT_WIDGETS_LIB",
 		"UNICODE",
 		"WIN32",
@@ -308,6 +344,7 @@
 	[
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
+		"QT_NETWORK_LIB",
 		"QT_NO_DEBUG",
 		"QT_WIDGETS_LIB",
 		"UNICODE",
@@ -322,6 +359,7 @@
 	[
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
+		"QT_NETWORK_LIB",
 		"QT_NO_DEBUG",
 		"QT_WIDGETS_LIB",
 		"UNICODE",
@@ -336,6 +374,7 @@
 	[
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
+		"QT_NETWORK_LIB",
 		"QT_NO_DEBUG",
 		"QT_WIDGETS_LIB",
 		"UNICODE",
@@ -360,7 +399,8 @@
 		"C:/Qt/6.7.2/msvc2019_64/include",
 		"C:/Qt/6.7.2/msvc2019_64/include/QtCore",
 		"C:/Qt/6.7.2/msvc2019_64/mkspecs/win32-msvc",
-		"C:/Qt/6.7.2/msvc2019_64/include/QtGui"
+		"C:/Qt/6.7.2/msvc2019_64/include/QtGui",
+		"C:/Qt/6.7.2/msvc2019_64/include/QtNetwork"
 	],
 	"MOC_INCLUDES_MinSizeRel" : 
 	[
@@ -368,7 +408,8 @@
 		"C:/Qt/6.7.2/msvc2019_64/include",
 		"C:/Qt/6.7.2/msvc2019_64/include/QtCore",
 		"C:/Qt/6.7.2/msvc2019_64/mkspecs/win32-msvc",
-		"C:/Qt/6.7.2/msvc2019_64/include/QtGui"
+		"C:/Qt/6.7.2/msvc2019_64/include/QtGui",
+		"C:/Qt/6.7.2/msvc2019_64/include/QtNetwork"
 	],
 	"MOC_INCLUDES_RelWithDebInfo" : 
 	[
@@ -376,7 +417,8 @@
 		"C:/Qt/6.7.2/msvc2019_64/include",
 		"C:/Qt/6.7.2/msvc2019_64/include/QtCore",
 		"C:/Qt/6.7.2/msvc2019_64/mkspecs/win32-msvc",
-		"C:/Qt/6.7.2/msvc2019_64/include/QtGui"
+		"C:/Qt/6.7.2/msvc2019_64/include/QtGui",
+		"C:/Qt/6.7.2/msvc2019_64/include/QtNetwork"
 	],
 	"MOC_INCLUDES_Release" : 
 	[
@@ -384,7 +426,8 @@
 		"C:/Qt/6.7.2/msvc2019_64/include",
 		"C:/Qt/6.7.2/msvc2019_64/include/QtCore",
 		"C:/Qt/6.7.2/msvc2019_64/mkspecs/win32-msvc",
-		"C:/Qt/6.7.2/msvc2019_64/include/QtGui"
+		"C:/Qt/6.7.2/msvc2019_64/include/QtGui",
+		"C:/Qt/6.7.2/msvc2019_64/include/QtNetwork"
 	],
 	"MOC_MACRO_NAMES" : 
 	[

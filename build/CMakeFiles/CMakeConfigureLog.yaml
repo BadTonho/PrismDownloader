@@ -6306,3 +6306,135 @@ events:
         - "C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6/3rdparty/extra-cmake-modules/find-modules"
         - "C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6/3rdparty/kwin"
 ...
+
+---
+events:
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6/Qt6Config.cmake:169 (find_package)"
+      - "CMakeLists.txt:14 (find_package)"
+    name: "Qt6Network"
+    configs:
+      -
+        filename: "Qt6Network.cps"
+        kind: "cps"
+      -
+        filename: "qt6network.cps"
+        kind: "cps"
+      -
+        filename: "Qt6NetworkConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "qt6network-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "optional"
+      quiet: false
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "Qt6Network"
+      search_paths:
+        - "C:/Qt/6.7.2/msvc2019_64/lib/cmake"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: false
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/Qt6NetworkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/qt6network-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/lib/cps/Qt6Network.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/lib/cps/qt6network.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/share/cps/Qt6Network.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/share/cps/qt6network.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6NetworkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Qt/6.7.2/msvc2019_64/lib/cmake/qt6network-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+    found:
+      path: "C:/Qt/6.7.2/msvc2019_64/lib/cmake/Qt6Network/Qt6NetworkConfig.cmake"
+      mode: "config"
+      version: "6.7.2"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "C:/Qt/6.7.2/msvc2019_64"
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\DenoLand.Deno_Microsoft.Winget.Source_8wekyb3d8bbwe"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\yt-dlp.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-N-125365-g9a01c1cb6a-win64-gpl\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.2-full_build\\bin"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/NeoVDownloader"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/NeoVDownloader"
+...

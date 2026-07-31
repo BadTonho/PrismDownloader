@@ -11,7 +11,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
 
 add_executable(${PROJECT_NAME}
     src/main.cpp
@@ -24,7 +24,7 @@ add_executable(${PROJECT_NAME}
     src/DownloadEngine.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network)
 
 if(MSVC)
     target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -34,6 +34,7 @@ if(MSVC)
         "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Core.dll"
         "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Gui.dll"
         "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Widgets.dll"
+        "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Network.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
     )
     # Copia a DLL de plataforma visual qwindows.dll para a subpasta platforms/
