@@ -1,0 +1,2924 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineSystem.cmake:218 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake:501 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake:538 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      Vers├úo do MSBuild 17.14.40+3e7442088 para .NET Framework
+      Compila├º├úo de 31/07/2026 11:58:50 iniciada.
+      
+      Projeto "C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\4.4.1\\CompilerIdCXX\\CompilerIdCXX.vcxproj" no n├│ 1 (destinos padr├úo).
+      PrepareForBuild:
+        Criando o diret├│rio "Debug\\".
+        A sa├¡da estruturada est├í habilitada. A formata├º├úo do diagn├│stico do compilador refletir├í a hierarquia de erros. Consulte https://aka.ms/cpp/structured-output para obter mais detalhes.
+        Criando o diret├│rio "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Criando "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" porque "AlwaysCreate" foi especificado.
+        Tocando "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\4.4.1\\CompilerIdCXX\\CompilerIdCXX.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        Excluindo o arquivo "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+        Tocando "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
+      Projeto de compila├º├úo pronto "C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\4.4.1\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (destinos padr├úo).
+      
+      Compila├º├úo com ├¬xito.
+          0 Aviso(s)
+          0 Erro(s)
+      
+      Tempo Decorrido 00:00:01.11
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/4.4.1/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:64 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:102 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/playit_gg/bin/"
+      - "C:/Program Files/Docker/Docker/resources/bin/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Ruby40-x64/bin/"
+      - "C:/Users/Admin/.cargo/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/"
+      - "C:/Users/Admin/.local/bin/"
+      - "C:/Program Files/foreman/"
+      - "C:/Users/Admin/.aftman/bin/"
+      - "C:/Users/Admin/.argon/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Admin/.foreman/bin/"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "C:/Users/Admin/.dotnet/tools/"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Program Files (x86)/GnuWin32/bin/"
+      - "C:/Users/Admin/AppData/Roaming/npm/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/link.com"
+    found: "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:64 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/playit_gg/bin/"
+      - "C:/Program Files/Docker/Docker/resources/bin/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Ruby40-x64/bin/"
+      - "C:/Users/Admin/.cargo/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/"
+      - "C:/Users/Admin/.local/bin/"
+      - "C:/Program Files/foreman/"
+      - "C:/Users/Admin/.aftman/bin/"
+      - "C:/Users/Admin/.argon/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Admin/.foreman/bin/"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "C:/Users/Admin/.dotnet/tools/"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Program Files (x86)/GnuWin32/bin/"
+      - "C:/Users/Admin/AppData/Roaming/npm/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lld-link.com"
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lld-link.exe"
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lld-link"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/lld-link.com"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/lld-link.exe"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/lld-link"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/lld-link.com"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/lld-link.exe"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/lld-link"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lld-link.com"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lld-link.exe"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lld-link"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/lld-link.com"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/lld-link.exe"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/playit_gg/bin/lld-link.com"
+      - "C:/Program Files/playit_gg/bin/lld-link.exe"
+      - "C:/Program Files/playit_gg/bin/lld-link"
+      - "C:/Program Files/Docker/Docker/resources/bin/lld-link.com"
+      - "C:/Program Files/Docker/Docker/resources/bin/lld-link.exe"
+      - "C:/Program Files/Docker/Docker/resources/bin/lld-link"
+      - "C:/Program Files/nodejs/lld-link.com"
+      - "C:/Program Files/nodejs/lld-link.exe"
+      - "C:/Program Files/nodejs/lld-link"
+      - "C:/Ruby40-x64/bin/lld-link.com"
+      - "C:/Ruby40-x64/bin/lld-link.exe"
+      - "C:/Ruby40-x64/bin/lld-link"
+      - "C:/Users/Admin/.cargo/bin/lld-link.com"
+      - "C:/Users/Admin/.cargo/bin/lld-link.exe"
+      - "C:/Users/Admin/.cargo/bin/lld-link"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lld-link"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lld-link"
+      - "C:/Users/Admin/.local/bin/lld-link.com"
+      - "C:/Users/Admin/.local/bin/lld-link.exe"
+      - "C:/Users/Admin/.local/bin/lld-link"
+      - "C:/Program Files/foreman/lld-link.com"
+      - "C:/Program Files/foreman/lld-link.exe"
+      - "C:/Program Files/foreman/lld-link"
+      - "C:/Users/Admin/.aftman/bin/lld-link.com"
+      - "C:/Users/Admin/.aftman/bin/lld-link.exe"
+      - "C:/Users/Admin/.aftman/bin/lld-link"
+      - "C:/Users/Admin/.argon/bin/lld-link.com"
+      - "C:/Users/Admin/.argon/bin/lld-link.exe"
+      - "C:/Users/Admin/.argon/bin/lld-link"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/Admin/.foreman/bin/lld-link.com"
+      - "C:/Users/Admin/.foreman/bin/lld-link.exe"
+      - "C:/Users/Admin/.foreman/bin/lld-link"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/lld-link"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/lld-link"
+      - "C:/Users/Admin/.dotnet/tools/lld-link.com"
+      - "C:/Users/Admin/.dotnet/tools/lld-link.exe"
+      - "C:/Users/Admin/.dotnet/tools/lld-link"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/lld-link.com"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/lld-link.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/lld-link"
+      - "C:/Program Files (x86)/GnuWin32/bin/lld-link.com"
+      - "C:/Program Files (x86)/GnuWin32/bin/lld-link.exe"
+      - "C:/Program Files (x86)/GnuWin32/bin/lld-link"
+      - "C:/Users/Admin/AppData/Roaming/npm/lld-link.com"
+      - "C:/Users/Admin/AppData/Roaming/npm/lld-link.exe"
+      - "C:/Users/Admin/AppData/Roaming/npm/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:247 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/playit_gg/bin/"
+      - "C:/Program Files/Docker/Docker/resources/bin/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Ruby40-x64/bin/"
+      - "C:/Users/Admin/.cargo/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/"
+      - "C:/Users/Admin/.local/bin/"
+      - "C:/Program Files/foreman/"
+      - "C:/Users/Admin/.aftman/bin/"
+      - "C:/Users/Admin/.argon/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Admin/.foreman/bin/"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "C:/Users/Admin/.dotnet/tools/"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Program Files (x86)/GnuWin32/bin/"
+      - "C:/Users/Admin/AppData/Roaming/npm/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/link.com"
+    found: "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:247 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_MT"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "mt"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/playit_gg/bin/"
+      - "C:/Program Files/Docker/Docker/resources/bin/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Ruby40-x64/bin/"
+      - "C:/Users/Admin/.cargo/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/"
+      - "C:/Users/Admin/.local/bin/"
+      - "C:/Program Files/foreman/"
+      - "C:/Users/Admin/.aftman/bin/"
+      - "C:/Users/Admin/.argon/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Admin/.foreman/bin/"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "C:/Users/Admin/.dotnet/tools/"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Program Files (x86)/GnuWin32/bin/"
+      - "C:/Users/Admin/AppData/Roaming/npm/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/mt.com"
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/mt.exe"
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/mt"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/mt.com"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/mt.exe"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/mt"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/mt.com"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/mt.exe"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/mt"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/mt.com"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/mt.exe"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/mt"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/mt.com"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/mt.exe"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/mt"
+      - "C:/Windows/System32/mt.com"
+      - "C:/Windows/System32/mt.exe"
+      - "C:/Windows/System32/mt"
+      - "C:/Windows/mt.com"
+      - "C:/Windows/mt.exe"
+      - "C:/Windows/mt"
+      - "C:/Windows/System32/wbem/mt.com"
+      - "C:/Windows/System32/wbem/mt.exe"
+      - "C:/Windows/System32/wbem/mt"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt"
+      - "C:/Windows/System32/OpenSSH/mt.com"
+      - "C:/Windows/System32/OpenSSH/mt.exe"
+      - "C:/Windows/System32/OpenSSH/mt"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/mt.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/mt.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/mt"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt"
+      - "C:/Program Files/dotnet/mt.com"
+      - "C:/Program Files/dotnet/mt.exe"
+      - "C:/Program Files/dotnet/mt"
+      - "C:/Program Files/Git/cmd/mt.com"
+      - "C:/Program Files/Git/cmd/mt.exe"
+      - "C:/Program Files/Git/cmd/mt"
+      - "C:/Program Files/playit_gg/bin/mt.com"
+      - "C:/Program Files/playit_gg/bin/mt.exe"
+      - "C:/Program Files/playit_gg/bin/mt"
+      - "C:/Program Files/Docker/Docker/resources/bin/mt.com"
+      - "C:/Program Files/Docker/Docker/resources/bin/mt.exe"
+      - "C:/Program Files/Docker/Docker/resources/bin/mt"
+      - "C:/Program Files/nodejs/mt.com"
+      - "C:/Program Files/nodejs/mt.exe"
+      - "C:/Program Files/nodejs/mt"
+      - "C:/Ruby40-x64/bin/mt.com"
+      - "C:/Ruby40-x64/bin/mt.exe"
+      - "C:/Ruby40-x64/bin/mt"
+      - "C:/Users/Admin/.cargo/bin/mt.com"
+      - "C:/Users/Admin/.cargo/bin/mt.exe"
+      - "C:/Users/Admin/.cargo/bin/mt"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/mt.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/mt"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/mt.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/mt"
+      - "C:/Users/Admin/.local/bin/mt.com"
+      - "C:/Users/Admin/.local/bin/mt.exe"
+      - "C:/Users/Admin/.local/bin/mt"
+      - "C:/Program Files/foreman/mt.com"
+      - "C:/Program Files/foreman/mt.exe"
+      - "C:/Program Files/foreman/mt"
+      - "C:/Users/Admin/.aftman/bin/mt.com"
+      - "C:/Users/Admin/.aftman/bin/mt.exe"
+      - "C:/Users/Admin/.aftman/bin/mt"
+      - "C:/Users/Admin/.argon/bin/mt.com"
+      - "C:/Users/Admin/.argon/bin/mt.exe"
+      - "C:/Users/Admin/.argon/bin/mt"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/mt.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/mt"
+      - "C:/Users/Admin/.foreman/bin/mt.com"
+      - "C:/Users/Admin/.foreman/bin/mt.exe"
+      - "C:/Users/Admin/.foreman/bin/mt"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/mt.com"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/mt"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/mt.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/mt"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/mt.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/mt"
+      - "C:/Users/Admin/.dotnet/tools/mt.com"
+      - "C:/Users/Admin/.dotnet/tools/mt.exe"
+      - "C:/Users/Admin/.dotnet/tools/mt"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/mt.com"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/mt.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/mt"
+      - "C:/Program Files (x86)/GnuWin32/bin/mt.com"
+      - "C:/Program Files (x86)/GnuWin32/bin/mt.exe"
+      - "C:/Program Files (x86)/GnuWin32/bin/mt"
+      - "C:/Users/Admin/AppData/Roaming/npm/mt.com"
+      - "C:/Users/Admin/AppData/Roaming/npm/mt.exe"
+      - "C:/Users/Admin/AppData/Roaming/npm/mt"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake:247 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lib"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/playit_gg/bin/"
+      - "C:/Program Files/Docker/Docker/resources/bin/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Ruby40-x64/bin/"
+      - "C:/Users/Admin/.cargo/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/"
+      - "C:/Users/Admin/.local/bin/"
+      - "C:/Program Files/foreman/"
+      - "C:/Users/Admin/.aftman/bin/"
+      - "C:/Users/Admin/.argon/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Admin/.foreman/bin/"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "C:/Users/Admin/.dotnet/tools/"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Program Files (x86)/GnuWin32/bin/"
+      - "C:/Users/Admin/AppData/Roaming/npm/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lib.com"
+    found: "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lib.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineRCCompiler.cmake:40 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/Platform/Windows-MSVC.cmake:592 (enable_language)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/Platform/Windows-MSVC.cmake:565 (__windows_compiler_msvc_enable_rc)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/Platform/Windows-MSVC-CXX.cmake:6 (__windows_compiler_msvc)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeCXXInformation.cmake:48 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_RC_COMPILER"
+    description: "RC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "rc"
+    candidate_directories:
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/playit_gg/bin/"
+      - "C:/Program Files/Docker/Docker/resources/bin/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Ruby40-x64/bin/"
+      - "C:/Users/Admin/.cargo/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/"
+      - "C:/Users/Admin/.local/bin/"
+      - "C:/Program Files/foreman/"
+      - "C:/Users/Admin/.aftman/bin/"
+      - "C:/Users/Admin/.argon/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/Admin/.foreman/bin/"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "C:/Users/Admin/.dotnet/tools/"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Program Files (x86)/GnuWin32/bin/"
+      - "C:/Users/Admin/AppData/Roaming/npm/"
+      - "C:/Program Files/bin/"
+      - "C:/Program Files/sbin/"
+      - "C:/Program Files/"
+      - "C:/Program Files (x86)/bin/"
+      - "C:/Program Files (x86)/sbin/"
+      - "C:/Program Files (x86)/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files/CMake/sbin/"
+      - "C:/Program Files/CMake/"
+      - "C:/Program Files (x86)/NeoVDownloader/bin/"
+      - "C:/Program Files (x86)/NeoVDownloader/sbin/"
+      - "C:/Program Files (x86)/NeoVDownloader/"
+    searched_directories:
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/rc.com"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/rc.exe"
+      - "C:/Users/Admin/.gemini/antigravity-ide/bin/rc"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/rc.com"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/rc.exe"
+      - "C:/Program Files/Common Files/Oracle/Java/javapath/rc"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/rc.com"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/rc.exe"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/rc"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/rc.com"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/rc.exe"
+      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/rc"
+      - "C:/Windows/System32/rc.com"
+      - "C:/Windows/System32/rc.exe"
+      - "C:/Windows/System32/rc"
+      - "C:/Windows/rc.com"
+      - "C:/Windows/rc.exe"
+      - "C:/Windows/rc"
+      - "C:/Windows/System32/wbem/rc.com"
+      - "C:/Windows/System32/wbem/rc.exe"
+      - "C:/Windows/System32/wbem/rc"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc"
+      - "C:/Windows/System32/OpenSSH/rc.com"
+      - "C:/Windows/System32/OpenSSH/rc.exe"
+      - "C:/Windows/System32/OpenSSH/rc"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/rc.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/rc.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/rc"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc"
+      - "C:/Program Files/dotnet/rc.com"
+      - "C:/Program Files/dotnet/rc.exe"
+      - "C:/Program Files/dotnet/rc"
+      - "C:/Program Files/Git/cmd/rc.com"
+      - "C:/Program Files/Git/cmd/rc.exe"
+      - "C:/Program Files/Git/cmd/rc"
+      - "C:/Program Files/playit_gg/bin/rc.com"
+      - "C:/Program Files/playit_gg/bin/rc.exe"
+      - "C:/Program Files/playit_gg/bin/rc"
+      - "C:/Program Files/Docker/Docker/resources/bin/rc.com"
+      - "C:/Program Files/Docker/Docker/resources/bin/rc.exe"
+      - "C:/Program Files/Docker/Docker/resources/bin/rc"
+      - "C:/Program Files/nodejs/rc.com"
+      - "C:/Program Files/nodejs/rc.exe"
+      - "C:/Program Files/nodejs/rc"
+      - "C:/Ruby40-x64/bin/rc.com"
+      - "C:/Ruby40-x64/bin/rc.exe"
+      - "C:/Ruby40-x64/bin/rc"
+      - "C:/Users/Admin/.cargo/bin/rc.com"
+      - "C:/Users/Admin/.cargo/bin/rc.exe"
+      - "C:/Users/Admin/.cargo/bin/rc"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/rc.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/rc"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/rc.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Python/Python311/rc"
+      - "C:/Users/Admin/.local/bin/rc.com"
+      - "C:/Users/Admin/.local/bin/rc.exe"
+      - "C:/Users/Admin/.local/bin/rc"
+      - "C:/Program Files/foreman/rc.com"
+      - "C:/Program Files/foreman/rc.exe"
+      - "C:/Program Files/foreman/rc"
+      - "C:/Users/Admin/.aftman/bin/rc.com"
+      - "C:/Users/Admin/.aftman/bin/rc.exe"
+      - "C:/Users/Admin/.aftman/bin/rc"
+      - "C:/Users/Admin/.argon/bin/rc.com"
+      - "C:/Users/Admin/.argon/bin/rc.exe"
+      - "C:/Users/Admin/.argon/bin/rc"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/rc.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/rc"
+      - "C:/Users/Admin/.foreman/bin/rc.com"
+      - "C:/Users/Admin/.foreman/bin/rc.exe"
+      - "C:/Users/Admin/.foreman/bin/rc"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/rc.com"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/rc"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/rc.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity/bin/rc"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/rc.com"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/bin/rc"
+      - "C:/Users/Admin/.dotnet/tools/rc.com"
+      - "C:/Users/Admin/.dotnet/tools/rc.exe"
+      - "C:/Users/Admin/.dotnet/tools/rc"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/rc.com"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/rc.exe"
+      - "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/bin/rc"
+      - "C:/Program Files (x86)/GnuWin32/bin/rc.com"
+      - "C:/Program Files (x86)/GnuWin32/bin/rc.exe"
+      - "C:/Program Files (x86)/GnuWin32/bin/rc"
+      - "C:/Users/Admin/AppData/Roaming/npm/rc.com"
+      - "C:/Users/Admin/AppData/Roaming/npm/rc.exe"
+      - "C:/Users/Admin/AppData/Roaming/npm/rc"
+      - "C:/Program Files/bin/rc.com"
+      - "C:/Program Files/bin/rc.exe"
+      - "C:/Program Files/bin/rc"
+      - "C:/Program Files/sbin/rc.com"
+      - "C:/Program Files/sbin/rc.exe"
+      - "C:/Program Files/sbin/rc"
+      - "C:/Program Files/rc.com"
+      - "C:/Program Files/rc.exe"
+      - "C:/Program Files/rc"
+      - "C:/Program Files (x86)/bin/rc.com"
+      - "C:/Program Files (x86)/bin/rc.exe"
+      - "C:/Program Files (x86)/bin/rc"
+      - "C:/Program Files (x86)/sbin/rc.com"
+      - "C:/Program Files (x86)/sbin/rc.exe"
+      - "C:/Program Files (x86)/sbin/rc"
+      - "C:/Program Files (x86)/rc.com"
+      - "C:/Program Files (x86)/rc.exe"
+      - "C:/Program Files (x86)/rc"
+      - "C:/Program Files/CMake/bin/rc.com"
+      - "C:/Program Files/CMake/bin/rc.exe"
+      - "C:/Program Files/CMake/bin/rc"
+      - "C:/Program Files/CMake/sbin/rc.com"
+      - "C:/Program Files/CMake/sbin/rc.exe"
+      - "C:/Program Files/CMake/sbin/rc"
+      - "C:/Program Files/CMake/rc.com"
+      - "C:/Program Files/CMake/rc.exe"
+      - "C:/Program Files/CMake/rc"
+      - "C:/Program Files (x86)/NeoVDownloader/bin/rc.com"
+      - "C:/Program Files (x86)/NeoVDownloader/bin/rc.exe"
+      - "C:/Program Files (x86)/NeoVDownloader/bin/rc"
+      - "C:/Program Files (x86)/NeoVDownloader/sbin/rc.com"
+      - "C:/Program Files (x86)/NeoVDownloader/sbin/rc.exe"
+      - "C:/Program Files (x86)/NeoVDownloader/sbin/rc"
+      - "C:/Program Files (x86)/NeoVDownloader/rc.com"
+      - "C:/Program Files (x86)/NeoVDownloader/rc.exe"
+      - "C:/Program Files (x86)/NeoVDownloader/rc"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/NeoVDownloader"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/NeoVDownloader"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerABI.cmake:123 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64"
+      binary: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /GR /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: false
+      stdout: |
+        Change Dir: 'C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_776de.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        Vers├úo do MSBuild 17.14.40+3e7442088 para .NET Framework
+        Compila├º├úo de 31/07/2026 11:58:52 iniciada.
+        
+        Projeto "C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\CMakeScratch\\TryCompile-28ip64\\cmTC_776de.vcxproj" no n├│ 1 (destinos padr├úo).
+        PrepareForBuild:
+          A sa├¡da estruturada est├í habilitada. A formata├º├úo do diagn├│stico do compilador refletir├í a hierarquia de erros. Consulte https://aka.ms/cpp/structured-output para obter mais detalhes.
+          Criando o diret├│rio "C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\CMakeScratch\\TryCompile-28ip64\\Debug\\".
+          Criando o diret├│rio "cmTC_776de.dir\\Debug\\cmTC_776de.tlog\\".
+        InitializeBuildStatus:
+          Criando "cmTC_776de.dir\\Debug\\cmTC_776de.tlog\\unsuccessfulbuild" porque "AlwaysCreate" foi especificado.
+          Tocando "cmTC_776de.dir\\Debug\\cmTC_776de.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_776de.dir\\Debug\\\\" /Fd"cmTC_776de.dir\\Debug\\vc143.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.4\\Modules\\CMakeCXXCompilerABI.cpp"
+          Microsoft (R) C/C++ Optimizing Compiler Vers├úo 19.44.35228 para x64
+          Copyright (C) Microsoft Corporation. Todos os direitos reservados.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_776de.dir\\Debug\\\\" /Fd"cmTC_776de.dir\\Debug\\vc143.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.4\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /OUT:"C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\CMakeScratch\\TryCompile-28ip64\\Debug\\cmTC_776de.exe" /INCREMENTAL /ILK:"cmTC_776de.dir\\Debug\\cmTC_776de.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64/Debug/cmTC_776de.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64/Debug/cmTC_776de.lib" /MACHINE:X64  /machine:x64 cmTC_776de.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_776de.vcxproj -> C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\CMakeScratch\\TryCompile-28ip64\\Debug\\cmTC_776de.exe
+        FinalizeBuildStatus:
+          Excluindo o arquivo "cmTC_776de.dir\\Debug\\cmTC_776de.tlog\\unsuccessfulbuild".
+          Tocando "cmTC_776de.dir\\Debug\\cmTC_776de.tlog\\cmTC_776de.lastbuildstate".
+        Projeto de compila├º├úo pronto "C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\CMakeScratch\\TryCompile-28ip64\\cmTC_776de.vcxproj" (destinos padr├úo).
+        
+        Compila├º├úo com ├¬xito.
+            0 Aviso(s)
+            0 Erro(s)
+        
+        Tempo Decorrido 00:00:00.64
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerABI.cmake:291 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        link line: [  C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /OUT:"C:\\Users\\Admin\\Desktop\\ProjetosCode\\projetos\\Baixar\\build\\CMakeFiles\\CMakeScratch\\TryCompile-28ip64\\Debug\\cmTC_776de.exe" /INCREMENTAL /ILK:"cmTC_776de.dir\\Debug\\cmTC_776de.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64/Debug/cmTC_776de.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/CMakeScratch/TryCompile-28ip64/Debug/cmTC_776de.lib" /MACHINE:X64  /machine:x64 cmTC_776de.dir\\Debug\\CMakeCXXCompilerABI.obj] ==> linker [C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe]
+        linker tool for 'CXX': C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/link.exe 
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/Internal/CMakeDetermineLinkerId.cmake:41 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerABI.cmake:337 (cmake_determine_linker_id)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.44.35228.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "CMakeLists.txt:11 (find_package)"
+    name: "QT"
+    components:
+      -
+        name: "Core"
+        required: true
+        found: false
+      -
+        name: "Network"
+        required: true
+        found: false
+    configs:
+      -
+        filename: "Qt6.cps"
+        kind: "cps"
+      -
+        filename: "qt6.cps"
+        kind: "cps"
+      -
+        filename: "Qt6Config.cmake"
+        kind: "cmake"
+      -
+        filename: "qt6-config.cmake"
+        kind: "cmake"
+      -
+        filename: "Qt5.cps"
+        kind: "cps"
+      -
+        filename: "qt5.cps"
+        kind: "cps"
+      -
+        filename: "Qt5Config.cmake"
+        kind: "cmake"
+      -
+        filename: "qt5-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "required_explicit"
+      quiet: false
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "Qt6"
+        - "Qt5"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/CMakeFiles/pkgRedirects/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.gemini/antigravity-ide/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Common Files/Oracle/Java/javapath/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/wbem/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/WindowsPowerShell/v1.0/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Windows/System32/OpenSSH/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/dotnet/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Git/cmd/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/playit_gg/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Docker/Docker/resources/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/nodejs/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Ruby40-x64/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.cargo/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Scripts/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Python/Python311/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.local/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/foreman/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.aftman/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.argon/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Microsoft VS Code/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/.foreman/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Microsoft/WindowsApps/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/Antigravity IDE/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Local/Programs/cursor/resources/app/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/GnuWin32/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Users/Admin/AppData/Roaming/npm/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files (x86)/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/Qt6Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/qt6-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/Qt5Config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/qt5-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/lib/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/lib/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/lib/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/lib/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/share/cps/Qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/share/cps/qt6.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/share/cps/Qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "C:/Program Files/CMake/share/cps/qt5.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found: null
+    search_context:
+      ENV{PATH}:
+        - "C:/Users/Admin/.gemini/antigravity-ide/bin"
+        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\playit_gg\\bin\\"
+        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Ruby40-x64\\bin"
+        - "C:\\Users\\Admin\\.cargo\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\Admin\\.local\\bin"
+        - "C:\\Program Files\\foreman"
+        - "C:\\Users\\Admin\\.aftman\\bin"
+        - "C:\\Users\\Admin\\.argon\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Admin\\.foreman\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\Admin\\.dotnet\\tools"
+        - "C:\\Users\\Admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Program Files (x86)\\GnuWin32\\bin"
+        - "C:\\Users\\Admin\\AppData\\Roaming\\npm"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/NeoVDownloader"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/NeoVDownloader"
+...
