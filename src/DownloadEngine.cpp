@@ -57,16 +57,16 @@ void DownloadEngine::startDownload(const std::string &url, const std::string &qu
     m_currentItem = MediaItem{url, "Analisando...", quality, "0 MB/s", "00:00", 0.0, DownloadStatus::Queued};
     m_isRunning.store(true);
 
-    QString ytdlpPath = QCoreApplication::applicationDirPath() + "/yt-dlp.exe";
+    QString ytdlpPath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/yt-dlp.exe");
     std::string ytdlpCmd = "yt-dlp";
-    if (QFile::exists(ytdlpPath)) {
+    if (QFile::exists(QCoreApplication::applicationDirPath() + "/yt-dlp.exe")) {
         ytdlpCmd = "\"" + ytdlpPath.toStdString() + "\"";
     }
 
     std::ostringstream cmd;
     cmd << ytdlpCmd << " --progress --newline --no-mtime ";
     if (!outputFolder.empty()) {
-        cmd << "-P \"" << outputFolder << "\" ";
+        cmd << "-P \"" << QDir::toNativeSeparators(QString::fromStdString(outputFolder)).toStdString() << "\" ";
     }
 
     if (!timeRange.empty()) {
@@ -83,7 +83,7 @@ void DownloadEngine::startDownload(const std::string &url, const std::string &qu
         if (m_onStatus) m_onStatus(DownloadStatus::Downloading, "Baixando e Juntando streams em alta velocidade...");
     }
 
-    cmd << "\"" << url << "\" 2>&1";
+    cmd << "\"" << url << "\""; // Sem redirecionamento shell '2>&1', pois o QProcess::MergedChannels gerencia isso nativamente na thread!
 
     if (m_workerThread.joinable()) {
         m_workerThread.join();
@@ -106,15 +106,22 @@ void DownloadEngine::workerLoop(const std::string &command) {
     std::cout << "[DownloadEngine Worker] Executando comando nativo (Modo Silencioso/GUI): " << command << "\n";
     if (m_onLog) m_onLog("[Processo Motor] Acionando linha de comando no Windows: " + command);
     
+    QString qtCmd = QString::fromUtf8(command.c_str());
+    if (qtCmd.endsWith(" 2>&1")) {
+        qtCmd.chop(5);
+    }
+
     QProcess process;
-    process.setWorkingDirectory(QCoreApplication::applicationDirPath());
+    process.setWorkingDirectory(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()));
 #ifdef _WIN32
     process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
         args->flags |= 0x08000000; // CREATE_NO_WINDOW (Impede qualquer tela de terminal/conhost de surgir no Windows)
     });
 #endif
     process.setProcessChannelMode(QProcess::MergedChannels);
-    process.start("cmd.exe", QStringList() << "/c" << QString::fromUtf8(command.c_str()));
+    
+    // Execução direta e segura no Windows via Qt 6 (sem passar por cmd.exe para evitar corrompimento de aspas)
+    process.startCommand(qtCmd);
     
     if (!process.waitForStarted()) {
         std::cerr << "[DownloadEngine] Falha ao abrir processo com yt-dlp/ffmpeg.\n";
