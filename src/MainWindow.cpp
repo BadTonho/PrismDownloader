@@ -10,6 +10,8 @@
 #include <QStandardPaths>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QSettings>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -62,7 +64,6 @@ MainWindow::MainWindow(QWidget *parent)
                     m_statusLabel->setText("Status: ✨ Concluído e salvo na pasta com sucesso!");
                     logMessage("✨ [SUCESSO] Operação finalizada! Mídia salva no diretório escolhido.");
                     
-                    // Exibe pop-up apenas se o usuário tiver ativado explicitamente a caixinha na interface
                     if (m_notifyCheckBox->isChecked()) {
                         QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nSeus arquivos foram salvos limpos na pasta selecionada.");
                     }
@@ -74,6 +75,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    // Salvar as preferências do usuário no encerramento da janela
+    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    settings.setValue("outputFolder", m_outputDirInput->text().trimmed());
+    settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
+    settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
+
     m_engine.cancelCurrent();
 }
 
@@ -110,11 +117,22 @@ void MainWindow::setupUI()
     m_timeRangeInput = new QLineEdit(this);
     m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Deixe em branco para o vídeo completo)");
 
-    QLabel *folderLabel = new QLabel("📁 Pasta de Destino:", this);
+    QLabel *folderLabel = new QLabel("📁 Pasta de Destino (Salva):", this);
     m_outputDirInput = new QLineEdit(this);
-    QString defaultFolder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    if (defaultFolder.isEmpty()) defaultFolder = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-    m_outputDirInput->setText(defaultFolder);
+    
+    // Carregar preferências salvas com QSettings
+    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    QString savedFolder = settings.value("outputFolder", "").toString();
+    if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
+        savedFolder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+        if (savedFolder.isEmpty()) savedFolder = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    }
+    m_outputDirInput->setText(savedFolder);
+
+    int savedQualityIndex = settings.value("selectedQuality", 1).toInt(); // 1080p como padrão
+    if (savedQualityIndex >= 0 && savedQualityIndex < m_qualityCombo->count()) {
+        m_qualityCombo->setCurrentIndex(savedQualityIndex);
+    }
 
     m_browseDirBtn = new QPushButton("📁 Escolher...", this);
     m_browseDirBtn->setCursor(Qt::PointingHandCursor);
@@ -125,9 +143,9 @@ void MainWindow::setupUI()
     folderLayout->addWidget(m_outputDirInput);
     folderLayout->addWidget(m_browseDirBtn);
 
-    // CheckBox para permitir que o usuário escolha se quer ver popups no final (desativado por padrão)
     m_notifyCheckBox = new QCheckBox("🔔 Exibir aviso pop-up ao concluir o download (Desativado por padrão)", this);
-    m_notifyCheckBox->setChecked(false);
+    bool notifyPref = settings.value("showNotifications", false).toBool();
+    m_notifyCheckBox->setChecked(notifyPref);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
 
     inputLayout->addWidget(urlLabel, 0, 0);
@@ -386,7 +404,9 @@ void MainWindow::onBrowseClicked()
     QString dir = QFileDialog::getExistingDirectory(this, "Escolha a Pasta de Destino para os Downloads", m_outputDirInput->text());
     if (!dir.isEmpty()) {
         m_outputDirInput->setText(dir);
-        logMessage("📁 [Sistema] Nova pasta de destino definida para: " + dir);
+        QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+        settings.setValue("outputFolder", dir);
+        logMessage("📁 [Sistema] Nova pasta de destino memorizada para futuros downloads: " + dir);
     }
 }
 
@@ -410,6 +430,12 @@ void MainWindow::onStartClicked()
     QString quality = m_qualityCombo->currentText();
     QString timeRange = m_timeRangeInput->text().trimmed();
     QString outputDir = m_outputDirInput->text().trimmed();
+
+    // Memorizar as preferências na hora do clique
+    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    settings.setValue("outputFolder", outputDir);
+    settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
+    settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
 
     m_progressBar->setValue(0);
     m_startBtn->setEnabled(false);
