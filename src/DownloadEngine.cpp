@@ -125,8 +125,12 @@ void DownloadEngine::parseYtDlpOutput(const std::string &line) {
             if (m_onStatus) m_onStatus(DownloadStatus::ConvertingGPU, "🎵 Extraindo faixas de áudio MP3 em alta velocidade...");
             return;
         }
-        if (line.find("Deleting original file") != std::string::npos || line.find("Already downloaded and merged") != std::string::npos) {
-            if (m_onStatus) m_onStatus(DownloadStatus::Completed, "✨ Arquivo processado e salvo na pasta com sucesso!");
+        if (line.find("Deleting original file") != std::string::npos) {
+            if (m_onStatus) m_onStatus(DownloadStatus::Muxing, "🧹 Limpando arquivos temporários e finalizando...");
+            return;
+        }
+        if (line.find("Already downloaded and merged") != std::string::npos) {
+            if (m_onStatus) m_onStatus(DownloadStatus::Muxing, "🔍 Verificando integridade da mídia...");
             return;
         }
 

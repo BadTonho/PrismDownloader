@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QTextEdit>
+#include <QCheckBox>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -28,12 +29,13 @@ private:
     void setupStyles();
     void logMessage(const QString &msg);
 
-    // Componentes de Entrada
+    // Componentes de Entrada e Configuração
     QLineEdit *m_urlInput;
     QComboBox *m_qualityCombo;
     QLineEdit *m_timeRangeInput;
     QLineEdit *m_outputDirInput;
     QPushButton *m_browseDirBtn;
+    QCheckBox *m_notifyCheckBox;
     
     // Botões de Ação
     QPushButton *m_startBtn;

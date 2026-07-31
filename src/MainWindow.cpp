@@ -15,15 +15,13 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle("⚡ NeoVDownloader - Turbo GPU Edition");
-    resize(880, 720);
+    resize(880, 750);
 
     setupUI();
     setupStyles();
 
-    // Inicializamos o Motor Core em C++17 puro
     m_engine.initialize();
 
-    // Consultamos o hardware para exibir no cartão visual superior
     GPUDetector *gpu = m_engine.gpuDetector();
     QString gpuName = QString::fromStdString(gpu->getGPUName());
     QString codec = QString::fromStdString(gpu->getRecommendedCodec());
@@ -42,7 +40,6 @@ MainWindow::MainWindow(QWidget *parent)
     style()->unpolish(m_gpuBanner);
     style()->polish(m_gpuBanner);
 
-    // Conectamos os Callbacks do worker C++ (std::thread) à nossa interface Qt (thread-safe!)
     m_engine.setProgressCallback([this](double percent, const std::string &speed, const std::string &eta) {
         QMetaObject::invokeMethod(this, [this, percent, speed, eta]() {
             m_progressBar->setValue(static_cast<int>(percent));
@@ -62,7 +59,13 @@ MainWindow::MainWindow(QWidget *parent)
                 m_cancelBtn->setEnabled(false);
                 if (status == DownloadStatus::Completed) {
                     m_progressBar->setValue(100);
-                    QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nSeus arquivos foram salvos limpos na pasta selecionada.");
+                    m_statusLabel->setText("Status: ✨ Concluído e salvo na pasta com sucesso!");
+                    logMessage("✨ [SUCESSO] Operação finalizada! Mídia salva no diretório escolhido.");
+                    
+                    // Exibe pop-up apenas se o usuário tiver ativado explicitamente a caixinha na interface
+                    if (m_notifyCheckBox->isChecked()) {
+                        QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nSeus arquivos foram salvos limpos na pasta selecionada.");
+                    }
                 }
             }
         }, Qt::QueuedConnection);
@@ -83,12 +86,10 @@ void MainWindow::setupUI()
     mainLayout->setSpacing(16);
     mainLayout->setContentsMargins(20, 20, 20, 20);
 
-    // 1. Cartão Banner de Hardware no Topo
     m_gpuBanner = new QLabel("Sondando GPU na placa-mãe...", this);
     m_gpuBanner->setAlignment(Qt::AlignCenter);
     mainLayout->addWidget(m_gpuBanner);
 
-    // 2. Grupo de Configurações do Download
     QGroupBox *inputGroup = new QGroupBox("🔗 Parâmetros de Download, Pasta e Recorte", this);
     QGridLayout *inputLayout = new QGridLayout(inputGroup);
     inputLayout->setSpacing(12);
@@ -124,6 +125,11 @@ void MainWindow::setupUI()
     folderLayout->addWidget(m_outputDirInput);
     folderLayout->addWidget(m_browseDirBtn);
 
+    // CheckBox para permitir que o usuário escolha se quer ver popups no final (desativado por padrão)
+    m_notifyCheckBox = new QCheckBox("🔔 Exibir aviso pop-up ao concluir o download (Desativado por padrão)", this);
+    m_notifyCheckBox->setChecked(false);
+    m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
+
     inputLayout->addWidget(urlLabel, 0, 0);
     inputLayout->addWidget(m_urlInput, 0, 1);
     inputLayout->addWidget(qualityLabel, 1, 0);
@@ -132,10 +138,10 @@ void MainWindow::setupUI()
     inputLayout->addWidget(m_timeRangeInput, 2, 1);
     inputLayout->addWidget(folderLabel, 3, 0);
     inputLayout->addLayout(folderLayout, 3, 1);
+    inputLayout->addWidget(m_notifyCheckBox, 4, 0, 1, 2);
 
     mainLayout->addWidget(inputGroup);
 
-    // 3. Botões de Ação Rápida e Abertura
     QHBoxLayout *btnLayout = new QHBoxLayout();
     m_startBtn = new QPushButton("⚡ INICIAR DOWNLOAD ACELERADO", this);
     m_startBtn->setObjectName("startBtn");
@@ -158,7 +164,6 @@ void MainWindow::setupUI()
     btnLayout->addWidget(m_openFolderBtn, 2);
     mainLayout->addLayout(btnLayout);
 
-    // 4. Painel de Progresso e Monitoramento ao Vivo
     QGroupBox *monitorGroup = new QGroupBox("📊 Monitor de Progresso em Tempo Real", this);
     QVBoxLayout *monitorLayout = new QVBoxLayout(monitorGroup);
     monitorLayout->setSpacing(12);
@@ -186,7 +191,6 @@ void MainWindow::setupUI()
 
     mainLayout->addWidget(monitorGroup);
 
-    // 5. Terminal de Log Embutido
     QLabel *logLabel = new QLabel("📟 Terminal de Processamento Nativo:", this);
     mainLayout->addWidget(logLabel);
 
@@ -247,6 +251,25 @@ void MainWindow::setupStyles()
             color: white;
             selection-background-color: #10b981;
             selection-color: black;
+        }
+        QCheckBox {
+            font-size: 13px;
+            color: #cccccc;
+            padding-top: 6px;
+        }
+        QCheckBox::indicator {
+            width: 18px;
+            height: 18px;
+            border: 1px solid #363636;
+            border-radius: 4px;
+            background-color: #242424;
+        }
+        QCheckBox::indicator:hover {
+            border: 1px solid #10b981;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #10b981;
+            border: 1px solid #ffffff;
         }
         QLabel {
             font-size: 13px;
