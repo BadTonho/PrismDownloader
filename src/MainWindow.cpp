@@ -82,29 +82,38 @@ MainWindow::MainWindow(QWidget *parent)
                     m_progressBar->setValue(100);
                     refreshLibrary();
 
-                    if (m_autoConvertAfterDownload && m_libraryTable->rowCount() > 0) {
+                    if (m_autoConvertAfterDownload) {
                         m_statusLabel->setText("Status: Baixado! Iniciando conversão automática para " + m_autoConvertFormat + "...");
                         logMessage("[Auto-Conversão] Download concluído! Acionando conversão automática no arquivo recém-baixado...");
                         
-                        QDir dir(m_outputDirInput->text());
-                        QString newestFileName = m_libraryTable->item(0, 0)->text();
-                        QString newestFilePath = dir.absoluteFilePath(newestFileName);
+                        // Buscar o arquivo mais recente no diretório exato deste download
+                        QString targetDir = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
+                        QDir dir(targetDir);
+                        QStringList filters;
+                        filters << "*.mp4" << "*.mp3" << "*.mkv" << "*.webm" << "*.m4a" << "*.avi" << "*.flv" << "*.wav";
+                        QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
                         
-                        m_convertInput->setText(newestFilePath);
-                        m_convertFormatCombo->setCurrentText(m_autoConvertFormat);
-                        
-                        m_autoConvertAfterDownload = false; // Resetar flag
-                        onStartConvertClicked(); // Acionar motor de conversão FFmpeg acelerado
-                        
-                        if (m_notifyCheckBox->isChecked()) {
-                            QMessageBox::information(this, "Download Concluído", "O arquivo foi baixado! O conversor foi iniciado automaticamente para transformá-lo em:\n" + m_autoConvertFormat);
+                        if (!fileList.isEmpty()) {
+                            QString newestFilePath = fileList.first().absoluteFilePath();
+                            m_convertInput->setText(newestFilePath);
+                            m_convertFormatCombo->setCurrentText(m_autoConvertFormat);
+                            
+                            m_autoConvertAfterDownload = false; // Resetar flag
+                            onStartConvertClicked(); // Acionar motor de conversão FFmpeg acelerado
+                            
+                            if (m_notifyCheckBox->isChecked()) {
+                                QMessageBox::information(this, "Download Concluído", "O arquivo foi baixado com sucesso em:\n" + targetDir + "\n\nO conversor foi iniciado automaticamente para transformá-lo em:\n" + m_autoConvertFormat);
+                            }
+                        } else {
+                            logMessage("[Auto-Conversão] Aviso: Não foi possível localizar o arquivo gerado para conversão em " + targetDir);
                         }
                     } else {
-                        m_statusLabel->setText("Status: Concluído e salvo com sucesso na biblioteca!");
+                        m_statusLabel->setText("Status: Concluído e salvo com sucesso!");
                         logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
 
                         if (m_notifyCheckBox->isChecked()) {
-                            QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na sua pasta de destino.");
+                            QString savedLoc = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
+                            QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na pasta:\n" + savedLoc);
                         }
                     }
                 }
@@ -646,7 +655,9 @@ void MainWindow::onStartConvertClicked()
     QString formatText = m_convertFormatCombo->currentText();
     QFileInfo fileInfo(inFile);
     QString baseName = fileInfo.completeBaseName();
-    QString outFolder = m_outputDirInput->text().trimmed();
+    
+    // Se estiver convertendo automaticamente pós-download, utilizar a pasta exclusiva que foi configurada
+    QString outFolder = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text().trimmed() : m_currentDownloadDir;
     QDir dir(outFolder);
     if (!dir.exists()) dir.mkpath(".");
 
@@ -759,13 +770,14 @@ void MainWindow::onConvertProcessFinished(int exitCode)
         m_convertProgressBar->setValue(100);
         m_convertStatusLabel->setText("Status: Conversão finalizada com sucesso! Salvo na sua Biblioteca.");
         if (m_stackedWidget->currentIndex() == 0) {
-            m_statusLabel->setText("Status: Conversão Automática concluída e salva na sua Biblioteca!");
+            m_statusLabel->setText("Status: Conversão Automática concluída e salva no disco!");
         }
         logMessage("[Sucesso] Arquivo convertido e salvo na pasta com sucesso!");
         refreshLibrary();
 
         if (m_notifyCheckBox->isChecked()) {
-            QMessageBox::information(this, "Conversão Concluída", "O arquivo foi convertido e salvo na sua pasta de destino com sucesso!");
+            QString savedLoc = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
+            QMessageBox::information(this, "Conversão Concluída", "O arquivo foi convertido com sucesso e salvo em:\n" + savedLoc);
         }
     } else {
         m_convertProgressBar->setValue(0);
@@ -841,11 +853,11 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
 // ==========================================
 // DIÁLOGO MODAL ESTILO ATUBE CATCHER (FOTO 3)
 // ==========================================
-bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat)
+bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir)
 {
     QDialog dlg(this);
     dlg.setWindowTitle("Selecione o formato da fonte - NeoV Studio Suite");
-    dlg.resize(760, 540);
+    dlg.resize(780, 580);
     dlg.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
 
     QVBoxLayout *dlgLayout = new QVBoxLayout(&dlg);
@@ -894,7 +906,7 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
 
     dlgLayout->addWidget(table);
 
-    // Opções de tempo, conversão e destino no modal
+    // Opções de tempo, conversão e destino personalizado no modal
     QGridLayout *optLayout = new QGridLayout();
     optLayout->setSpacing(12);
     
@@ -918,17 +930,33 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     comboConv->setEnabled(false);
     connect(chkConv, &QCheckBox::toggled, comboConv, &QComboBox::setEnabled);
 
-    QLabel *lblFolderOpt = new QLabel("Salvar download em:", &dlg);
+    QLabel *lblFolderOpt = new QLabel("Salvar este download em:", &dlg);
     lblFolderOpt->setStyleSheet("color: #a3a3a3; font-weight: bold;");
-    QLabel *lblFolderVal = new QLabel(m_outputDirInput->text(), &dlg);
-    lblFolderVal->setStyleSheet("color: #10b981; font-weight: bold;");
+    
+    QHBoxLayout *folderOptLayout = new QHBoxLayout();
+    QLineEdit *editCustomFolder = new QLineEdit(&dlg);
+    editCustomFolder->setText(m_outputDirInput->text());
+    
+    QPushButton *btnChangeCustomFolder = new QPushButton("Mudar Pasta (Apenas Este)", &dlg);
+    btnChangeCustomFolder->setObjectName("browseBtn");
+    btnChangeCustomFolder->setCursor(Qt::PointingHandCursor);
+    btnChangeCustomFolder->setMinimumHeight(32);
+    connect(btnChangeCustomFolder, &QPushButton::clicked, &dlg, [this, editCustomFolder]() {
+        QString dir = QFileDialog::getExistingDirectory(nullptr, "Escolha a Pasta Exclusiva Para Este Download", editCustomFolder->text());
+        if (!dir.isEmpty()) {
+            editCustomFolder->setText(dir);
+        }
+    });
+
+    folderOptLayout->addWidget(editCustomFolder, 1);
+    folderOptLayout->addWidget(btnChangeCustomFolder, 0);
 
     optLayout->addWidget(lblTimeOpt, 0, 0);
     optLayout->addWidget(editTime, 0, 1);
     optLayout->addWidget(chkConv, 1, 0);
     optLayout->addWidget(comboConv, 1, 1);
     optLayout->addWidget(lblFolderOpt, 2, 0);
-    optLayout->addWidget(lblFolderVal, 2, 1);
+    optLayout->addLayout(folderOptLayout, 2, 1);
     optLayout->setColumnStretch(1, 1);
 
     dlgLayout->addLayout(optLayout);
@@ -972,6 +1000,10 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
         
         outDoConvert = chkConv->isChecked();
         outConvertFormat = comboConv->currentText();
+        outCustomOutputDir = editCustomFolder->text().trimmed();
+        if (outCustomOutputDir.isEmpty()) {
+            outCustomOutputDir = m_outputDirInput->text().trimmed();
+        }
         return true;
     }
     return false;
@@ -979,19 +1011,19 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
 
 void MainWindow::onBrowseClicked()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, "Escolha a Pasta de Destino para os Downloads", m_outputDirInput->text());
+    QString dir = QFileDialog::getExistingDirectory(this, "Escolha a Pasta de Destino Padrão para os Downloads", m_outputDirInput->text());
     if (!dir.isEmpty()) {
         m_outputDirInput->setText(dir);
         QSettings settings("NeoV Dev Studio", "NeoVDownloader");
         settings.setValue("outputFolder", dir);
-        logMessage("[System] Nova pasta de destino selecionada: " + dir);
+        logMessage("[System] Nova pasta de destino padrão salva: " + dir);
         refreshLibrary();
     }
 }
 
 void MainWindow::onOpenFolderClicked()
 {
-    QString dir = m_outputDirInput->text();
+    QString dir = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
     if (!dir.isEmpty()) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
         logMessage("[System] Abrindo a pasta no Windows Explorer: " + dir);
@@ -1006,20 +1038,21 @@ void MainWindow::onStartClicked()
         return;
     }
 
-    // Acionar a janela modal de opções (Foto 3) com suporte à conversão automática pós-download!
-    QString selectedQuality, timeRange, convertFormat;
+    // Acionar a janela modal de opções (Foto 3) com suporte à pasta temporária e conversão pós-download!
+    QString selectedQuality, timeRange, convertFormat, customOutputDir;
     bool doConvert = false;
-    if (!showFormatSelectionDialog(selectedQuality, timeRange, doConvert, convertFormat)) {
+    if (!showFormatSelectionDialog(selectedQuality, timeRange, doConvert, convertFormat, customOutputDir)) {
         logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
         return;
     }
 
     m_autoConvertAfterDownload = doConvert;
     m_autoConvertFormat = convertFormat;
+    m_currentDownloadDir = customOutputDir;
 
-    QString outputDir = m_outputDirInput->text().trimmed();
+    QString defaultOutputDir = m_outputDirInput->text().trimmed();
     QSettings settings("NeoV Dev Studio", "NeoVDownloader");
-    settings.setValue("outputFolder", outputDir);
+    settings.setValue("outputFolder", defaultOutputDir); // Conserva a pasta padrão inalterada!
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
     settings.setValue("defaultTimeRange", timeRange);
@@ -1036,9 +1069,13 @@ void MainWindow::onStartClicked()
     if (m_autoConvertAfterDownload) {
         logMessage("[Auto-Conversão] Programado para converter automaticamente para: " + m_autoConvertFormat);
     }
-    logMessage("[Destino] Mídia será salva em: " + outputDir);
+    if (customOutputDir != defaultOutputDir) {
+        logMessage("[Destino Temporário] Este download específico será salvo em: " + customOutputDir);
+    } else {
+        logMessage("[Destino Padrão] Mídia será salva na pasta padrão: " + customOutputDir);
+    }
     
-    m_engine.startDownload(url.toStdString(), selectedQuality.toStdString(), timeRange.toStdString(), outputDir.toStdString());
+    m_engine.startDownload(url.toStdString(), selectedQuality.toStdString(), timeRange.toStdString(), customOutputDir.toStdString());
 }
 
 void MainWindow::onCancelClicked()

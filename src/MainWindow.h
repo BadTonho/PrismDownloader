@@ -49,7 +49,7 @@ private:
     void setupUI();
     void setupStyles();
     void logMessage(const QString &msg);
-    bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat);
+    bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir);
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -78,9 +78,10 @@ private:
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
 
-    // Estado de Conversão Automática pós-download
+    // Estado de Conversão Automática e Pasta Temporária pós-download
     bool m_autoConvertAfterDownload;
     QString m_autoConvertFormat;
+    QString m_currentDownloadDir;
 
     // Tela de Biblioteca de Mídias (Página 1)
     QTableWidget *m_libraryTable;
