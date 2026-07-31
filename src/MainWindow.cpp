@@ -12,12 +12,13 @@
 #include <QUrl>
 #include <QSettings>
 #include <QDir>
+#include <QFileInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle("NeoVDownloader - Turbo Edition");
-    resize(920, 560);
+    resize(960, 580);
 
     setupUI();
     setupStyles();
@@ -68,7 +69,8 @@ MainWindow::MainWindow(QWidget *parent)
                     m_progressBar->setValue(100);
                     m_statusLabel->setText("Status: Concluído e salvo na pasta com sucesso!");
                     logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
-                    
+                    refreshLibrary(); // Atualizar a biblioteca automaticamente ao terminar o download!
+
                     if (m_notifyCheckBox->isChecked()) {
                         QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na pasta de destino.");
                     }
@@ -76,6 +78,9 @@ MainWindow::MainWindow(QWidget *parent)
             }
         }, Qt::QueuedConnection);
     });
+
+    // Carregar a biblioteca inicial
+    refreshLibrary();
 }
 
 MainWindow::~MainWindow()
@@ -118,6 +123,11 @@ void MainWindow::setupUI()
     m_navDownloadBtn->setChecked(true);
     m_navDownloadBtn->setCursor(Qt::PointingHandCursor);
 
+    m_navLibraryBtn = new QPushButton("Biblioteca", sidebar);
+    m_navLibraryBtn->setObjectName("navBtn");
+    m_navLibraryBtn->setCheckable(true);
+    m_navLibraryBtn->setCursor(Qt::PointingHandCursor);
+
     m_navLogsBtn = new QPushButton("Terminal de Logs", sidebar);
     m_navLogsBtn->setObjectName("navBtn");
     m_navLogsBtn->setCheckable(true);
@@ -131,10 +141,12 @@ void MainWindow::setupUI()
     QButtonGroup *navGroup = new QButtonGroup(this);
     navGroup->setExclusive(true);
     navGroup->addButton(m_navDownloadBtn, 0);
-    navGroup->addButton(m_navLogsBtn, 1);
-    navGroup->addButton(m_navInfoBtn, 2);
+    navGroup->addButton(m_navLibraryBtn, 1);
+    navGroup->addButton(m_navLogsBtn, 2);
+    navGroup->addButton(m_navInfoBtn, 3);
 
     sidebarLayout->addWidget(m_navDownloadBtn);
+    sidebarLayout->addWidget(m_navLibraryBtn);
     sidebarLayout->addWidget(m_navLogsBtn);
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
@@ -266,7 +278,64 @@ void MainWindow::setupUI()
     downloadsLayout->addStretch();
     m_stackedWidget->addWidget(pageDownloads);
 
-    // ---> TELA 1: TERMINAL DE LOGS <---
+    // ---> TELA 1: BIBLIOTECA DE MÍDIAS <---
+    QWidget *pageLibrary = new QWidget(m_stackedWidget);
+    QVBoxLayout *libLayout = new QVBoxLayout(pageLibrary);
+    libLayout->setSpacing(14);
+    libLayout->setContentsMargins(24, 20, 24, 20);
+
+    QHBoxLayout *libTopLayout = new QHBoxLayout();
+    QLabel *libTitle = new QLabel("Minha Biblioteca (Arquivos na Pasta de Destino):", pageLibrary);
+    libTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 14px;");
+    libTopLayout->addWidget(libTitle);
+    libTopLayout->addStretch();
+
+    QPushButton *btnRefreshLib = new QPushButton("Atualizar Lista", pageLibrary);
+    btnRefreshLib->setObjectName("browseBtn");
+    btnRefreshLib->setCursor(Qt::PointingHandCursor);
+    btnRefreshLib->setMinimumHeight(32);
+    connect(btnRefreshLib, &QPushButton::clicked, this, &MainWindow::refreshLibrary);
+    libTopLayout->addWidget(btnRefreshLib);
+
+    libLayout->addLayout(libTopLayout);
+
+    m_libraryTable = new QTableWidget(0, 3, pageLibrary);
+    QStringList headers;
+    headers << "Arquivo de Mídia" << "Formato" << "Tamanho";
+    m_libraryTable->setHorizontalHeaderLabels(headers);
+    m_libraryTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    m_libraryTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    m_libraryTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    m_libraryTable->verticalHeader()->setVisible(false);
+    m_libraryTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_libraryTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_libraryTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_libraryTable->setAlternatingRowColors(true);
+    m_libraryTable->setObjectName("libraryTable");
+    connect(m_libraryTable, &QTableWidget::cellDoubleClicked, this, &MainWindow::onLibraryDoubleClicked);
+
+    libLayout->addWidget(m_libraryTable);
+
+    QHBoxLayout *libBottomLayout = new QHBoxLayout();
+    QPushButton *btnPlay = new QPushButton("REPRODUZIR / ABRIR SELECIONADO", pageLibrary);
+    btnPlay->setObjectName("startBtn");
+    btnPlay->setCursor(Qt::PointingHandCursor);
+    btnPlay->setMinimumHeight(40);
+    connect(btnPlay, &QPushButton::clicked, this, &MainWindow::onPlaySelectedMedia);
+
+    QPushButton *btnOpenExp = new QPushButton("ABRIR NO EXPLORER", pageLibrary);
+    btnOpenExp->setObjectName("openFolderSideBtn");
+    btnOpenExp->setCursor(Qt::PointingHandCursor);
+    btnOpenExp->setMinimumHeight(40);
+    connect(btnOpenExp, &QPushButton::clicked, this, &MainWindow::onOpenFolderClicked);
+
+    libBottomLayout->addWidget(btnPlay, 2);
+    libBottomLayout->addWidget(btnOpenExp, 1);
+    libLayout->addLayout(libBottomLayout);
+
+    m_stackedWidget->addWidget(pageLibrary);
+
+    // ---> TELA 2: TERMINAL DE LOGS <---
     QWidget *pageLogs = new QWidget(m_stackedWidget);
     QVBoxLayout *logsLayout = new QVBoxLayout(pageLogs);
     logsLayout->setSpacing(12);
@@ -282,13 +351,12 @@ void MainWindow::setupUI()
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
 
-    // ---> TELA 2: INFORMAÇÕES E HARDWARE COM DESIGN MODERNO <---
+    // ---> TELA 3: INFORMAÇÕES E HARDWARE COM DESIGN MODERNO <---
     QWidget *pageInfo = new QWidget(m_stackedWidget);
     QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
     infoLayout->setSpacing(16);
     infoLayout->setContentsMargins(24, 20, 24, 20);
 
-    // Painel 1 - Informações do Aplicativo
     QGroupBox *appInfoGroup = new QGroupBox("Informações do Aplicativo", pageInfo);
     QGridLayout *appLayout = new QGridLayout(appInfoGroup);
     appLayout->setSpacing(10);
@@ -325,7 +393,6 @@ void MainWindow::setupUI()
     appLayout->setColumnStretch(1, 1);
     infoLayout->addWidget(appInfoGroup);
 
-    // Painel 2 - Diagnóstico de Hardware e Aceleração GPU
     QGroupBox *hwInfoGroup = new QGroupBox("Diagnóstico de Hardware e Aceleração", pageInfo);
     QGridLayout *hwLayout = new QGridLayout(hwInfoGroup);
     hwLayout->setSpacing(10);
@@ -354,7 +421,6 @@ void MainWindow::setupUI()
     hwLayout->setColumnStretch(1, 1);
     infoLayout->addWidget(hwInfoGroup);
 
-    // Painel 3 - Recursos e Tecnologia do Sistema
     QGroupBox *techGroup = new QGroupBox("Tecnologias Integradas no Core", pageInfo);
     QGridLayout *techLayout = new QGridLayout(techGroup);
     techLayout->setSpacing(10);
@@ -399,6 +465,73 @@ void MainWindow::switchPage(int index)
 {
     if (m_stackedWidget) {
         m_stackedWidget->setCurrentIndex(index);
+        if (index == 1) { // Se abriu a aba Biblioteca, revigorar a lista de vídeos baixados!
+            refreshLibrary();
+        }
+    }
+}
+
+void MainWindow::refreshLibrary()
+{
+    if (!m_libraryTable) return;
+    m_libraryTable->setRowCount(0);
+
+    QString folder = m_outputDirInput->text();
+    QDir dir(folder);
+    if (!dir.exists()) return;
+
+    QStringList filters;
+    filters << "*.mp4" << "*.mp3" << "*.mkv" << "*.webm" << "*.m4a" << "*.avi" << "*.flv" << "*.wav";
+    QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
+
+    m_libraryTable->setRowCount(fileList.size());
+    for (int i = 0; i < fileList.size(); ++i) {
+        QFileInfo info = fileList.at(i);
+        
+        QTableWidgetItem *itemTitle = new QTableWidgetItem(info.fileName());
+        itemTitle->setFlags(itemTitle->flags() ^ Qt::ItemIsEditable);
+        
+        QTableWidgetItem *itemExt = new QTableWidgetItem(info.suffix().toUpper());
+        itemExt->setFlags(itemExt->flags() ^ Qt::ItemIsEditable);
+        itemExt->setTextAlignment(Qt::AlignCenter);
+
+        double sizeMB = static_cast<double>(info.size()) / (1024.0 * 1024.0);
+        QTableWidgetItem *itemSize = new QTableWidgetItem(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
+        itemSize->setFlags(itemSize->flags() ^ Qt::ItemIsEditable);
+        itemSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+        m_libraryTable->setItem(i, 0, itemTitle);
+        m_libraryTable->setItem(i, 1, itemExt);
+        m_libraryTable->setItem(i, 2, itemSize);
+    }
+    logMessage(QString("[Biblioteca] Lista de mídias atualizada: %1 arquivo(s) encontrado(s).").arg(fileList.size()));
+}
+
+void MainWindow::onPlaySelectedMedia()
+{
+    int row = m_libraryTable->currentRow();
+    if (row < 0) {
+        QMessageBox::information(this, "Biblioteca", "Selecione um arquivo de mídia da lista acima para reproduzir.");
+        return;
+    }
+    onLibraryDoubleClicked(row, 0);
+}
+
+void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
+{
+    QTableWidgetItem *item = m_libraryTable->item(row, 0);
+    if (!item) return;
+
+    QString fileName = item->text();
+    QDir dir(m_outputDirInput->text());
+    QString filePath = dir.absoluteFilePath(fileName);
+
+    if (QFile::exists(filePath)) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+        logMessage("[Biblioteca] Reproduzindo arquivo no player do Windows: " + fileName);
+    } else {
+        QMessageBox::warning(this, "Aviso", "O arquivo selecionado não foi encontrado fisicamente no disco:\n" + filePath);
+        refreshLibrary();
     }
 }
 
@@ -568,6 +701,34 @@ void MainWindow::setupStyles()
             background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #10b981, stop:1 #047857);
             border-radius: 4px;
         }
+        QTableWidget#libraryTable {
+            background-color: #1a1a1a;
+            border: 1px solid #262626;
+            border-radius: 6px;
+            color: #ffffff;
+            gridline-color: #262626;
+            font-size: 13px;
+            selection-background-color: #10b981;
+            selection-color: #031c12;
+        }
+        QTableWidget#libraryTable QHeaderView::section {
+            background-color: #242424;
+            color: #10b981;
+            font-weight: bold;
+            border: none;
+            border-bottom: 2px solid #10b981;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        QTableWidget#libraryTable::item {
+            padding: 6px 10px;
+            border-bottom: 1px solid #222222;
+        }
+        QTableWidget#libraryTable::item:selected {
+            background-color: #10b981;
+            color: #031c12;
+            font-weight: bold;
+        }
         QTextEdit#logArea {
             background-color: #0a0e0b;
             border: 1px solid #1a241c;
@@ -597,6 +758,7 @@ void MainWindow::onBrowseClicked()
         QSettings settings("NeoV Dev Studio", "NeoVDownloader");
         settings.setValue("outputFolder", dir);
         logMessage("[System] Nova pasta de destino selecionada: " + dir);
+        refreshLibrary();
     }
 }
 

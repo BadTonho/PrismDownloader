@@ -12,6 +12,9 @@
 #include <QStackedWidget>
 #include <QButtonGroup>
 #include <QFrame>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QFileInfoList>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -27,6 +30,9 @@ private slots:
     void onBrowseClicked();
     void onOpenFolderClicked();
     void switchPage(int index);
+    void refreshLibrary();
+    void onPlaySelectedMedia();
+    void onLibraryDoubleClicked(int row, int column);
 
 private:
     void setupUI();
@@ -36,6 +42,7 @@ private:
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
     QPushButton *m_navDownloadBtn;
+    QPushButton *m_navLibraryBtn;
     QPushButton *m_navLogsBtn;
     QPushButton *m_navInfoBtn;
     QPushButton *m_openFolderBtn;
@@ -58,10 +65,13 @@ private:
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
 
-    // Tela de Terminal de Logs
+    // Tela de Biblioteca de Mídias (Página 1 do StackedWidget)
+    QTableWidget *m_libraryTable;
+
+    // Tela de Terminal de Logs (Página 2 do StackedWidget)
     QTextEdit *m_logEdit;
 
-    // Componentes da Tela de Informações
+    // Componentes da Tela de Informações (Página 3 do StackedWidget)
     QLabel *m_gpuModelLabel;
     QLabel *m_gpuCodecLabel;
     QLabel *m_gpuStatusLabel;

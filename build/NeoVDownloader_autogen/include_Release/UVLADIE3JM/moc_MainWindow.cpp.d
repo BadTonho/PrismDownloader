@@ -1,4 +1,5 @@
 C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen/include_Release/UVLADIE3JM/moc_MainWindow.cpp: C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/MainWindow.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/QFileInfoList \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/q20functional.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/q20memory.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/q20type_traits.h \
@@ -18,6 +19,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qbytearrayalgorithms.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qbytearraylist.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qbytearrayview.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qcalendar.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qchar.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qcompare.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qcompare_impl.h \
@@ -31,9 +33,13 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qcontiguouscache.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qdarwinhelpers.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qdatastream.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qdatetime.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qdebug.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qendian.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qexceptionhandling.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qfile.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qfiledevice.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qfileinfo.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qflags.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qfloat16.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qforeach.h \
@@ -46,6 +52,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qhashfunctions.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qiodevice.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qiodevicebase.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qitemselectionmodel.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qiterable.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qiterator.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qlatin1stringview.h \
@@ -104,6 +111,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtdeprecationmarkers.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtenvironmentvariables.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtextstream.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtimezone.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtmetamacros.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtnoop.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtCore/qtpreprocessorsupport.h \
@@ -157,15 +165,18 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QCheckBox \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QComboBox \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QFrame \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QHeaderView \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QLabel \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QLineEdit \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QMainWindow \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QProgressBar \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QPushButton \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QStackedWidget \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QTableWidget \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/QTextEdit \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractbutton.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractitemdelegate.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractitemview.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractscrollarea.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractslider.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qabstractspinbox.h \
@@ -173,6 +184,7 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcheckbox.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qcombobox.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qframe.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qheaderview.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qlabel.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qlineedit.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qmainwindow.h \
@@ -185,6 +197,8 @@ C:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/build/NeoVDownloader_autogen
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qstyle.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qstyleoption.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qtabbar.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qtableview.h \
+  C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qtablewidget.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qtabwidget.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qtextedit.h \
   C:/Qt/6.7.2/msvc2019_64/include/QtWidgets/qtwidgets-config.h \
