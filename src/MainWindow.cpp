@@ -1530,13 +1530,28 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     QJsonArray assets = obj.value("assets").toArray();
     QString downloadUrl = "";
     QString assetName = "PrismDownloader_Setup.exe";
+    
+    // Prioridade 1: Buscar rigorosamente o instalador (.exe)
     for (int i = 0; i < assets.size(); ++i) {
         QJsonObject asset = assets.at(i).toObject();
         QString name = asset.value("name").toString();
-        if (name.endsWith(".exe", Qt::CaseInsensitive) || name.endsWith(".zip", Qt::CaseInsensitive)) {
+        if (name.endsWith(".exe", Qt::CaseInsensitive)) {
             downloadUrl = asset.value("browser_download_url").toString();
             assetName = name;
             break;
+        }
+    }
+    
+    // Prioridade 2 (Fallback): Se não houver .exe, buscar por pacote portável (.zip)
+    if (downloadUrl.isEmpty()) {
+        for (int i = 0; i < assets.size(); ++i) {
+            QJsonObject asset = assets.at(i).toObject();
+            QString name = asset.value("name").toString();
+            if (name.endsWith(".zip", Qt::CaseInsensitive)) {
+                downloadUrl = asset.value("browser_download_url").toString();
+                assetName = name;
+                break;
+            }
         }
     }
 
