@@ -177,7 +177,7 @@ void MainWindow::setupUI()
     m_navDownloadBtn->setChecked(true);
     m_navDownloadBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navLibraryBtn = new QPushButton("Minha biblioteca de mídia", sidebar);
+    m_navLibraryBtn = new QPushButton("Biblioteca", sidebar);
     m_navLibraryBtn->setObjectName("navBtn");
     m_navLibraryBtn->setCheckable(true);
     m_navLibraryBtn->setCursor(Qt::PointingHandCursor);
@@ -192,7 +192,7 @@ void MainWindow::setupUI()
     m_navLogsBtn->setCheckable(true);
     m_navLogsBtn->setCursor(Qt::PointingHandCursor);
 
-    m_navInfoBtn = new QPushButton("Informações e hardware", sidebar);
+    m_navInfoBtn = new QPushButton("Informações", sidebar);
     m_navInfoBtn->setObjectName("navBtn");
     m_navInfoBtn->setCheckable(true);
     m_navInfoBtn->setCursor(Qt::PointingHandCursor);
@@ -364,7 +364,7 @@ void MainWindow::setupUI()
     libLayout->setContentsMargins(24, 20, 24, 20);
 
     QHBoxLayout *libTopLayout = new QHBoxLayout();
-    QLabel *libTitle = new QLabel("Minha biblioteca de mídia (Arquivos na Pasta de Destino):", pageLibrary);
+    QLabel *libTitle = new QLabel("Biblioteca de Mídias (Arquivos na Pasta de Destino):", pageLibrary);
     libTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 15px;");
     libTopLayout->addWidget(libTitle);
     libTopLayout->addStretch();
