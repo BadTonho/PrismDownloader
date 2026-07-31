@@ -27,8 +27,8 @@
 // ============================================================================
 // CONFIGURAÇÃO OFICIAL DE VERSÃO (Mude apenas aqui para futuras Releases!)
 // ============================================================================
-static const QString NEOV_VERSION_TAG = "v1.1.3";    // Tag de verificação no GitHub
-static const QString NEOV_VERSION_NUMBER = "1.1.3";  // Número de exibição
+static const QString NEOV_VERSION_TAG = "v1.1.4";    // Tag de verificação no GitHub
+static const QString NEOV_VERSION_NUMBER = "1.1.4";  // Número de exibição
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr), m_networkManager(new QNetworkAccessManager(this))
