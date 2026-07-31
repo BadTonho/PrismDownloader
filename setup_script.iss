@@ -1,6 +1,6 @@
 #define MyAppName "NeoVDownloader"
 #define MyAppVersion "1.1.0"
-#define MyAppPublisher "NeoV Dev Studio"
+#define MyAppPublisher "Tonho Studios"
 #define MyAppExeName "NeoVDownloader.exe"
 
 [Setup]

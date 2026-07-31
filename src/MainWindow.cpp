@@ -143,7 +143,7 @@ MainWindow::MainWindow(QWidget *parent)
     refreshLibrary();
 
     // Carregar configurações do Auto-Updater e iniciar checagem silenciosa ao start (se habilitado)
-    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "NeoVDownloader");
     bool checkOnStart = settings.value("checkUpdatesOnStart", true).toBool(); // Por padrão ATIVADO
     bool autoDownload = settings.value("autoDownloadUpdates", false).toBool(); // Por padrão DESATIVADO
     if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
@@ -161,7 +161,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "NeoVDownloader");
     settings.setValue("outputFolder", m_outputDirInput->text().trimmed());
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
@@ -325,7 +325,7 @@ void MainWindow::setupUI()
     saveLayout->addWidget(m_outputDirInput, 1);
     saveLayout->addWidget(m_browseDirBtn, 0);
 
-    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "NeoVDownloader");
     QString savedFolder = settings.value("outputFolder", "").toString();
     if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
         savedFolder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
@@ -1123,7 +1123,7 @@ void MainWindow::onBrowseClicked()
     QString dir = QFileDialog::getExistingDirectory(this, "Escolha a Pasta de Destino Padrão para os Downloads", m_outputDirInput->text());
     if (!dir.isEmpty()) {
         m_outputDirInput->setText(dir);
-        QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+        QSettings settings("Tonho Studios", "NeoVDownloader");
         settings.setValue("outputFolder", dir);
         logMessage("[System] Nova pasta de destino padrão salva: " + dir);
         refreshLibrary();
@@ -1160,7 +1160,7 @@ void MainWindow::onStartClicked()
     m_currentDownloadDir = customOutputDir;
 
     QString defaultOutputDir = m_outputDirInput->text().trimmed();
-    QSettings settings("NeoV Dev Studio", "NeoVDownloader");
+    QSettings settings("Tonho Studios", "NeoVDownloader");
     settings.setValue("outputFolder", defaultOutputDir); // Conserva a pasta padrão inalterada!
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
