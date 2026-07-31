@@ -64,10 +64,7 @@ void DownloadEngine::startDownload(const std::string &url, const std::string &qu
         if (m_onStatus) m_onStatus(DownloadStatus::ConvertingGPU, "Extraindo Áudio Puro em alta velocidade...");
     } else {
         cmd << "-f \"bestvideo+bestaudio/best\" --merge-output-format mp4 ";
-        if (m_gpuDetector.hasHardwareAcceleration()) {
-            std::cout << "⚡ [DownloadEngine] Ativando processamento na placa: " << m_gpuDetector.getRecommendedCodec() << "\n";
-            cmd << "--postprocessor-args \"ffmpeg:-vcodec " << m_gpuDetector.getRecommendedCodec() << "\" ";
-        }
+        std::cout << "⚡ [DownloadEngine] Modo Stream Copy ativado (União instantânea sem perda de quadros ou recodificação desnecessária).\n";
         if (m_onStatus) m_onStatus(DownloadStatus::Downloading, "Baixando e Juntando streams em alta velocidade...");
     }
 
@@ -117,6 +114,19 @@ void DownloadEngine::workerLoop(const std::string &command) {
 void DownloadEngine::parseYtDlpOutput(const std::string &line) {
     std::cout << "[Output] " << line;
     try {
+        if (line.find("[Merger]") != std::string::npos || line.find("Merging formats into") != std::string::npos) {
+            if (m_onStatus) m_onStatus(DownloadStatus::Muxing, "📦 Mesclando áudio e vídeo de forma instantânea sem perda (Stream Copy)...");
+            return;
+        }
+        if (line.find("[ExtractAudio]") != std::string::npos || (line.find("Destination: ") != std::string::npos && line.find(".mp3") != std::string::npos)) {
+            if (m_onStatus) m_onStatus(DownloadStatus::ConvertingGPU, "🎵 Extraindo faixas de áudio MP3 em alta velocidade...");
+            return;
+        }
+        if (line.find("Deleting original file") != std::string::npos || line.find("Already downloaded and merged") != std::string::npos) {
+            if (m_onStatus) m_onStatus(DownloadStatus::Completed, "✨ Arquivo processado e salvo na pasta com sucesso!");
+            return;
+        }
+
         std::regex rx("\\[download\\]\\s+([0-9.]+)%.*at\\s+([0-9a-zA-Z./]+)\\s+ETA\\s+([0-9:]+)");
         std::smatch match;
         if (std::regex_search(line, match, rx) && match.size() >= 4) {
