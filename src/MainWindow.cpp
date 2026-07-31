@@ -24,6 +24,12 @@
 #include <QJsonArray>
 #include <QApplication>
 
+// ============================================================================
+// CONFIGURAÇÃO OFICIAL DE VERSÃO (Mude apenas aqui para futuras Releases!)
+// ============================================================================
+static const QString NEOV_VERSION_TAG = "v1.1.0";    // Tag de verificação no GitHub
+static const QString NEOV_VERSION_NUMBER = "1.1.0";  // Número de exibição
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr), m_networkManager(new QNetworkAccessManager(this))
 {
@@ -241,7 +247,7 @@ void MainWindow::setupUI()
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
 
-    m_sidebarUpdateNotification = new QLabel("🛡️ v1.0.0 (Em Dia)", sidebar);
+    m_sidebarUpdateNotification = new QLabel("🛡️ " + NEOV_VERSION_TAG + " (Em Dia)", sidebar);
     m_sidebarUpdateNotification->setAlignment(Qt::AlignCenter);
     m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
     sidebarLayout->addWidget(m_sidebarUpdateNotification);
@@ -569,7 +575,7 @@ void MainWindow::setupUI()
 
     QLabel *lblAppVerKey = new QLabel("Versão Atual:", appInfoGroup);
     lblAppVerKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    QLabel *lblAppVerVal = new QLabel("1.0.0 (Estável / Release)", appInfoGroup);
+    QLabel *lblAppVerVal = new QLabel(NEOV_VERSION_NUMBER + " (Estável / Release)", appInfoGroup);
     lblAppVerVal->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
 
     QLabel *lblAppArchKey = new QLabel("Arquitetura:", appInfoGroup);
@@ -674,7 +680,7 @@ void MainWindow::setupUI()
 
     QLabel *lblUpStatusKey = new QLabel("Status de Versão:", updateGroup);
     lblUpStatusKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    m_updateStatusLabel = new QLabel("Versão v1.0.0 (Release) operacional. Aguardando verificação...", updateGroup);
+    m_updateStatusLabel = new QLabel("Versão " + NEOV_VERSION_TAG + " (Release) operacional. Aguardando verificação...", updateGroup);
     m_updateStatusLabel->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
 
     upGrid->addWidget(lblServerKey, 0, 0);
@@ -1450,19 +1456,19 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     if (reply->error() != QNetworkReply::NoError) {
         int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (httpCode == 404) {
-            m_updateStatusLabel->setText("Nenhuma release pública postada ainda (Versão v1.0.0 Dev em uso).");
+            m_updateStatusLabel->setText("Nenhuma release pública postada ainda (Versão " + NEOV_VERSION_TAG + " em uso).");
             if (m_sidebarUpdateNotification) {
-                m_sidebarUpdateNotification->setText("✅ v1.0.0 (Em Dia)");
+                m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
                 m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
             }
             logMessage("[Updater] Resposta 404: Repositório sem releases públicas criadas no GitHub. O software local está atualizado.");
             if (!silent) {
-                QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do NeoVDownloader (v1.0.0)!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
+                QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do NeoVDownloader (" + NEOV_VERSION_TAG + ")!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
             }
         } else {
-            m_updateStatusLabel->setText("Falha de conexão ou offline. (Versão v1.0.0 em uso).");
+            m_updateStatusLabel->setText("Falha de conexão ou offline. (Versão " + NEOV_VERSION_TAG + " em uso).");
             if (m_sidebarUpdateNotification) {
-                m_sidebarUpdateNotification->setText("🛡️ v1.0.0 (Offline/Local)");
+                m_sidebarUpdateNotification->setText("🛡️ " + NEOV_VERSION_TAG + " (Offline/Local)");
                 m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
             }
             logMessage("[Updater] Erro ao conectar com o GitHub: " + reply->errorString());
@@ -1480,9 +1486,9 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     QString tagName = obj.value("tag_name").toString().trimmed();
     QString body = obj.value("body").toString();
     if (tagName.isEmpty()) {
-        m_updateStatusLabel->setText("Versão v1.0.0 operacional (Nenhuma tag encontrada).");
+        m_updateStatusLabel->setText("Versão " + NEOV_VERSION_TAG + " operacional (Nenhuma tag encontrada).");
         if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText("✅ v1.0.0 (Em Dia)");
+            m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
             m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
         }
         return;
@@ -1490,15 +1496,15 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
 
     logMessage("[Updater] Última release no GitHub identificada: " + tagName);
 
-    // Comparar versão com a local (v1.0.0)
-    QString localVersion = "v1.0.0";
+    // Comparar versão com a local
+    QString localVersion = NEOV_VERSION_TAG;
     QString cleanLocal = localVersion; cleanLocal.remove("v", Qt::CaseInsensitive);
     QString cleanRemote = tagName; cleanRemote.remove("v", Qt::CaseInsensitive);
 
     if (cleanRemote == cleanLocal || cleanRemote.isEmpty()) {
         m_updateStatusLabel->setText("Você está utilizando a versão mais recente (" + tagName + ").");
         if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText("✅ v1.0.0 (Em Dia)");
+            m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
             m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
         }
         logMessage("[Updater] A versão instalada já é a mais recente disponível.");

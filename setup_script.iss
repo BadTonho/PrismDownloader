@@ -1,5 +1,5 @@
 #define MyAppName "NeoVDownloader"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "NeoV Dev Studio"
 #define MyAppExeName "NeoVDownloader.exe"
 
@@ -13,7 +13,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=dist
-OutputBaseFilename=NeoVDownloader_V1.0_Setup
+OutputBaseFilename=NeoVDownloader_v{#MyAppVersion}_Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
