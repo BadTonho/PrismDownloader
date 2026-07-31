@@ -17,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle("NeoVDownloader - Turbo Edition");
-    resize(820, 480); // Janela agora é ultracompatada, moderna e limpa sem o blocão de logs ocupando o fundo!
+    resize(920, 560);
 
     setupUI();
     setupStyles();
@@ -31,23 +31,33 @@ MainWindow::MainWindow(QWidget *parent)
 
     if (hasAccel) {
         m_hardwareInfoText = QString(
-            "=== INFORMAÇÕES DE HARDWARE E SISTEMA ===\n\n"
-            "[GPU DETECTADA]\n"
-            "Modelo: %1\n"
-            "Codec Acelerado (Turbo): %2\n"
-            "Status: ACELERAÇÃO DE HARDWARE ATIVA\n\n"
-            "[MOTOR NATIVO]\n"
-            "Núcleo C++17 Padrão + Qt 6.7\n"
-            "Processador de Mídia: Zero-Loss Stream Copy habilitado."
+            "==========================================================\n"
+            "         NEOVDOWNLOADER - SYSTEM & HARDWARE INFO          \n"
+            "==========================================================\n\n"
+            "[GPU E ACELERAÇÃO NATIVE]\n"
+            " Modelo Detectado na Placa-Mãe: %1\n"
+            " Codec Acelerado Recomendado: [%2]\n"
+            " Status NVENC / Hardware Engine: ATIVO E OPERANTE\n\n"
+            "[ARQUITETURA DE SOFTWARES]\n"
+            " Motor de Alta Performance: C++17 Padrão + Qt 6.7\n"
+            " Processamento de Áudio/Vídeo: FFmpeg Nativo Embeddado\n"
+            " Mescla de Streams: Zero-Loss Stream Copy (Sem perda de qualidade e junção instantânea em < 1 segundo)."
         ).arg(gpuName, codec);
         logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
     } else {
         m_hardwareInfoText = 
-            "=== INFORMAÇÕES DE HARDWARE E SISTEMA ===\n\n"
-            "Modo: Fallback CPU Multi-thread\n"
-            "Aviso: Nenhuma aceleração de GPU dedicada NVIDIA foi localizada.\n"
-            "Processamento utilizando threads nativas do processador principal.";
+            "==========================================================\n"
+            "         NEOVDOWNLOADER - SYSTEM & HARDWARE INFO          \n"
+            "==========================================================\n\n"
+            "[GPU E ACELERAÇÃO NATIVE]\n"
+            " Modo Atual: Fallback CPU Multi-thread\n"
+            " Aviso: Nenhuma aceleração dedicada NVIDIA foi localizada ou ativada no Driver.\n"
+            " O processamento ocorrerá pelas threads centrais do processador principal.";
         logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
+    }
+
+    if (m_infoEdit) {
+        m_infoEdit->setText(m_hardwareInfoText);
     }
 
     m_engine.setProgressCallback([this](double percent, const std::string &speed, const std::string &eta) {
@@ -89,7 +99,6 @@ MainWindow::~MainWindow()
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
 
     m_engine.cancelCurrent();
-    if (m_logDialog) m_logDialog->close();
 }
 
 void MainWindow::setupUI()
@@ -97,33 +106,95 @@ void MainWindow::setupUI()
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
-    mainLayout->setSpacing(16);
-    mainLayout->setContentsMargins(20, 20, 20, 20);
+    QHBoxLayout *rootLayout = new QHBoxLayout(centralWidget);
+    rootLayout->setSpacing(0);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
 
-    // 1. Grupo de Configurações e Parâmetros
-    QGroupBox *inputGroup = new QGroupBox("Parâmetros do Download", this);
+    // ==========================================
+    // 1. BARRA LATERAL (SIDEBAR NAVIGATION)
+    // ==========================================
+    QFrame *sidebar = new QFrame(this);
+    sidebar->setObjectName("sidebar");
+    sidebar->setFixedWidth(200);
+    QVBoxLayout *sidebarLayout = new QVBoxLayout(sidebar);
+    sidebarLayout->setSpacing(8);
+    sidebarLayout->setContentsMargins(0, 16, 0, 16);
+
+    QLabel *brandLabel = new QLabel("NeoV Studio", sidebar);
+    brandLabel->setAlignment(Qt::AlignCenter);
+    brandLabel->setStyleSheet("font-weight: bold; font-size: 15px; color: #10b981; margin-bottom: 12px;");
+    sidebarLayout->addWidget(brandLabel);
+
+    m_navDownloadBtn = new QPushButton("Downloads", sidebar);
+    m_navDownloadBtn->setObjectName("navBtn");
+    m_navDownloadBtn->setCheckable(true);
+    m_navDownloadBtn->setChecked(true);
+    m_navDownloadBtn->setCursor(Qt::PointingHandCursor);
+
+    m_navLogsBtn = new QPushButton("Terminal de Logs", sidebar);
+    m_navLogsBtn->setObjectName("navBtn");
+    m_navLogsBtn->setCheckable(true);
+    m_navLogsBtn->setCursor(Qt::PointingHandCursor);
+
+    m_navInfoBtn = new QPushButton("Hardware & Info", sidebar);
+    m_navInfoBtn->setObjectName("navBtn");
+    m_navInfoBtn->setCheckable(true);
+    m_navInfoBtn->setCursor(Qt::PointingHandCursor);
+
+    QButtonGroup *navGroup = new QButtonGroup(this);
+    navGroup->setExclusive(true);
+    navGroup->addButton(m_navDownloadBtn, 0);
+    navGroup->addButton(m_navLogsBtn, 1);
+    navGroup->addButton(m_navInfoBtn, 2);
+
+    sidebarLayout->addWidget(m_navDownloadBtn);
+    sidebarLayout->addWidget(m_navLogsBtn);
+    sidebarLayout->addWidget(m_navInfoBtn);
+    sidebarLayout->addStretch();
+
+    // Botão prático no fundo da barra lateral
+    m_openFolderBtn = new QPushButton("Abrir Pasta", sidebar);
+    m_openFolderBtn->setObjectName("openFolderSideBtn");
+    m_openFolderBtn->setCursor(Qt::PointingHandCursor);
+    sidebarLayout->addWidget(m_openFolderBtn);
+
+    rootLayout->addWidget(sidebar);
+
+    // ==========================================
+    // 2. ÁREA CENTRAL (STACKED WIDGET DE TELAS)
+    // ==========================================
+    m_stackedWidget = new QStackedWidget(this);
+    m_stackedWidget->setObjectName("mainArea");
+    rootLayout->addWidget(m_stackedWidget);
+
+    // ---> TELA 0: DOWNLOADS <---
+    QWidget *pageDownloads = new QWidget(m_stackedWidget);
+    QVBoxLayout *downloadsLayout = new QVBoxLayout(pageDownloads);
+    downloadsLayout->setSpacing(16);
+    downloadsLayout->setContentsMargins(24, 20, 24, 20);
+
+    QGroupBox *inputGroup = new QGroupBox("Parâmetros do Download", pageDownloads);
     QGridLayout *inputLayout = new QGridLayout(inputGroup);
     inputLayout->setSpacing(12);
     inputLayout->setContentsMargins(16, 24, 16, 16);
 
-    QLabel *urlLabel = new QLabel("URL da Mídia:", this);
-    m_urlInput = new QLineEdit(this);
+    QLabel *urlLabel = new QLabel("URL da Mídia:", pageDownloads);
+    m_urlInput = new QLineEdit(pageDownloads);
     m_urlInput->setPlaceholderText("Cole aqui o link do vídeo ou stream (YouTube, Vimeo, etc)...");
 
-    QLabel *qualityLabel = new QLabel("Qualidade / Resolução:", this);
-    m_qualityCombo = new QComboBox(this);
+    QLabel *qualityLabel = new QLabel("Qualidade / Resolução:", pageDownloads);
+    m_qualityCombo = new QComboBox(pageDownloads);
     m_qualityCombo->addItem("4K (Melhor Disponível no Servidor)");
     m_qualityCombo->addItem("1080p Full HD");
     m_qualityCombo->addItem("720p HD");
     m_qualityCombo->addItem("Áudio MP3 (Extração Direta)");
 
-    QLabel *timeLabel = new QLabel("Recorte de Tempo (Opcional):", this);
-    m_timeRangeInput = new QLineEdit(this);
+    QLabel *timeLabel = new QLabel("Recorte de Tempo (Opcional):", pageDownloads);
+    m_timeRangeInput = new QLineEdit(pageDownloads);
     m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Deixe em branco para o vídeo completo)");
 
-    QLabel *folderLabel = new QLabel("Pasta de Destino:", this);
-    m_outputDirInput = new QLineEdit(this);
+    QLabel *folderLabel = new QLabel("Pasta de Destino:", pageDownloads);
+    m_outputDirInput = new QLineEdit(pageDownloads);
     
     QSettings settings("NeoV Dev Studio", "NeoVDownloader");
     QString savedFolder = settings.value("outputFolder", "").toString();
@@ -138,7 +209,7 @@ void MainWindow::setupUI()
         m_qualityCombo->setCurrentIndex(savedQualityIndex);
     }
 
-    m_browseDirBtn = new QPushButton("Escolher...", this);
+    m_browseDirBtn = new QPushButton("Escolher...", pageDownloads);
     m_browseDirBtn->setCursor(Qt::PointingHandCursor);
     m_browseDirBtn->setMinimumHeight(34);
     m_browseDirBtn->setObjectName("browseBtn");
@@ -147,7 +218,7 @@ void MainWindow::setupUI()
     folderLayout->addWidget(m_outputDirInput);
     folderLayout->addWidget(m_browseDirBtn);
 
-    m_notifyCheckBox = new QCheckBox("Exibir aviso pop-up ao concluir o download (Desativado por padrão)", this);
+    m_notifyCheckBox = new QCheckBox("Exibir aviso pop-up ao concluir o download (Desativado por padrão)", pageDownloads);
     bool notifyPref = settings.value("showNotifications", false).toBool();
     m_notifyCheckBox->setChecked(notifyPref);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
@@ -162,16 +233,15 @@ void MainWindow::setupUI()
     inputLayout->addLayout(folderLayout, 3, 1);
     inputLayout->addWidget(m_notifyCheckBox, 4, 0, 1, 2);
 
-    mainLayout->addWidget(inputGroup);
+    downloadsLayout->addWidget(inputGroup);
 
-    // 2. Duas linhas organizadas de Botões: Controles Principais (Superior) e Ferramentas/Utilitários (Inferior)
     QHBoxLayout *mainBtnLayout = new QHBoxLayout();
-    m_startBtn = new QPushButton("INICIAR DOWNLOAD ACELERADO", this);
+    m_startBtn = new QPushButton("INICIAR DOWNLOAD ACELERADO", pageDownloads);
     m_startBtn->setObjectName("startBtn");
     m_startBtn->setCursor(Qt::PointingHandCursor);
     m_startBtn->setMinimumHeight(44);
 
-    m_cancelBtn = new QPushButton("CANCELAR", this);
+    m_cancelBtn = new QPushButton("CANCELAR", pageDownloads);
     m_cancelBtn->setObjectName("cancelBtn");
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
     m_cancelBtn->setMinimumHeight(44);
@@ -179,47 +249,25 @@ void MainWindow::setupUI()
 
     mainBtnLayout->addWidget(m_startBtn, 3);
     mainBtnLayout->addWidget(m_cancelBtn, 1);
-    mainLayout->addLayout(mainBtnLayout);
+    downloadsLayout->addLayout(mainBtnLayout);
 
-    QHBoxLayout *toolsLayout = new QHBoxLayout();
-    m_openFolderBtn = new QPushButton("ABRIR PASTA", this);
-    m_openFolderBtn->setObjectName("openFolderBtn");
-    m_openFolderBtn->setCursor(Qt::PointingHandCursor);
-    m_openFolderBtn->setMinimumHeight(36);
-
-    m_logsBtn = new QPushButton("TERMINAL DE LOGS", this);
-    m_logsBtn->setObjectName("toolBtn");
-    m_logsBtn->setCursor(Qt::PointingHandCursor);
-    m_logsBtn->setMinimumHeight(36);
-
-    m_infoBtn = new QPushButton("INFO / HARDWARE", this);
-    m_infoBtn->setObjectName("toolBtn");
-    m_infoBtn->setCursor(Qt::PointingHandCursor);
-    m_infoBtn->setMinimumHeight(36);
-
-    toolsLayout->addWidget(m_openFolderBtn, 2);
-    toolsLayout->addWidget(m_logsBtn, 2);
-    toolsLayout->addWidget(m_infoBtn, 2);
-    mainLayout->addLayout(toolsLayout);
-
-    // 3. Monitor de Progresso
-    QGroupBox *monitorGroup = new QGroupBox("Monitor de Progresso", this);
+    QGroupBox *monitorGroup = new QGroupBox("Monitor de Progresso", pageDownloads);
     QVBoxLayout *monitorLayout = new QVBoxLayout(monitorGroup);
     monitorLayout->setSpacing(12);
     monitorLayout->setContentsMargins(16, 24, 16, 16);
 
-    m_statusLabel = new QLabel("Status: Pronto para iniciar...", this);
+    m_statusLabel = new QLabel("Status: Pronto para iniciar...", pageDownloads);
     m_statusLabel->setStyleSheet("font-weight: bold; font-size: 13px; color: #10b981;");
 
-    m_progressBar = new QProgressBar(this);
+    m_progressBar = new QProgressBar(pageDownloads);
     m_progressBar->setRange(0, 100);
     m_progressBar->setValue(0);
     m_progressBar->setTextVisible(true);
     m_progressBar->setMinimumHeight(22);
 
     QHBoxLayout *statsLayout = new QHBoxLayout();
-    m_speedLabel = new QLabel("Velocidade: 0.0 MB/s", this);
-    m_etaLabel = new QLabel("Tempo Restante: --:--", this);
+    m_speedLabel = new QLabel("Velocidade: 0.0 MB/s", pageDownloads);
+    m_etaLabel = new QLabel("Tempo Restante: --:--", pageDownloads);
     statsLayout->addWidget(m_speedLabel);
     statsLayout->addStretch();
     statsLayout->addWidget(m_etaLabel);
@@ -228,45 +276,65 @@ void MainWindow::setupUI()
     monitorLayout->addWidget(m_progressBar);
     monitorLayout->addLayout(statsLayout);
 
-    mainLayout->addWidget(monitorGroup);
+    downloadsLayout->addWidget(monitorGroup);
+    downloadsLayout->addStretch();
+    m_stackedWidget->addWidget(pageDownloads);
 
-    // 4. Conectar todos os botões aos seus respectivos slots
+    // ---> TELA 1: TERMINAL DE LOGS <---
+    QWidget *pageLogs = new QWidget(m_stackedWidget);
+    QVBoxLayout *logsLayout = new QVBoxLayout(pageLogs);
+    logsLayout->setSpacing(12);
+    logsLayout->setContentsMargins(24, 20, 24, 20);
+
+    QLabel *logsTitle = new QLabel("Terminal de Processamento Nativo e Diagnóstico em Tempo Real:", pageLogs);
+    logsTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 14px;");
+    logsLayout->addWidget(logsTitle);
+
+    m_logEdit = new QTextEdit(pageLogs);
+    m_logEdit->setReadOnly(true);
+    m_logEdit->setObjectName("logArea");
+    logsLayout->addWidget(m_logEdit);
+    m_stackedWidget->addWidget(pageLogs);
+
+    // ---> TELA 2: HARDWARE & INFO <---
+    QWidget *pageInfo = new QWidget(m_stackedWidget);
+    QVBoxLayout *infoLayout = new QVBoxLayout(pageInfo);
+    infoLayout->setSpacing(12);
+    infoLayout->setContentsMargins(24, 20, 24, 20);
+
+    QLabel *infoTitle = new QLabel("Diagnóstico do Sistema e Motor Gráfico:", pageInfo);
+    infoTitle->setStyleSheet("font-weight: bold; color: #38bdf8; font-size: 14px;");
+    infoLayout->addWidget(infoTitle);
+
+    m_infoEdit = new QTextEdit(pageInfo);
+    m_infoEdit->setReadOnly(true);
+    m_infoEdit->setObjectName("infoArea");
+    m_infoEdit->setText(m_hardwareInfoText);
+    infoLayout->addWidget(m_infoEdit);
+    m_stackedWidget->addWidget(pageInfo);
+
+    // Conexão dos eventos dos botões da Sidebar com a troca de telas no StackedWidget
+    connect(navGroup, &QButtonGroup::idClicked, this, &MainWindow::switchPage);
+
+    // Conectar botões de ação e pastas
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
     connect(m_browseDirBtn, &QPushButton::clicked, this, &MainWindow::onBrowseClicked);
     connect(m_openFolderBtn, &QPushButton::clicked, this, &MainWindow::onOpenFolderClicked);
-    connect(m_infoBtn, &QPushButton::clicked, this, &MainWindow::onInfoClicked);
-    connect(m_logsBtn, &QPushButton::clicked, this, &MainWindow::onLogsClicked);
+}
 
-    // 5. Configurar a Janela Flutuante de Terminal de Logs (oculta até que o usuário clique em TERMINAL DE LOGS)
-    m_logDialog = new QDialog(this);
-    m_logDialog->setWindowTitle("Terminal de Processamento Nativo (Logs)");
-    m_logDialog->resize(720, 420);
-    QVBoxLayout *dlgLayout = new QVBoxLayout(m_logDialog);
-    dlgLayout->setContentsMargins(14, 14, 14, 14);
-
-    QLabel *dlgTitle = new QLabel("Saída em Tempo Real dos Motores C++ e Extratores:", m_logDialog);
-    dlgTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 13px;");
-    dlgLayout->addWidget(dlgTitle);
-
-    m_logEdit = new QTextEdit(m_logDialog);
-    m_logEdit->setReadOnly(true);
-    m_logEdit->setObjectName("logArea");
-    dlgLayout->addWidget(m_logEdit);
-
-    QPushButton *closeDlgBtn = new QPushButton("FECHAR TERMINAL", m_logDialog);
-    closeDlgBtn->setCursor(Qt::PointingHandCursor);
-    closeDlgBtn->setMinimumHeight(34);
-    closeDlgBtn->setObjectName("cancelBtn");
-    connect(closeDlgBtn, &QPushButton::clicked, m_logDialog, &QDialog::hide);
-    dlgLayout->addWidget(closeDlgBtn);
+void MainWindow::switchPage(int index)
+{
+    if (m_stackedWidget) {
+        m_stackedWidget->setCurrentIndex(index);
+    }
 }
 
 void MainWindow::setupStyles()
 {
     QString qss = R"(
-        QMainWindow, QDialog {
-            background-color: #141414;
+        QMainWindow {
+            background-color: #121212;
             color: #dedede;
             font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 13px;
@@ -274,9 +342,49 @@ void MainWindow::setupStyles()
         QWidget {
             color: #dedede;
         }
+        QFrame#sidebar {
+            background-color: #181818;
+            border-right: 1px solid #262626;
+        }
+        QStackedWidget#mainArea {
+            background-color: #121212;
+        }
+        QPushButton#navBtn {
+            background-color: transparent;
+            color: #909090;
+            border: none;
+            border-left: 3px solid transparent;
+            padding: 12px 18px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton#navBtn:hover {
+            background-color: #222222;
+            color: #ffffff;
+        }
+        QPushButton#navBtn:checked {
+            background-color: #1f2a24;
+            color: #10b981;
+            border-left: 3px solid #10b981;
+        }
+        QPushButton#openFolderSideBtn {
+            background-color: #1c2e3a;
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 13px;
+            border: 1px solid #38bdf8;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 0 14px;
+        }
+        QPushButton#openFolderSideBtn:hover {
+            background-color: #38bdf8;
+            color: #061824;
+        }
         QGroupBox {
-            background-color: #1a1a1a;
-            border: 1px solid #2a2a2a;
+            background-color: #191919;
+            border: 1px solid #262626;
             border-radius: 6px;
             margin-top: 14px;
             font-weight: bold;
@@ -338,7 +446,7 @@ void MainWindow::setupStyles()
             font-size: 14px;
             border-radius: 5px;
             border: none;
-            padding: 8px;
+            padding: 10px;
         }
         QPushButton#startBtn:hover {
             background-color: #059669;
@@ -355,7 +463,7 @@ void MainWindow::setupStyles()
             font-size: 13px;
             border-radius: 5px;
             border: none;
-            padding: 8px;
+            padding: 10px;
         }
         QPushButton#cancelBtn:hover {
             background-color: #b91c1c;
@@ -376,33 +484,6 @@ void MainWindow::setupStyles()
             background-color: #354a43;
             color: #ffffff;
         }
-        QPushButton#openFolderBtn {
-            background-color: #162630;
-            color: #38bdf8;
-            font-weight: bold;
-            font-size: 13px;
-            border: 1px solid #38bdf8;
-            border-radius: 5px;
-            padding: 8px;
-        }
-        QPushButton#openFolderBtn:hover {
-            background-color: #38bdf8;
-            color: #061824;
-        }
-        QPushButton#toolBtn {
-            background-color: #222222;
-            color: #e2e8f0;
-            font-weight: bold;
-            font-size: 13px;
-            border: 1px solid #525252;
-            border-radius: 5px;
-            padding: 8px;
-        }
-        QPushButton#toolBtn:hover {
-            background-color: #383838;
-            color: #ffffff;
-            border: 1px solid #10b981;
-        }
         QProgressBar {
             background-color: #222222;
             border: 1px solid #333333;
@@ -416,18 +497,26 @@ void MainWindow::setupStyles()
             border-radius: 4px;
         }
         QTextEdit#logArea {
-            background-color: #0c0f0d;
+            background-color: #0a0e0b;
             border: 1px solid #1a241c;
             border-radius: 5px;
             color: #10b981;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
-            padding: 8px;
+            padding: 12px;
+        }
+        QTextEdit#infoArea {
+            background-color: #0b141a;
+            border: 1px solid #1a2c38;
+            border-radius: 5px;
+            color: #38bdf8;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            padding: 14px;
         }
     )";
 
     setStyleSheet(qss);
-    if (m_logDialog) m_logDialog->setStyleSheet(qss);
 }
 
 void MainWindow::logMessage(const QString &msg)
@@ -454,21 +543,6 @@ void MainWindow::onOpenFolderClicked()
     if (!dir.isEmpty()) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
         logMessage("[System] Abrindo a pasta no Windows Explorer: " + dir);
-    }
-}
-
-void MainWindow::onInfoClicked()
-{
-    QMessageBox::information(this, "Informações de Hardware e Sistema", m_hardwareInfoText);
-    logMessage("[System] Exibindo janela de Informações e Hardware.");
-}
-
-void MainWindow::onLogsClicked()
-{
-    if (m_logDialog) {
-        m_logDialog->show();
-        m_logDialog->raise();
-        m_logDialog->activateWindow();
     }
 }
 

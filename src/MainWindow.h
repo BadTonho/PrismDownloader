@@ -9,7 +9,9 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QCheckBox>
-#include <QDialog>
+#include <QStackedWidget>
+#include <QButtonGroup>
+#include <QFrame>
 #include "DownloadEngine.h"
 
 class MainWindow : public QMainWindow {
@@ -24,15 +26,21 @@ private slots:
     void onCancelClicked();
     void onBrowseClicked();
     void onOpenFolderClicked();
-    void onInfoClicked();
-    void onLogsClicked();
+    void switchPage(int index);
 
 private:
     void setupUI();
     void setupStyles();
     void logMessage(const QString &msg);
 
-    // Componentes de Entrada e Configuração
+    // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
+    QStackedWidget *m_stackedWidget;
+    QPushButton *m_navDownloadBtn;
+    QPushButton *m_navLogsBtn;
+    QPushButton *m_navInfoBtn;
+    QPushButton *m_openFolderBtn;
+
+    // Componentes da Tela de Downloads
     QLineEdit *m_urlInput;
     QComboBox *m_qualityCombo;
     QLineEdit *m_timeRangeInput;
@@ -40,12 +48,9 @@ private:
     QPushButton *m_browseDirBtn;
     QCheckBox *m_notifyCheckBox;
     
-    // Botões de Ação Principal e Ferramentas
+    // Botões de Ação na Tela de Downloads
     QPushButton *m_startBtn;
     QPushButton *m_cancelBtn;
-    QPushButton *m_openFolderBtn;
-    QPushButton *m_infoBtn;
-    QPushButton *m_logsBtn;
 
     // Indicadores e Monitoramento ao vivo
     QProgressBar *m_progressBar;
@@ -53,11 +58,11 @@ private:
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
 
-    // Janela flutuante dedicada para o Terminal de Logs
-    QDialog *m_logDialog;
+    // Tela de Terminal de Logs (Página 1 do StackedWidget)
     QTextEdit *m_logEdit;
 
-    // Dados de Hardware memorizados
+    // Tela de Informações de Hardware (Página 2 do StackedWidget)
+    QTextEdit *m_infoEdit;
     QString m_hardwareInfoText;
 
     // Motor Central nativo C++
