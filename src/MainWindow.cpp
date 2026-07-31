@@ -821,6 +821,11 @@ void MainWindow::onStartConvertClicked()
     m_convertStatusLabel->setText("Status: Convertendo mídia em alta velocidade...");
     if (m_stackedWidget->currentIndex() == 0) {
         m_statusLabel->setText("Status: Conversão Automática acionada em alta velocidade...");
+        m_progressBar->setRange(0, 0); // Ativa barra indeterminada (animação pulsante mostrando processamento ativo!)
+        m_speedLabel->setText("Modo: Conversão em andamento...");
+        m_etaLabel->setText("Motor FFmpeg Acelerado");
+        m_cancelBtn->setEnabled(true); // Permite cancelar também durante a conversão automática
+        m_startBtn->setEnabled(false);
     }
     m_startConvertBtn->setEnabled(false);
     m_cancelConvertBtn->setEnabled(true);
@@ -880,11 +885,20 @@ void MainWindow::onConvertProcessFinished(int exitCode)
     m_startConvertBtn->setEnabled(true);
     m_cancelConvertBtn->setEnabled(false);
 
+    if (m_stackedWidget->currentIndex() == 0) {
+        m_progressBar->setRange(0, 100);
+        m_startBtn->setEnabled(true);
+        m_cancelBtn->setEnabled(false);
+    }
+
     if (exitCode == 0) {
         m_convertProgressBar->setValue(100);
         m_convertStatusLabel->setText("Status: Conversão finalizada com sucesso! Salvo na sua Biblioteca.");
         if (m_stackedWidget->currentIndex() == 0) {
+            m_progressBar->setValue(100);
             m_statusLabel->setText("Status: Conversão Automática concluída e salva no disco!");
+            m_speedLabel->setText("Velocidade: Concluído!");
+            m_etaLabel->setText("Pronto na Biblioteca!");
         }
         logMessage("[Sucesso] Arquivo convertido e salvo na pasta com sucesso!");
         refreshLibrary();
@@ -897,6 +911,12 @@ void MainWindow::onConvertProcessFinished(int exitCode)
         m_convertProgressBar->setValue(0);
         m_convertStatusLabel->setText("Status: Erro na conversão ou processo interrompido.");
         logMessage(QString("[Erro] Conversor encerrou com código %1").arg(exitCode));
+        if (m_stackedWidget->currentIndex() == 0) {
+            m_progressBar->setValue(0);
+            m_statusLabel->setText("Status: Conversão interrompida ou com erro.");
+            m_speedLabel->setText("Velocidade de Download: 0.0 MB/s");
+            m_etaLabel->setText("Tempo Restante: --:--");
+        }
     }
 }
 
@@ -1196,6 +1216,15 @@ void MainWindow::onCancelClicked()
 {
     logMessage("[Alerta] Comando de cancelamento enviado para o worker...");
     m_engine.cancelCurrent();
+    if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
+        m_convertProcess->kill();
+        logMessage("[Conversor] Conversão automática interrompida pelo usuário na tela inicial.");
+        m_progressBar->setRange(0, 100);
+        m_progressBar->setValue(0);
+        m_statusLabel->setText("Status: Operação cancelada pelo usuário.");
+        m_speedLabel->setText("Velocidade de Download: 0.0 MB/s");
+        m_etaLabel->setText("Tempo Restante: --:--");
+    }
     m_startBtn->setEnabled(true);
     m_cancelBtn->setEnabled(false);
 }
