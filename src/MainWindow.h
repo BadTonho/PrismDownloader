@@ -40,6 +40,7 @@ private slots:
     void refreshLibrary();
     void onPlaySelectedMedia();
     void onLibraryDoubleClicked(int row, int column);
+    void onDownloadQueueDoubleClicked(int row, int column);
 
     // Slots do Conversor de Mídia
     void onConvertBrowseClicked();
@@ -92,6 +93,7 @@ private:
     QLabel *m_speedLabel;
     QLabel *m_etaLabel;
     QLabel *m_statusLabel;
+    QTableWidget *m_downloadsQueueTable{nullptr};
 
     // Estado de Conversão Automática e Pasta Temporária pós-download
     bool m_autoConvertAfterDownload;

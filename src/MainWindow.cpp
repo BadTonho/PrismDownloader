@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QColor>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QWidget>
@@ -95,6 +96,13 @@ MainWindow::MainWindow(QWidget *parent)
             if (status == DownloadStatus::Completed || status == DownloadStatus::Cancelled || status == DownloadStatus::Error) {
                 m_startBtn->setEnabled(true);
                 m_cancelBtn->setEnabled(false);
+                if (status != DownloadStatus::Completed && m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
+                    QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
+                    if (itemStatus && itemStatus->text().contains("Baixando")) {
+                        itemStatus->setText(status == DownloadStatus::Cancelled ? "⛔ Cancelado" : "❌ Erro");
+                        itemStatus->setForeground(QColor("#ef4444")); // Vermelho
+                    }
+                }
                 if (status == DownloadStatus::Completed) {
                     m_progressBar->setValue(100);
                     refreshLibrary();
@@ -401,10 +409,26 @@ void MainWindow::setupUI()
     actionBottomLayout->addStretch();
     actionBottomLayout->addWidget(m_cancelBtn);
 
+    m_downloadsQueueTable = new QTableWidget(0, 4, pageDownloads);
+    QStringList queueHeaders;
+    queueHeaders << "Vídeo / Arquivo Baixado" << "Formato" << "Tamanho" << "Status";
+    m_downloadsQueueTable->setHorizontalHeaderLabels(queueHeaders);
+    m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    m_downloadsQueueTable->verticalHeader()->setVisible(false);
+    m_downloadsQueueTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_downloadsQueueTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_downloadsQueueTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_downloadsQueueTable->setAlternatingRowColors(true);
+    m_downloadsQueueTable->setObjectName("libraryTable");
+    connect(m_downloadsQueueTable, &QTableWidget::cellDoubleClicked, this, &MainWindow::onDownloadQueueDoubleClicked);
+
     centerLayout->addWidget(m_statusLabel);
     centerLayout->addWidget(m_progressBar);
     centerLayout->addLayout(statsLayout);
-    centerLayout->addStretch();
+    centerLayout->addWidget(m_downloadsQueueTable, 1);
     centerLayout->addLayout(actionBottomLayout);
 
     downloadsLayout->addWidget(centralPanel, 1);
@@ -966,6 +990,9 @@ void MainWindow::refreshLibrary()
 {
     if (!m_libraryTable) return;
     m_libraryTable->setRowCount(0);
+    if (m_downloadsQueueTable) {
+        m_downloadsQueueTable->setRowCount(0);
+    }
 
     QString folder = m_outputDirInput->text();
     QDir dir(folder);
@@ -976,6 +1003,9 @@ void MainWindow::refreshLibrary()
     QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
 
     m_libraryTable->setRowCount(fileList.size());
+    if (m_downloadsQueueTable) {
+        m_downloadsQueueTable->setRowCount(fileList.size());
+    }
     for (int i = 0; i < fileList.size(); ++i) {
         QFileInfo info = fileList.at(i);
         
@@ -994,6 +1024,29 @@ void MainWindow::refreshLibrary()
         m_libraryTable->setItem(i, 0, itemTitle);
         m_libraryTable->setItem(i, 1, itemExt);
         m_libraryTable->setItem(i, 2, itemSize);
+
+        if (m_downloadsQueueTable) {
+            QTableWidgetItem *qTitle = new QTableWidgetItem(info.fileName());
+            qTitle->setFlags(qTitle->flags() ^ Qt::ItemIsEditable);
+
+            QTableWidgetItem *qExt = new QTableWidgetItem(info.suffix().toUpper());
+            qExt->setFlags(qExt->flags() ^ Qt::ItemIsEditable);
+            qExt->setTextAlignment(Qt::AlignCenter);
+
+            QTableWidgetItem *qSize = new QTableWidgetItem(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
+            qSize->setFlags(qSize->flags() ^ Qt::ItemIsEditable);
+            qSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+            QTableWidgetItem *qStatus = new QTableWidgetItem("✔ Concluído");
+            qStatus->setFlags(qStatus->flags() ^ Qt::ItemIsEditable);
+            qStatus->setTextAlignment(Qt::AlignCenter);
+            qStatus->setForeground(QColor("#10b981"));
+
+            m_downloadsQueueTable->setItem(i, 0, qTitle);
+            m_downloadsQueueTable->setItem(i, 1, qExt);
+            m_downloadsQueueTable->setItem(i, 2, qSize);
+            m_downloadsQueueTable->setItem(i, 3, qStatus);
+        }
     }
     logMessage(QString("[Biblioteca] Lista de mídias atualizada: %1 arquivo(s) encontrado(s).").arg(fileList.size()));
 }
@@ -1022,6 +1075,30 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
         logMessage("[Biblioteca] Reproduzindo arquivo no player do Windows: " + fileName);
     } else {
         QMessageBox::warning(this, "Aviso", "O arquivo selecionado não foi encontrado fisicamente no disco:\n" + filePath);
+        refreshLibrary();
+    }
+}
+
+void MainWindow::onDownloadQueueDoubleClicked(int row, int /*column*/)
+{
+    if (!m_downloadsQueueTable) return;
+    QTableWidgetItem *item = m_downloadsQueueTable->item(row, 0);
+    if (!item) return;
+
+    QString fileName = item->text();
+    if (fileName.startsWith("A processar stream...")) {
+        QMessageBox::information(this, "Aguarde", "Este vídeo ainda está em processo de extração ou download.");
+        return;
+    }
+
+    QDir dir(m_outputDirInput->text());
+    QString filePath = dir.absoluteFilePath(fileName);
+
+    if (QFile::exists(filePath)) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+        logMessage("[Fila de Downloads] Reproduzindo vídeo no player do Windows: " + fileName);
+    } else {
+        QMessageBox::warning(this, "Aviso", "O arquivo selecionado não foi encontrado no disco ou ainda não concluiu o download:\n" + filePath);
         refreshLibrary();
     }
 }
@@ -1236,6 +1313,32 @@ void MainWindow::onStartClicked()
     m_progressBar->setValue(0);
     m_startBtn->setEnabled(false);
     m_cancelBtn->setEnabled(true);
+
+    if (m_downloadsQueueTable) {
+        m_downloadsQueueTable->insertRow(0);
+        
+        QString displayTitle = "A processar stream... (" + url.left(38) + "...)";
+        QTableWidgetItem *qTitle = new QTableWidgetItem(displayTitle);
+        qTitle->setFlags(qTitle->flags() ^ Qt::ItemIsEditable);
+        
+        QTableWidgetItem *qExt = new QTableWidgetItem(selectedQuality.left(10));
+        qExt->setFlags(qExt->flags() ^ Qt::ItemIsEditable);
+        qExt->setTextAlignment(Qt::AlignCenter);
+
+        QTableWidgetItem *qSize = new QTableWidgetItem("Calculando...");
+        qSize->setFlags(qSize->flags() ^ Qt::ItemIsEditable);
+        qSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+        QTableWidgetItem *qStatus = new QTableWidgetItem("⏳ Baixando...");
+        qStatus->setFlags(qStatus->flags() ^ Qt::ItemIsEditable);
+        qStatus->setTextAlignment(Qt::AlignCenter);
+        qStatus->setForeground(QColor("#38bdf8"));
+
+        m_downloadsQueueTable->setItem(0, 0, qTitle);
+        m_downloadsQueueTable->setItem(0, 1, qExt);
+        m_downloadsQueueTable->setItem(0, 2, qSize);
+        m_downloadsQueueTable->setItem(0, 3, qStatus);
+    }
     
     logMessage("\n========================================================");
     logMessage("[DownloadEngine] Acionando motor acelerado de extração e junção...");
