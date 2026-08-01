@@ -23,3 +23,9 @@ dist/
 *.webm
 *.part
 *.ytdl
+
+# Diretórios e arquivos dos Agentes de IA
+.agents/
+.agent/
+*.agents*
+*.agent*
