@@ -5,12 +5,16 @@
 <h1 align="center">💎 Prism Downloader — Tonho Studios Suite</h1>
 
 <p align="center">
-  <b>A mais completa, rápida e inteligente suíte desktop para download, recorte e conversão de mídias do mercado.</b><br>
-  Construída com engenharia de alta precisão em <b>C++17 Puro</b> e <b>Qt 6</b>, com aceleração de hardware nativa.
+  <b>The most comprehensive, fast, and intelligent desktop suite for media download, trimming, and conversion.</b><br>
+  Engineered with high-precision in <b>Pure C++17</b> and <b>Qt 6</b>, featuring native hardware acceleration and advanced telemetry logs.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/BadTonho/PrismDownloader?color=00e676&label=Release%20Oficial&style=for-the-badge&logo=github" alt="GitHub Release">
+  <a href="README_PT.md">🇧🇷 Leia a versão em Português do Brasil (PT-BR) aqui.</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/BadTonho/PrismDownloader?color=00e676&label=Official%20Release&style=for-the-badge&logo=github" alt="GitHub Release">
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17">
   <img src="https://img.shields.io/badge/Qt_GUI-6.7%20Dark%20Tech-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Qt 6">
   <img src="https://img.shields.io/badge/NVIDIA-NVENC%20Hardware-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="NVIDIA NVENC">
@@ -20,84 +24,93 @@
 
 ---
 
-## ⚡ O que é o Prism Downloader?
+## ⚡ What is Prism Downloader?
 
-Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetivo de revolucionar a experiência de download e processamento de áudio e vídeo em desktops Windows. Como um prisma óptico que deforma e organiza feixes de dados, a suíte combina o poder da linguagem de programação de alta performance **C++17** com motores consagrados na indústria (`yt-dlp` e `FFmpeg`) para oferecer um fluxo ultrarápido, limpo e totalmente silencioso.
-
----
-
-## 🔥 Funcionalidades de Destaque
-
-### 🎬 1. Recorte de Faixa de Tempo (Time-Slice Extraction)
-* **Pare de gastar banda baixando vídeos inteiros de 2 horas!** 
-* Defina o intervalo exato de corte diretamente no painel (ex: das `00:03:15` às `00:05:45`). O motor processa e baixa exclusivamente os bytes necessários da nuvem em tempo recorde!
-
-### ⚡ 2. Aceleração Gráfica de Baixo Nível (NVIDIA NVENC & AMD)
-* **Detecção via RAM (0.001ms):** O sistema interroga a API nativa Win32 (`EnumDisplayDevicesA`) no segundo em que o app inicia para identificar processadores gráficos dedicados (compatível com **NVIDIA GeForce GTX 1660 SUPER** e superiores, além de **AMD Radeon AMF**).
-* Todas as conversões de formatos utilizam codecs de hardware (`h264_nvenc`), poupando 100% da sua CPU e reduzindo tempos de renderização a meros segundos.
-
-### 🛡️ 3. Blindagem de Kernel e Zero Janelas de Terminal (`CREATE_NO_WINDOW`)
-* Esqueça aplicativos que ficam abrindo ou piscando janelas pretas do *CMD*, *PowerShell* ou *Windows Terminal* durante downloads!
-* Todos os fluxos em segundo plano são enxertados com travas do Kernel Win32 (`0x08000000`), garantindo uma operação 100% gráfica, lisa, silenciosa e invisível para o sistema operacional.
-
-### ☁️ 4. Central de Atualizações Tonho Studios
-* **Sincronia Global com o GitHub:** Checagem de versões assíncrona baseada na nuvem com suporte a modo silencioso de inicialização. 
-* **Atualizador Independente do Motor:** Capacidade de atualizar a inteligência do extrator de assinaturas (`yt-dlp`) com apenas um clique sem precisar reinstalar a suíte inteira!
+Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize the audio and video download and processing experience on Windows desktops. Like an optical prism that bends and organizes beams of light, the suite combines the power of high-performance **C++17** with industry-standard engines (`yt-dlp` and `FFmpeg`) executed directly on the Win32 API to deliver an ultra-fast, clean, secure, and transparent workflow.
 
 ---
 
-## 📦 Como Instalar e Usar
+## 🔥 Key Features
 
-Acesse a nossa aba de [Releases Oficiais (Clique Aqui)](https://github.com/BadTonho/PrismDownloader/releases/latest) no GitHub para baixar os pacotes completos prontos para uso no Windows (já acompanham motores FFmpeg e yt-dlp embutidos no binário):
+### 🎬 1. Time-Slice Extraction (Trimming)
+* **Save bandwidth by downloading only what you need!**
+* Define the exact start and end times directly in the panel (e.g., from `00:03:15` to `00:05:45`). The engine requests and downloads only the target section in record time.
 
-| Pacote Disponível | O que oferece? |
+### ⚡ 2. Low-Level Graphics Acceleration (NVIDIA NVENC, AMD & QSV)
+* **High-Speed RAM Detection (0.001ms):** The system queries the native Win32 API (`EnumDisplayDevicesA`) during startup to identify dedicated graphics processors (fully optimized for **NVIDIA GeForce GTX 1660 SUPER** and above, as well as **AMD Radeon AMF** and **Intel QSV**).
+* All format conversions utilize hardware codecs (`h264_nvenc`), sparing 100% of your CPU and completing rendering jobs in mere seconds.
+
+### 📡 3. Real-Time Log Terminal with Telemetry Filters
+* Track every step of the download, conversion, and audio extraction through an integrated terminal in the application's dedicated tab.
+* **Dynamic Filter Toolbar:** Switch on the fly between:
+  * 🌐 **All Logs:** Full console stream.
+  * ⚙️ **Processes:** Raw command output and Windows sub-process telemetry.
+  * ❌ **Errors:** Quick visual isolation of error codes and warnings highlighted in red.
+  * 📌 **System & General:** Auto-updater, hardware detection notifications, and engine status logs.
+  * 🧹 **Clear Terminal:** Clear the display buffer instantly.
+
+### 🛡️ 4. Graphical Sandboxing and Zero Terminal Windows (`CREATE_NO_WINDOW`)
+* No more black CMD or Windows Terminal windows flashing on your screen while downloading!
+* The engine executes binaries at a low level via **`QProcess::startCommand`** using Win32 Kernel creation flags (`0x08000000`), ensuring a 100% graphical, silent operation with strict `exit code` monitoring to prevent false positive reports.
+
+### ☁️ 5. Tonho Studios Update Center
+* **GitHub Cloud Synchronization:** Asynchronous update checking on startup with support for silent backgrounds.
+* **Decoupled Engine Updater:** Update the downloader's signature engine (`yt-dlp`) with a single click without needing to reinstall the entire suite.
+
+---
+
+## 📦 Installation & Usage
+
+Visit our [Official Releases Page on GitHub](https://github.com/BadTonho/PrismDownloader/releases/latest) to download the standalone Windows binaries (pre-packaged with FFmpeg and yt-dlp):
+
+| Package | Purpose |
 | :--- | :--- |
-| ⭐ **`PrismDownloader_vX.X.X_Setup.exe`** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
-| 💼 **`PrismDownloader_vX.X.X_Portable.zip`** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
+| ⭐ **`PrismDownloader_vX.X.X_Setup.exe`** | **Official Tonho Studios Installer** (Recommended). Complete setup wizard in Portuguese (Brazil) with Desktop shortcut creation. |
+| 💼 **`PrismDownloader_vX.X.X_Portable.zip`** | **Portable Archive**. Extract anywhere on your Hard Drive or USB flash drive and run immediately. |
 
 ---
 
-## 🛠️ Como Compilar o Projeto do Zero (Para Desenvolvedores)
+## 🛠️ Compiling from Source (For Developers)
 
-Se você deseja compilar este projeto nativo em sua própria estação de trabalho Windows:
+To build the native application on your Windows machine:
 
-### Requisitos do Sistema
-* **Windows 10 ou 11 (64-bit)**
-* **Visual Studio 2019 / 2022** (com suporte ao compilador MSVC C++ x64)
-* **Qt 6.7+** (componentes `Widgets` e `Network`)
+### System Requirements
+* **Windows 10 or 11 (64-bit)**
+* **Visual Studio 2019 / 2022** (with MSVC C++ x64 compiler toolset)
+* **Qt 6.7+** (specifically `Widgets` and `Network` modules)
 * **CMake 3.16+**
-* **Inno Setup 6+** (opcional, para compilar o instalador `.exe`)
+* **Inno Setup 6+** (optional, to generate the `.exe` setup file)
 
-### Passos Rápido para Build via CMake (PowerShell)
+### Quick Build via CMake (PowerShell)
 ```powershell
-# 1. Clone o repositório oficial
+# 1. Clone the repository
 git clone https://github.com/BadTonho/PrismDownloader.git
 cd PrismDownloader
 
-# 2. Gere os arquivos de projeto apontando para o seu compilador Visual Studio
+# 2. Configure project files targeting Visual Studio
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
-# 3. Compile em modo Release
+# 3. Build in Release configuration
 cmake --build build --config Release
 
-# 4. (Opcional) Injete as dependências do Qt e execute
+# 4. Deploy Qt dependencies and run the executable
 C:\Qt\6.7.2\msvc2019_64\bin\windeployqt.exe --release --no-translations .\build\Release\PrismDownloader.exe
 .\build\Release\PrismDownloader.exe
 ```
 
 ---
 
-## ⚖️ Licença e Direitos Autorais
+## ⚖️ License and Copyrights
 
-Este software é disponibilizado publicamente sob os termos da **Licença MIT** (consulte o arquivo [LICENSE](LICENSE)).  
-Isso significa que a comunidade possui liberdade legal para utilizar, auditar e redistribuir esta ferramenta, **desde que preservada a nota de direitos autorais (Copyright © Tonho Studios)**.
+This software is released under the terms of the **MIT License** (see [LICENSE](LICENSE) for details).  
+The community is free to use, modify, and redistribute this project, **provided the copyright notices remain intact (Copyright © Tonho Studios)**.
 
-* Para relatar falhas críticas ou vulnerabilidades, consulte a nossa [Política de Segurança](SECURITY.md).
-* Deseja colaborar com o código C++ do projeto? Leia o nosso [Guia de Contribuição](CONTRIBUTING.md).
+* To report vulnerabilities, refer to our [Security Policy](SECURITY.md).
+* Want to help improve the C++ codebase? Read our [Contributing Guide](CONTRIBUTING.md).
 
 ---
 
 <p align="center">
-  <b>Desenvolvido com ☕ e extrema dedicação por <a href="https://github.com/BadTonho">Tonho Studios</a></b><br>
-  <i>Todos os direitos reservados • Engenharia em C++ e Performance Visual no Windows.</i>
+  <b>Developed with ☕ and passion by <a href="https://github.com/BadTonho">Tonho Studios</a></b><br>
+  <i>All rights reserved • C++ Engineering & Premium Windows Visual Experience.</i>
 </p>
