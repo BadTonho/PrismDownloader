@@ -134,6 +134,7 @@ private:
     QCheckBox *m_checkUpdatesOnStartChk;
     QCheckBox *m_autoDownloadUpdatesChk;
     QLabel *m_updateStatusLabel;
+    QProgressBar *m_updateProgressBar{nullptr};
     QPushButton *m_checkUpdateBtn;
     QPushButton *m_updateYtdlpBtn;
 

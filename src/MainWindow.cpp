@@ -807,6 +807,14 @@ void MainWindow::setupUI()
     upBtnsLayout->addWidget(m_updateYtdlpBtn, 2);
     upLayout->addLayout(upBtnsLayout);
 
+    m_updateProgressBar = new QProgressBar(updateGroup);
+    m_updateProgressBar->setRange(0, 100);
+    m_updateProgressBar->setValue(0);
+    m_updateProgressBar->setTextVisible(true);
+    m_updateProgressBar->setStyleSheet("QProgressBar { background-color: #171717; border: 1px solid #333333; border-radius: 6px; color: #ffffff; font-weight: bold; height: 24px; text-align: center; } QProgressBar::chunk { background-color: #10b981; border-radius: 5px; }");
+    m_updateProgressBar->setVisible(false);
+    upLayout->addWidget(m_updateProgressBar);
+
     upPageLayout->addWidget(updateGroup);
     upPageLayout->addStretch();
     m_stackedWidget->addWidget(pageUpdates);
@@ -1851,13 +1859,31 @@ void MainWindow::startUpdateDownload(const QString &url, const QString &fileName
 {
     if (url.isEmpty()) return;
     logMessage(QString("[Updater] Iniciando download da atualização %1 de: %2").arg(fileName, url));
-    m_updateStatusLabel->setText("Baixando atualização " + fileName + " do GitHub...");
+    m_updateStatusLabel->setText("Conectando ao servidor para baixar " + fileName + "...");
+
+    if (m_stackedWidget) m_stackedWidget->setCurrentIndex(5);
+    if (m_sidebarUpdateBtn) m_sidebarUpdateBtn->setChecked(true);
+    if (m_updateProgressBar) {
+        m_updateProgressBar->setRange(0, 100);
+        m_updateProgressBar->setValue(0);
+        m_updateProgressBar->setVisible(true);
+    }
 
     QUrl targetUrl(url);
     QNetworkRequest req(targetUrl);
     req.setHeader(QNetworkRequest::UserAgentHeader, "PrismDownloader-Updater/1.0");
     QNetworkReply *reply = m_networkManager->get(req);
     
+    connect(reply, &QNetworkReply::downloadProgress, this, [this](qint64 rx, qint64 total) {
+        if (total > 0 && m_updateProgressBar) {
+            int pct = static_cast<int>((rx * 100) / total);
+            m_updateProgressBar->setValue(pct);
+            double rxMB = static_cast<double>(rx) / (1024.0 * 1024.0);
+            double totalMB = static_cast<double>(total) / (1024.0 * 1024.0);
+            m_updateStatusLabel->setText(QString("Baixando nova versão: %1 MB de %2 MB (%3%)...").arg(rxMB, 0, 'f', 1).arg(totalMB, 0, 'f', 1).arg(pct));
+        }
+    });
+
     connect(reply, &QNetworkReply::finished, this, [this, reply, fileName]() {
         onUpdateDownloadFinished(reply, fileName);
     });
@@ -1867,6 +1893,7 @@ void MainWindow::onUpdateDownloadFinished(QNetworkReply *reply, const QString &f
 {
     reply->deleteLater();
     if (reply->error() != QNetworkReply::NoError) {
+        if (m_updateProgressBar) m_updateProgressBar->setVisible(false);
         logMessage("[Updater] Erro durante o download do instalador de atualização: " + reply->errorString());
         m_updateStatusLabel->setText("Falha no download da atualização: " + reply->errorString());
         QMessageBox::critical(this, "Erro", "Houve um problema na transmissão da atualização do GitHub:\n" + reply->errorString());
@@ -1884,6 +1911,10 @@ void MainWindow::onUpdateDownloadFinished(QNetworkReply *reply, const QString &f
         file.close();
         logMessage("[Updater] Atualização salva na pasta temporária: " + savePath);
         m_updateStatusLabel->setText("Atualização baixada com sucesso em: " + savePath);
+        if (m_updateProgressBar) {
+            m_updateProgressBar->setRange(0, 100);
+            m_updateProgressBar->setValue(100);
+        }
 
         if (savePath.endsWith(".exe", Qt::CaseInsensitive)) {
             QMessageBox::StandardButton ask = QMessageBox::question(this, "Instalar Atualização",
@@ -1913,6 +1944,10 @@ void MainWindow::updateYtdlpEngine()
     logMessage("\n========================================================");
     logMessage("[Motor Extrator] Conectando aos servidores do yt-dlp para checar novas assinaturas...");
     m_updateStatusLabel->setText("Atualizando motor extrator yt-dlp em segundo plano...");
+    if (m_updateProgressBar) {
+        m_updateProgressBar->setRange(0, 0); // Barra em movimento perpétuo/animado
+        m_updateProgressBar->setVisible(true);
+    }
 
     QProcess *proc = new QProcess(this);
 #ifdef _WIN32
@@ -1922,6 +1957,10 @@ void MainWindow::updateYtdlpEngine()
 #endif
     connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this, proc](int code, QProcess::ExitStatus status) {
         proc->deleteLater();
+        if (m_updateProgressBar) {
+            m_updateProgressBar->setRange(0, 100);
+            m_updateProgressBar->setValue(100);
+        }
         QString out = QString::fromUtf8(proc->readAllStandardOutput()).trimmed();
         QString err = QString::fromUtf8(proc->readAllStandardError()).trimmed();
         if (!out.isEmpty()) logMessage("[yt-dlp update] " + out);
