@@ -107,16 +107,37 @@ MainWindow::MainWindow(QWidget *parent)
                     m_progressBar->setValue(100);
                     refreshLibrary();
 
+                    QString targetDir = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
+                    QDir dir(targetDir);
+                    QStringList filters;
+                    filters << "*.mp4" << "*.mp3" << "*.mkv" << "*.webm" << "*.m4a" << "*.avi" << "*.flv" << "*.wav";
+                    QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
+
+                    if (m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
+                        QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
+                        if (itemStatus && (itemStatus->text().contains("Baixando") || itemStatus->text().contains("Aguardando"))) {
+                            if (!fileList.isEmpty()) {
+                                QFileInfo info = fileList.first();
+                                if (auto item0 = m_downloadsQueueTable->item(0, 0)) item0->setText(info.fileName());
+                                if (auto item1 = m_downloadsQueueTable->item(0, 1)) item1->setText(info.suffix().toUpper());
+                                double sizeMB = static_cast<double>(info.size()) / (1024.0 * 1024.0);
+                                if (auto item2 = m_downloadsQueueTable->item(0, 2)) item2->setText(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
+                            }
+                            if (m_autoConvertAfterDownload) {
+                                itemStatus->setText("🔄 Convertendo...");
+                                itemStatus->setForeground(QColor("#f59e0b"));
+                            } else {
+                                itemStatus->setText("✔ Concluído");
+                                itemStatus->setForeground(QColor("#10b981"));
+                            }
+                        }
+                    }
+
                     if (m_autoConvertAfterDownload) {
                         m_statusLabel->setText("Status: Baixado! Iniciando conversão automática para " + m_autoConvertFormat + "...");
                         logMessage("[Auto-Conversão] Download concluído! Acionando conversão automática no arquivo recém-baixado...");
                         
                         // Buscar o arquivo mais recente no diretório exato deste download
-                        QString targetDir = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
-                        QDir dir(targetDir);
-                        QStringList filters;
-                        filters << "*.mp4" << "*.mp3" << "*.mkv" << "*.webm" << "*.m4a" << "*.avi" << "*.flv" << "*.wav";
-                        QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
                         
                         if (!fileList.isEmpty()) {
                             QString newestFilePath = fileList.first().absoluteFilePath();
@@ -969,6 +990,26 @@ void MainWindow::onConvertProcessFinished(int exitCode)
         logMessage("[Sucesso] Arquivo convertido e salvo na pasta com sucesso!");
         refreshLibrary();
 
+        if (m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
+            QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
+            if (itemStatus && itemStatus->text().contains("Convertendo")) {
+                QString targetDir = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
+                QDir dir(targetDir);
+                QStringList filters;
+                filters << "*.mp4" << "*.mp3" << "*.mkv" << "*.webm" << "*.m4a" << "*.avi" << "*.flv" << "*.wav";
+                QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
+                if (!fileList.isEmpty()) {
+                    QFileInfo info = fileList.first();
+                    if (auto item0 = m_downloadsQueueTable->item(0, 0)) item0->setText(info.fileName());
+                    if (auto item1 = m_downloadsQueueTable->item(0, 1)) item1->setText(info.suffix().toUpper());
+                    double sizeMB = static_cast<double>(info.size()) / (1024.0 * 1024.0);
+                    if (auto item2 = m_downloadsQueueTable->item(0, 2)) item2->setText(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
+                }
+                itemStatus->setText("✔ Concluído");
+                itemStatus->setForeground(QColor("#10b981"));
+            }
+        }
+
         if (m_notifyCheckBox->isChecked()) {
             QString savedLoc = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
             QMessageBox::information(this, "Conversão Concluída", "O arquivo foi convertido com sucesso e salvo em:\n" + savedLoc);
@@ -983,6 +1024,13 @@ void MainWindow::onConvertProcessFinished(int exitCode)
             m_speedLabel->setText("Velocidade de Download: 0.0 MB/s");
             m_etaLabel->setText("Tempo Restante: --:--");
         }
+        if (m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
+            QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
+            if (itemStatus && itemStatus->text().contains("Convertendo")) {
+                itemStatus->setText("❌ Erro Conversão");
+                itemStatus->setForeground(QColor("#ef4444"));
+            }
+        }
     }
 }
 
@@ -990,9 +1038,6 @@ void MainWindow::refreshLibrary()
 {
     if (!m_libraryTable) return;
     m_libraryTable->setRowCount(0);
-    if (m_downloadsQueueTable) {
-        m_downloadsQueueTable->setRowCount(0);
-    }
 
     QString folder = m_outputDirInput->text();
     QDir dir(folder);
@@ -1003,9 +1048,6 @@ void MainWindow::refreshLibrary()
     QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
 
     m_libraryTable->setRowCount(fileList.size());
-    if (m_downloadsQueueTable) {
-        m_downloadsQueueTable->setRowCount(fileList.size());
-    }
     for (int i = 0; i < fileList.size(); ++i) {
         QFileInfo info = fileList.at(i);
         
@@ -1024,29 +1066,6 @@ void MainWindow::refreshLibrary()
         m_libraryTable->setItem(i, 0, itemTitle);
         m_libraryTable->setItem(i, 1, itemExt);
         m_libraryTable->setItem(i, 2, itemSize);
-
-        if (m_downloadsQueueTable) {
-            QTableWidgetItem *qTitle = new QTableWidgetItem(info.fileName());
-            qTitle->setFlags(qTitle->flags() ^ Qt::ItemIsEditable);
-
-            QTableWidgetItem *qExt = new QTableWidgetItem(info.suffix().toUpper());
-            qExt->setFlags(qExt->flags() ^ Qt::ItemIsEditable);
-            qExt->setTextAlignment(Qt::AlignCenter);
-
-            QTableWidgetItem *qSize = new QTableWidgetItem(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
-            qSize->setFlags(qSize->flags() ^ Qt::ItemIsEditable);
-            qSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-
-            QTableWidgetItem *qStatus = new QTableWidgetItem("✔ Concluído");
-            qStatus->setFlags(qStatus->flags() ^ Qt::ItemIsEditable);
-            qStatus->setTextAlignment(Qt::AlignCenter);
-            qStatus->setForeground(QColor("#10b981"));
-
-            m_downloadsQueueTable->setItem(i, 0, qTitle);
-            m_downloadsQueueTable->setItem(i, 1, qExt);
-            m_downloadsQueueTable->setItem(i, 2, qSize);
-            m_downloadsQueueTable->setItem(i, 3, qStatus);
-        }
     }
     logMessage(QString("[Biblioteca] Lista de mídias atualizada: %1 arquivo(s) encontrado(s).").arg(fileList.size()));
 }
