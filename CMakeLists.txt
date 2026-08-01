@@ -29,6 +29,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network)
 
 if(MSVC)
     target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    # Copia automaticamente os novos ícones para junto do executável compilação após compilação
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.ico"
+        "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.png"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    )
     # Copia as DLLs do Qt para a pasta do executável para rodar sem falhas de dependência
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
