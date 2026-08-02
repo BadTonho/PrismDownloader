@@ -65,8 +65,8 @@ Visit our [Official Releases Page on GitHub](https://github.com/BadTonho/PrismDo
 
 | Package | Purpose |
 | :--- | :--- |
-| ⭐ **`PrismDownloader_vX.X.X_Setup.exe`** | **Official Tonho Studios Installer** (Recommended). Complete setup wizard in Portuguese (Brazil) with Desktop shortcut creation. |
-| 💼 **`PrismDownloader_vX.X.X_Portable.zip`** | **Portable Archive**. Extract anywhere on your Hard Drive or USB flash drive and run immediately. |
+| ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Official Tonho Studios Installer** (Recommended). Complete setup wizard in Portuguese (Brazil) with Desktop shortcut creation. |
+| 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Portable Archive**. Extract anywhere on your Hard Drive or USB flash drive and run immediately. |
 
 ---
 

@@ -61,8 +61,8 @@ Acesse a nossa aba de [Releases Oficiais no GitHub](https://github.com/BadTonho/
 
 | Pacote Disponível | O que oferece? |
 | :--- | :--- |
-| ⭐ **`PrismDownloader_vX.X.X_Setup.exe`** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
-| 💼 **`PrismDownloader_vX.X.X_Portable.zip`** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
+| ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
+| 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
 
 ---
 
