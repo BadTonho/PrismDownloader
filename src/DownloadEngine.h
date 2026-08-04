@@ -5,6 +5,8 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <QString>
+#include <QStringList>
 #include "MediaItem.h"
 #include "GPUDetector.h"
 
@@ -24,19 +26,23 @@ public:
     void setProgressCallback(std::function<void(double, const std::string&, const std::string&)> cb);
     void setStatusCallback(std::function<void(DownloadStatus, const std::string&)> cb);
     void setLogCallback(std::function<void(const std::string&)> cb);
+    void setCompletedFileCallback(std::function<void(const std::string&)> cb);
 
 private:
     GPUDetector m_gpuDetector;
     MediaItem m_currentItem;
     std::atomic<bool> m_isRunning{false};
+    std::atomic<bool> m_cancelRequested{false};
     std::thread m_workerThread;
 
     std::function<void(double, const std::string&, const std::string&)> m_onProgress;
     std::function<void(DownloadStatus, const std::string&)> m_onStatus;
     std::function<void(const std::string&)> m_onLog;
+    std::function<void(const std::string&)> m_onCompletedFile;
+    std::string m_completedFilePath;
 
     void parseYtDlpOutput(const std::string &line);
-    void workerLoop(const std::string &command);
+    void workerLoop(const QString &program, const QStringList &arguments);
 };
 
 #endif // DOWNLOADENGINE_H

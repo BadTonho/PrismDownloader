@@ -7,7 +7,7 @@
 #include <QProgressBar>
 #include <QLabel>
 #include <QPushButton>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QCheckBox>
 #include <QStackedWidget>
 #include <QButtonGroup>
@@ -53,7 +53,6 @@ private slots:
     void checkForUpdates(bool silent = false);
     void onUpdateReplyFinished(QNetworkReply *reply, bool silent);
     void updateYtdlpEngine();
-    void onUpdateDownloadFinished(QNetworkReply *reply, const QString &fileName);
 
 private:
     void setupUI();
@@ -63,7 +62,6 @@ private:
     void refreshLogDisplay();
     bool shouldShowLogLine(const QString &line) const;
     bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir);
-    void startUpdateDownload(const QString &url, const QString &fileName);
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -99,6 +97,7 @@ private:
     bool m_autoConvertAfterDownload;
     QString m_autoConvertFormat;
     QString m_currentDownloadDir;
+    QString m_lastDownloadedFile;
 
     // Tela de Biblioteca de Mídias (Página 1)
     QTableWidget *m_libraryTable;
@@ -113,9 +112,15 @@ private:
     QLabel *m_convertStatusLabel;
     QLabel *m_convertEngineLabel;
     QProcess *m_convertProcess;
+    QString m_convertProgramPath;
+    QStringList m_convertCpuFallbackArgs;
+    QString m_convertOutputPath;
+    bool m_convertUsingHardware{false};
+    bool m_convertFallbackAttempted{false};
+    bool m_convertCancellationRequested{false};
 
     // Tela de Terminal de Logs (Página 3)
-    QTextEdit *m_logEdit{nullptr};
+    QPlainTextEdit *m_logEdit{nullptr};
     QStringList m_allLogs;
     int m_logFilterMode{0}; // 0=Todos, 1=Processos, 2=Erros, 3=Geral
     QPushButton *m_filterAllBtn{nullptr};

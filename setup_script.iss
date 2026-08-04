@@ -29,7 +29,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkablealone
 
 [Files]
-Source: "build\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Falhar no empacotamento caso os motores obrigatórios não estejam presentes.
+Source: "build\Release\yt-dlp.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\Release\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\Release\*"; DestDir: "{app}"; Excludes: "yt-dlp.exe,ffmpeg.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppName}"

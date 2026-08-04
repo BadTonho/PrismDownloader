@@ -3,6 +3,20 @@
 Data da análise: 04/08/2026  
 Escopo: revisão estática do código-fonte, CMake, instalador e artefatos locais. Não foram feitos downloads de mídia nem chamadas à API do GitHub.
 
+## Status das correções — 04/08/2026
+
+As seguintes correções foram implementadas após esta análise:
+
+- O aplicativo não baixa nem executa mais instaladores ou atualiza o `yt-dlp` automaticamente. Para novas versões, abre somente a página oficial no navegador; a verificação de versão agora é semântica e rejeita URL/resposta inválida.
+- O download usa `QProcess::start(program, arguments)` com `--` antes da URL; URL, intervalo e diretório são validados. O intervalo é aceito apenas como `HH:MM:SS-HH:MM:SS` com início menor que o fim.
+- Os perfis 4K/1080p/720p agora geram seletores distintos do `yt-dlp`, cobertos por teste unitário.
+- O caminho final emitido pelo `yt-dlp` é propagado à interface, eliminando a seleção do arquivo “mais recente” para conversão automática e para a fila.
+- A conversão usa o encoder do fabricante correto (NVENC/AMF/QSV), tenta fallback seguro para CPU se o encoder de hardware falhar e não sobrescreve arquivos existentes.
+- O cancelamento de download encerra a árvore de processos no Windows; logs são texto simples e têm limite de 5.000 entradas.
+- CMake usa UTF-8, avisos elevados e caminho de Qt configurável. O instalador falha se FFmpeg/yt-dlp não estiverem presentes. Há teste CTest para a seleção de perfil.
+
+Pendências deliberadas: a atualização integrada só deve voltar quando houver uma infraestrutura de assinatura verificável (chave pública/assinatura de release ou validação Authenticode com certificado fixado). Também faltam testes de integração com `yt-dlp`/FFmpeg reais e paginação assíncrona da biblioteca para pastas muito grandes.
+
 ## Resumo executivo
 
 O projeto compila no estado atual, mas há riscos importantes antes de uma distribuição ampla: o atualizador executa instaladores sem verificar autenticidade, a conversão falha em máquinas AMD/Intel apesar de anunciá-las como aceleradas, a escolha de qualidade não é aplicada ao `yt-dlp` e a conversão pode sobrescrever arquivos existentes sem confirmação.
@@ -160,4 +174,3 @@ Cobrir pelo menos: montagem de argumentos do `yt-dlp`, parser de progresso, vers
 3. **Distribuição:** tornar o bundle de Qt/FFmpeg/yt-dlp declarativo e validado em build limpo; assinar releases.
 4. **Qualidade contínua:** criar testes de unidade/integração com executáveis simulados e CI com warnings/análise estática.
 5. **Escala de UX:** limitar logs, tornar biblioteca assíncrona e implementar progresso real de conversão.
-

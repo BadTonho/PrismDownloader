@@ -27,7 +27,6 @@ private:
     std::string m_name = "CPU Multi-Thread Fallback";
     std::string m_codec = "libx264";
 
-    std::string execCommand(const char* cmd);
 };
 
 #endif // GPUDETECTOR_H

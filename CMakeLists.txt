@@ -4,8 +4,11 @@ project(PrismDownloader LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Aponta automaticamente para a instalação do Qt 6.7.2 no Windows
-list(PREPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.2/msvc2019_64")
+# Caminho opcional para uma instalação local do Qt. Pode ser sobrescrito via CMake.
+set(PRISM_QT_ROOT "C:/Qt/6.7.2/msvc2019_64" CACHE PATH "Raiz da instalação do Qt usada pelo Prism Downloader")
+if(PRISM_QT_ROOT AND EXISTS "${PRISM_QT_ROOT}")
+    list(PREPEND CMAKE_PREFIX_PATH "${PRISM_QT_ROOT}")
+endif()
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -19,6 +22,7 @@ add_executable(${PROJECT_NAME} WIN32
     src/MainWindow.h
     src/MainWindow.cpp
     src/MediaItem.h
+    src/DownloadProfile.h
     src/GPUDetector.h
     src/GPUDetector.cpp
     src/DownloadEngine.h
@@ -28,7 +32,11 @@ add_executable(${PROJECT_NAME} WIN32
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network)
 
 if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /utf-8)
     target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    if(NOT PRISM_QT_ROOT OR NOT EXISTS "${PRISM_QT_ROOT}/bin/Qt6Core.dll")
+        message(FATAL_ERROR "PRISM_QT_ROOT deve apontar para uma instalação Qt com os binários de runtime.")
+    endif()
     # Copia automaticamente os novos ícones para junto do executável compilação após compilação
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -39,17 +47,36 @@ if(MSVC)
     # Copia as DLLs do Qt para a pasta do executável para rodar sem falhas de dependência
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Core.dll"
-        "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Gui.dll"
-        "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Widgets.dll"
-        "C:/Qt/6.7.2/msvc2019_64/bin/Qt6Network.dll"
+        "${PRISM_QT_ROOT}/bin/Qt6Core.dll"
+        "${PRISM_QT_ROOT}/bin/Qt6Gui.dll"
+        "${PRISM_QT_ROOT}/bin/Qt6Widgets.dll"
+        "${PRISM_QT_ROOT}/bin/Qt6Network.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
     )
     # Copia a DLL de plataforma visual qwindows.dll para a subpasta platforms/
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "C:/Qt/6.7.2/msvc2019_64/plugins/platforms/qwindows.dll"
+        "${PRISM_QT_ROOT}/plugins/platforms/qwindows.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms/"
     )
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(PrismDownloaderTests
+        tests/DownloadProfileTests.cpp
+        src/DownloadProfile.h
+        src/MediaItem.h
+    )
+    target_include_directories(PrismDownloaderTests PRIVATE src)
+    target_compile_features(PrismDownloaderTests PRIVATE cxx_std_17)
+    if(MSVC)
+        target_compile_options(PrismDownloaderTests PRIVATE /W4 /permissive- /utf-8)
+    else()
+        target_compile_options(PrismDownloaderTests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME PrismDownloader.ProfileSelection COMMAND PrismDownloaderTests)
 endif()

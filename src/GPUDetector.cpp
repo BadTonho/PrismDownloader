@@ -1,30 +1,10 @@
 #include "GPUDetector.h"
 #include <iostream>
-#include <array>
-#include <memory>
 #include <algorithm>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <QProcess>
-#include <QString>
-#include <QStringList>
-
-std::string GPUDetector::execCommand(const char* cmd) {
-    QProcess process;
-#ifdef _WIN32
-    process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
-        args->flags |= 0x08000000; // CREATE_NO_WINDOW
-    });
-#endif
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.start("cmd.exe", QStringList() << "/c" << QString::fromUtf8(cmd));
-    process.waitForFinished(10000);
-    QByteArray result = process.readAll();
-    return result.toStdString();
-}
-
 void GPUDetector::detect() {
     std::cout << "[GPUDetector] Iniciando sondagem nativa de hardware em C++ puro via API Win32...\n";
 

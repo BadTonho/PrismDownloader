@@ -6,6 +6,7 @@ dist/
 *.obj
 *.pdb
 *.ilk
+*.log
 
 # Arquivos de IDE do Visual Studio / Qt
 *.suo

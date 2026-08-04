@@ -25,7 +25,9 @@ struct MediaItem {
 
     bool isAudioOnly() const {
         std::string upper = quality;
-        std::transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
+        std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char character) {
+            return static_cast<char>(std::toupper(character));
+        });
         return upper.find("MP3") != std::string::npos || 
                upper.find("FLAC") != std::string::npos || 
                upper.find("AUDIO") != std::string::npos;
