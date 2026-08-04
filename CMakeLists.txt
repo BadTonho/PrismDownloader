@@ -25,8 +25,10 @@ add_executable(${PROJECT_NAME} WIN32
     src/DownloadProfile.h
     src/GPUDetector.h
     src/GPUDetector.cpp
-    src/DownloadEngine.h
-    src/DownloadEngine.cpp
+    src/DownloadManager.h
+    src/DownloadManager.cpp
+    src/ConversionManager.h
+    src/ConversionManager.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network)
@@ -79,4 +81,31 @@ if(BUILD_TESTING)
         target_compile_options(PrismDownloaderTests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
     add_test(NAME PrismDownloader.ProfileSelection COMMAND PrismDownloaderTests)
+
+    add_executable(PrismFakeMediaTool tests/FakeMediaTool.cpp)
+    target_link_libraries(PrismFakeMediaTool PRIVATE Qt6::Core)
+    target_compile_features(PrismFakeMediaTool PRIVATE cxx_std_17)
+
+    add_executable(PrismQueueManagerTests
+        tests/QueueManagerTests.cpp
+        src/DownloadManager.h
+        src/DownloadManager.cpp
+        src/ConversionManager.h
+        src/ConversionManager.cpp
+        src/DownloadProfile.h
+        src/MediaItem.h
+        src/GPUDetector.h
+    )
+    target_include_directories(PrismQueueManagerTests PRIVATE src)
+    target_link_libraries(PrismQueueManagerTests PRIVATE Qt6::Core)
+    target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_17)
+    if(MSVC)
+        target_compile_options(PrismFakeMediaTool PRIVATE /W4 /permissive- /utf-8)
+        target_compile_options(PrismQueueManagerTests PRIVATE /W4 /permissive- /utf-8)
+    else()
+        target_compile_options(PrismFakeMediaTool PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(PrismQueueManagerTests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME PrismDownloader.QueueManagers
+             COMMAND PrismQueueManagerTests $<TARGET_FILE:PrismFakeMediaTool>)
 endif()

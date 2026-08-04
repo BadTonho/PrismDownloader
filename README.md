@@ -32,6 +32,10 @@ Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize t
 
 ## 🔥 Key Features
 
+### 🚦 Concurrent Session Queue
+* Add as many URLs as needed and run **1 to 5 downloads simultaneously** (default: 2), with isolated progress, speed, ETA, status, and cancellation for every task.
+* Automatic and manual conversions share a FIFO queue with exactly one active FFmpeg process, avoiding GPU/CPU overload.
+
 ### 🎬 1. Time-Slice Extraction (Trimming)
 * **Save bandwidth by downloading only what you need!**
 * Define the exact start and end times directly in the panel (e.g., from `00:03:15` to `00:05:45`). The engine requests and downloads only the target section in record time.
@@ -51,11 +55,11 @@ Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize t
 
 ### 🛡️ 4. Graphical Sandboxing and Zero Terminal Windows (`CREATE_NO_WINDOW`)
 * No more black CMD or Windows Terminal windows flashing on your screen while downloading!
-* The engine executes binaries at a low level via **`QProcess::startCommand`** using Win32 Kernel creation flags (`0x08000000`), ensuring a 100% graphical, silent operation with strict `exit code` monitoring to prevent false positive reports.
+* The engine executes binaries through **`QProcess::start(program, arguments)`** using Win32 Kernel creation flags (`0x08000000`), ensuring a 100% graphical, silent operation with strict `exit code` monitoring to prevent false positive reports.
 
 ### ☁️ 5. Tonho Studios Update Center
 * **GitHub Cloud Synchronization:** Asynchronous update checking on startup with support for silent backgrounds.
-* **Decoupled Engine Updater:** Update the downloader's signature engine (`yt-dlp`) with a single click without needing to reinstall the entire suite.
+* **Safe Update Links:** Opens the official Prism Downloader or `yt-dlp` release page for a user-verified manual update; the app does not download or execute installers automatically.
 
 ---
 

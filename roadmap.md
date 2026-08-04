@@ -44,7 +44,7 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 ---
 
 ### 📍 Etapa 2: Motor Core & Inteligência de Hardware em C++ 🏁 (Concluído!)
-* [x] **2.1. Integração C++ <> Motores de Mídia:** Criada a classe [DownloadEngine.cpp](file:///c:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/DownloadEngine.cpp) em C++17 puro (via `std::thread` e pipes assíncronos) com callbacks para progresso em tempo real e suporte a recorte de faixa de tempo.
+* [x] **2.1. Integração C++ <> Motores de Mídia:** Criados o [DownloadManager.cpp](src/DownloadManager.cpp), com fila assíncrona baseada em `QProcess` e concorrência configurável, e o [ConversionManager.cpp](src/ConversionManager.cpp), com conversões FIFO e fallback para CPU.
 * [x] **2.2. Módulo de Detecção de GPU:** Criado o [GPUDetector.cpp](file:///c:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/GPUDetector.cpp) em C++ nativo com sondagem universal de hardware (identificando com perfeição a **NVIDIA GeForce GTX 1660 SUPER** e selecionando o codec `h264_nvenc`).
 * [x] **2.3. Mídia Sem Perda (*Stream Copy*):** Estruturado o motor de download para união instantânea de faixas sem sobrecarga de processador.
 
@@ -52,7 +52,7 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 
 ### 📍 Etapa 3: Interface Gráfica e Experiência do Usuário (UI/UX) 🏁 (Concluído!)
 * [x] **3.1. Design da Janela Principal:** Criada interface em Qt 6 com tema moderno (Dark Tech), campos de URL, qualidade e o diferencial de Recorte de Faixa de Tempo em [MainWindow.cpp](file:///c:/Users/Admin/Desktop/ProjetosCode/projetos/Baixar/src/MainWindow.cpp).
-* [x] **3.2. Gerenciador de Downloads:** Implementada barra de progresso em tempo real (`QProgressBar`), velocidade em MB/s e botão de cancelamento integrados de forma thread-safe com o nosso worker C++.
+* [x] **3.2. Gerenciador de Downloads:** Implementada tabela por tarefa, concorrência de 1 a 5 downloads, progresso em tempo real, cancelamento individual/global e resumo único da sessão.
 * [x] **3.3. Indicador Visual de Hardware:** Exibido na linha de frente um cartão verde brilhante de "Placa Dedicada Ativa (NVIDIA NVENC / GTX 1660 SUPER)" destacando o processamento em hardware na tela!
 
 ---

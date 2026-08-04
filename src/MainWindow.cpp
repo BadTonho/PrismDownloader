@@ -14,7 +14,6 @@
 #include <QSettings>
 #include <QDir>
 #include <QFileInfo>
-#include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QHeaderView>
@@ -22,10 +21,12 @@
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
 #include <QApplication>
+#include <QCloseEvent>
 #include <QRegularExpression>
 #include <QVersionNumber>
+
+#include <utility>
 
 // ============================================================================
 // CONFIGURAÇÃO OFICIAL DE VERSÃO (Mude apenas aqui para futuras Releases!)
@@ -55,33 +56,13 @@ bool isValidTimeRange(const QString &timeRange)
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
 }
 
-QString uniqueOutputPath(const QDir &directory, const QString &stem, const QString &extension)
-{
-    QString candidate = directory.absoluteFilePath(stem + extension);
-    for (int index = 2; QFile::exists(candidate); ++index) {
-        candidate = directory.absoluteFilePath(QString("%1 (%2)%3").arg(stem).arg(index).arg(extension));
-    }
-    return candidate;
-}
-
-QString encoderFor(GPUType type, bool hevc)
-{
-    switch (type) {
-    case GPUType::NVIDIA:
-        return hevc ? "hevc_nvenc" : "h264_nvenc";
-    case GPUType::AMD:
-        return hevc ? "hevc_amf" : "h264_amf";
-    case GPUType::INTEL:
-        return hevc ? "hevc_qsv" : "h264_qsv";
-    case GPUType::CPU_ONLY:
-        return {};
-    }
-    return {};
-}
 }
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_autoConvertAfterDownload(false), m_convertProcess(nullptr), m_networkManager(new QNetworkAccessManager(this))
+    : QMainWindow(parent),
+      m_networkManager(new QNetworkAccessManager(this)),
+      m_downloadManager(new DownloadManager(this)),
+      m_conversionManager(new ConversionManager(this))
 {
     setWindowTitle("Prism Downloader - Studio Suite");
     resize(980, 620);
@@ -89,9 +70,9 @@ MainWindow::MainWindow(QWidget *parent)
     setupUI();
     setupStyles();
 
-    m_engine.initialize();
+    m_gpuDetector.detect();
 
-    GPUDetector *gpu = m_engine.gpuDetector();
+    GPUDetector *gpu = &m_gpuDetector;
     QString gpuName = QString::fromStdString(gpu->getGPUName());
     QString codec = QString::fromStdString(gpu->getRecommendedCodec());
     bool hasAccel = gpu->hasHardwareAcceleration();
@@ -122,125 +103,37 @@ MainWindow::MainWindow(QWidget *parent)
         logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
     }
 
-    m_engine.setProgressCallback([this](double percent, const std::string &speed, const std::string &eta) {
-        QMetaObject::invokeMethod(this, [this, percent, speed, eta]() {
-            m_progressBar->setValue(static_cast<int>(percent));
-            m_speedLabel->setText(QString("Velocidade de Download: %1").arg(QString::fromStdString(speed)));
-            m_etaLabel->setText(QString("Tempo Restante: %1").arg(QString::fromStdString(eta)));
-        }, Qt::QueuedConnection);
+    connect(m_downloadManager, &DownloadManager::jobProgress, this, &MainWindow::onDownloadProgress);
+    connect(m_downloadManager, &DownloadManager::jobStatus, this, &MainWindow::onDownloadStatus);
+    connect(m_downloadManager, &DownloadManager::jobCompleted, this, &MainWindow::onDownloadCompleted);
+    connect(m_downloadManager, &DownloadManager::queueStateChanged, this, &MainWindow::onDownloadQueueStateChanged);
+    connect(m_downloadManager, &DownloadManager::queueIdle, this, &MainWindow::maybeShowQueueSummary);
+    connect(m_downloadManager, &DownloadManager::jobLog, this, [this](DownloadId id, const QString &message) {
+        logMessage(QString("[Download #%1] %2").arg(id).arg(message));
     });
 
-    m_engine.setLogCallback([this](const std::string &msg) {
-        QMetaObject::invokeMethod(this, [this, msg]() {
-            logMessage(QString::fromStdString(msg));
-        }, Qt::QueuedConnection);
+    connect(m_conversionManager, &ConversionManager::conversionStatus, this, &MainWindow::onConversionStatus);
+    connect(m_conversionManager, &ConversionManager::conversionCompleted, this, &MainWindow::onConversionCompleted);
+    connect(m_conversionManager, &ConversionManager::conversionFailed, this, &MainWindow::onConversionFailed);
+    connect(m_conversionManager, &ConversionManager::conversionCancelled, this, &MainWindow::onConversionCancelled);
+    connect(m_conversionManager, &ConversionManager::queueIdle, this, &MainWindow::maybeShowQueueSummary);
+    connect(m_conversionManager, &ConversionManager::queueStateChanged, this, [this](bool, int) {
+        onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
     });
-
-    m_engine.setCompletedFileCallback([this](const std::string &filePath) {
-        QMetaObject::invokeMethod(this, [this, filePath]() {
-            m_lastDownloadedFile = QString::fromStdString(filePath);
-        }, Qt::QueuedConnection);
+    connect(m_conversionManager, &ConversionManager::conversionLog, this,
+            [this](ConversionId id, DownloadId owner, const QString &message) {
+        const QString ownerText = owner == 0 ? "manual" : QString("download #%1").arg(owner);
+        logMessage(QString("[Conversão #%1 / %2] %3").arg(id).arg(ownerText, message));
     });
-
-    m_engine.setStatusCallback([this](DownloadStatus status, const std::string &msg) {
-        QMetaObject::invokeMethod(this, [this, status, msg]() {
-            QString qtMsg = QString::fromStdString(msg);
-            m_statusLabel->setText("Status: " + qtMsg);
-            logMessage(">>> [Status] " + qtMsg);
-
-            if (status == DownloadStatus::Completed || status == DownloadStatus::Cancelled || status == DownloadStatus::Error) {
-                m_startBtn->setEnabled(true);
-                m_cancelBtn->setEnabled(false);
-                if (status != DownloadStatus::Completed && m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
-                    QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
-                    if (itemStatus && itemStatus->text().contains("Baixando")) {
-                        itemStatus->setText(status == DownloadStatus::Cancelled ? "⛔ Cancelado" : "❌ Erro");
-                        itemStatus->setForeground(QColor("#ef4444")); // Vermelho
-                    }
-                }
-                if (status == DownloadStatus::Completed) {
-                    m_progressBar->setValue(100);
-                    refreshLibrary();
-
-                    const QFileInfo completedFile(m_lastDownloadedFile);
-                    const bool hasCompletedFile = completedFile.exists() && completedFile.isFile();
-                    const QString targetDir = hasCompletedFile
-                        ? completedFile.absolutePath()
-                        : (m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir);
-
-                    if (m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
-                        QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
-                        if (itemStatus && (itemStatus->text().contains("Baixando") || itemStatus->text().contains("Aguardando"))) {
-                            if (hasCompletedFile) {
-                                if (auto item0 = m_downloadsQueueTable->item(0, 0)) {
-                                    item0->setText(completedFile.fileName());
-                                    item0->setData(Qt::UserRole, completedFile.absoluteFilePath());
-                                }
-                                if (auto item1 = m_downloadsQueueTable->item(0, 1)) item1->setText(completedFile.suffix().toUpper());
-                                double sizeMB = static_cast<double>(completedFile.size()) / (1024.0 * 1024.0);
-                                if (auto item2 = m_downloadsQueueTable->item(0, 2)) item2->setText(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
-                            }
-                            if (m_autoConvertAfterDownload) {
-                                itemStatus->setText("🔄 Convertendo...");
-                                itemStatus->setForeground(QColor("#f59e0b"));
-                            } else {
-                                itemStatus->setText("✔ Concluído");
-                                itemStatus->setForeground(QColor("#10b981"));
-                            }
-                        }
-                    }
-
-                    if (m_autoConvertAfterDownload) {
-                        m_statusLabel->setText("Status: Baixado! Iniciando conversão automática para " + m_autoConvertFormat + "...");
-                        logMessage("[Auto-Conversão] Download concluído! Acionando conversão automática no arquivo recém-baixado...");
-                        
-                        if (hasCompletedFile) {
-                            m_convertInput->setText(completedFile.absoluteFilePath());
-                            m_convertFormatCombo->setCurrentText(m_autoConvertFormat);
-                            
-                            m_autoConvertAfterDownload = false; // Resetar flag
-                            onStartConvertClicked(); // Acionar motor de conversão FFmpeg acelerado
-                            
-                            if (m_notifyCheckBox->isChecked()) {
-                                QMessageBox::information(this, "Download Concluído", "O arquivo foi baixado com sucesso em:\n" + targetDir + "\n\nO conversor foi iniciado automaticamente para transformá-lo em:\n" + m_autoConvertFormat);
-                            }
-                        } else {
-                            m_autoConvertAfterDownload = false;
-                            m_statusLabel->setText("Status: Download concluído, mas o arquivo final não foi localizado para conversão automática.");
-                            logMessage("[Auto-Conversão] Erro: yt-dlp não informou um arquivo final válido em " + targetDir);
-                        }
-                    } else {
-                        m_statusLabel->setText("Status: Concluído e salvo com sucesso!");
-                        logMessage("[Sucesso] Operação finalizada! Mídia salva no diretório escolhido.");
-
-                        if (m_notifyCheckBox->isChecked()) {
-                            QString savedLoc = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
-                            QMessageBox::information(this, "Sucesso", "Download finalizado em velocidade máxima!\nOs arquivos foram salvos na pasta:\n" + savedLoc);
-                        }
-                    }
-                }
-            }
-        }, Qt::QueuedConnection);
-    });
-
-    m_convertProcess = new QProcess(this);
-#ifdef _WIN32
-    m_convertProcess->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
-        args->flags |= 0x08000000; // CREATE_NO_WINDOW
-    });
-#endif
-    connect(m_convertProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::onConvertProcessOutput);
-    connect(m_convertProcess, &QProcess::readyReadStandardError, this, &MainWindow::onConvertProcessOutput);
-    connect(m_convertProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            [this](int exitCode, QProcess::ExitStatus /*exitStatus*/) {
-                onConvertProcessFinished(exitCode);
-            });
 
     refreshLibrary();
 
     // Carregar configurações do Auto-Updater e iniciar checagem silenciosa ao start (se habilitado)
     QSettings settings("Tonho Studios", "PrismDownloader");
     bool checkOnStart = settings.value("checkUpdatesOnStart", true).toBool(); // Por padrão ATIVADO
+    const int concurrency = qBound(1, settings.value("maxConcurrentDownloads", 2).toInt(), 5);
+    if (m_concurrencySpin) m_concurrencySpin->setValue(concurrency);
+    m_downloadManager->setConcurrencyLimit(concurrency);
     if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
     if (m_autoDownloadUpdatesChk) {
         m_autoDownloadUpdatesChk->setChecked(false);
@@ -265,14 +158,8 @@ MainWindow::~MainWindow()
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
     settings.setValue("defaultTimeRange", m_timeRangeInput->text().trimmed());
     if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
+    if (m_concurrencySpin) settings.setValue("maxConcurrentDownloads", m_concurrencySpin->value());
     settings.setValue("autoDownloadUpdates", false);
-
-    m_engine.cancelCurrent();
-    if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
-        m_convertCancellationRequested = true;
-        m_convertProcess->kill();
-        m_convertProcess->waitForFinished();
-    }
 }
 
 void MainWindow::setupUI()
@@ -382,11 +269,11 @@ void MainWindow::setupUI()
     m_urlInput->setMinimumHeight(44);
     m_urlInput->setStyleSheet("font-size: 14px; padding: 10px 14px;");
 
-    m_startBtn = new QPushButton("BAIXAR", pageDownloads);
+    m_startBtn = new QPushButton("ADICIONAR À FILA", pageDownloads);
     m_startBtn->setObjectName("startBtn");
     m_startBtn->setCursor(Qt::PointingHandCursor);
     m_startBtn->setMinimumHeight(44);
-    m_startBtn->setFixedWidth(140);
+    m_startBtn->setFixedWidth(185);
     m_startBtn->setStyleSheet("font-size: 15px; font-weight: bold;");
 
     topInputLayout->addWidget(m_urlInput, 1);
@@ -473,30 +360,48 @@ void MainWindow::setupUI()
     statsLayout->addWidget(m_etaLabel);
 
     QHBoxLayout *actionBottomLayout = new QHBoxLayout();
-    m_cancelBtn = new QPushButton("CANCELAR OPERAÇÃO ATUAL", pageDownloads);
+    m_cancelBtn = new QPushButton("CANCELAR SELECIONADO", pageDownloads);
     m_cancelBtn->setObjectName("cancelBtn");
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
     m_cancelBtn->setMinimumHeight(40);
-    m_cancelBtn->setFixedWidth(230);
+    m_cancelBtn->setFixedWidth(210);
     m_cancelBtn->setEnabled(false);
 
-    m_notifyCheckBox = new QCheckBox("Exibir aviso pop-up ao concluir o download (Desativado por padrão)", pageDownloads);
+    m_cancelAllBtn = new QPushButton("CANCELAR TODOS", pageDownloads);
+    m_cancelAllBtn->setObjectName("cancelBtn");
+    m_cancelAllBtn->setCursor(Qt::PointingHandCursor);
+    m_cancelAllBtn->setMinimumHeight(40);
+    m_cancelAllBtn->setFixedWidth(160);
+    m_cancelAllBtn->setEnabled(false);
+
+    QLabel *concurrencyLabel = new QLabel("Simultâneos:", pageDownloads);
+    m_concurrencySpin = new QSpinBox(pageDownloads);
+    m_concurrencySpin->setRange(1, 5);
+    m_concurrencySpin->setValue(2);
+    m_concurrencySpin->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
+
+    m_notifyCheckBox = new QCheckBox("Exibir resumo quando toda a fila terminar", pageDownloads);
     bool notifyPref = settings.value("showNotifications", false).toBool();
     m_notifyCheckBox->setChecked(notifyPref);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
 
     actionBottomLayout->addWidget(m_notifyCheckBox);
+    actionBottomLayout->addWidget(concurrencyLabel);
+    actionBottomLayout->addWidget(m_concurrencySpin);
     actionBottomLayout->addStretch();
     actionBottomLayout->addWidget(m_cancelBtn);
+    actionBottomLayout->addWidget(m_cancelAllBtn);
 
-    m_downloadsQueueTable = new QTableWidget(0, 4, pageDownloads);
+    m_downloadsQueueTable = new QTableWidget(0, 6, pageDownloads);
     QStringList queueHeaders;
-    queueHeaders << "Vídeo / Arquivo Baixado" << "Formato" << "Tamanho" << "Status";
+    queueHeaders << "Vídeo / Arquivo" << "Formato" << "Progresso" << "Velocidade / ETA" << "Tamanho" << "Status";
     m_downloadsQueueTable->setHorizontalHeaderLabels(queueHeaders);
     m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+    m_downloadsQueueTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
     m_downloadsQueueTable->verticalHeader()->setVisible(false);
     m_downloadsQueueTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_downloadsQueueTable->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -504,6 +409,7 @@ void MainWindow::setupUI()
     m_downloadsQueueTable->setAlternatingRowColors(true);
     m_downloadsQueueTable->setObjectName("libraryTable");
     connect(m_downloadsQueueTable, &QTableWidget::cellDoubleClicked, this, &MainWindow::onDownloadQueueDoubleClicked);
+    connect(m_downloadsQueueTable, &QTableWidget::itemSelectionChanged, this, &MainWindow::onQueueSelectionChanged);
 
     centerLayout->addWidget(m_statusLabel);
     centerLayout->addWidget(m_progressBar);
@@ -882,6 +788,8 @@ void MainWindow::setupUI()
     connect(navGroup, &QButtonGroup::idClicked, this, &MainWindow::switchPage);
     connect(m_startBtn, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(m_cancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelClicked);
+    connect(m_cancelAllBtn, &QPushButton::clicked, this, &MainWindow::onCancelAllClicked);
+    connect(m_concurrencySpin, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::onConcurrencyChanged);
     connect(m_browseDirBtn, &QPushButton::clicked, this, &MainWindow::onBrowseClicked);
     connect(m_openFolderBtn, &QPushButton::clicked, this, &MainWindow::onOpenFolderClicked);
 }
@@ -909,247 +817,42 @@ void MainWindow::onConvertBrowseClicked()
 
 void MainWindow::onStartConvertClicked()
 {
-    QString inFile = m_convertInput->text().trimmed();
+    const QString inFile = m_convertInput->text().trimmed();
     if (inFile.isEmpty() || !QFile::exists(inFile)) {
         QMessageBox::warning(this, "Atenção", "Selecione um arquivo de mídia existente no computador para converter.");
         return;
     }
 
-    QString formatText = m_convertFormatCombo->currentText();
-    QFileInfo fileInfo(inFile);
-    QString baseName = fileInfo.completeBaseName();
-    
-    // Se estiver convertendo automaticamente pós-download, utilizar a pasta exclusiva que foi configurada
-    QString outFolder = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text().trimmed() : m_currentDownloadDir;
+    const QString outFolder = m_outputDirInput->text().trimmed();
     if (outFolder.isEmpty() || (!QDir(outFolder).exists() && !QDir().mkpath(outFolder))) {
         QMessageBox::critical(this, "Erro", "Não foi possível criar ou acessar a pasta de destino da conversão.");
         return;
     }
-    QDir dir(outFolder);
 
-    QString outputStem = baseName + "_convertido";
-    QString outputExtension = ".mp4";
-    QStringList args;
-    args << "-n" << "-i" << inFile;
-    m_convertUsingHardware = false;
-    m_convertFallbackAttempted = false;
-    m_convertCancellationRequested = false;
-    m_convertCpuFallbackArgs = args;
+    ConversionRequest request;
+    request.inputFile = inFile;
+    request.format = m_convertFormatCombo->currentText();
+    request.outputDirectory = outFolder;
+    request.gpuType = m_gpuDetector.getGPUType();
 
-    const GPUType gpuType = m_engine.gpuDetector()->getGPUType();
-
-    if (formatText.startsWith("MP4 (H.264")) {
-        const QString encoder = encoderFor(gpuType, false);
-        if (!encoder.isEmpty()) {
-            m_convertUsingHardware = true;
-            args << "-c:v" << encoder;
-            if (gpuType == GPUType::NVIDIA) {
-                args << "-preset" << "p4" << "-cq" << "23";
-            } else {
-                args << "-b:v" << "5M";
-            }
-            args << "-c:a" << "aac" << "-b:a" << "192k";
-            m_convertCpuFallbackArgs << "-c:v" << "libx264" << "-crf" << "23" << "-c:a" << "aac" << "-b:a" << "192k";
-        } else {
-            args << "-c:v" << "libx264" << "-crf" << "23" << "-c:a" << "aac";
-        }
-    } else if (formatText.startsWith("MP4 (HEVC")) {
-        outputStem = baseName + "_hevc";
-        const QString encoder = encoderFor(gpuType, true);
-        if (!encoder.isEmpty()) {
-            m_convertUsingHardware = true;
-            args << "-c:v" << encoder;
-            if (gpuType == GPUType::NVIDIA) {
-                args << "-preset" << "p4" << "-cq" << "25";
-            } else {
-                args << "-b:v" << "4M";
-            }
-            args << "-c:a" << "aac" << "-b:a" << "192k";
-            m_convertCpuFallbackArgs << "-c:v" << "libx265" << "-crf" << "25" << "-c:a" << "aac" << "-b:a" << "192k";
-        } else {
-            args << "-c:v" << "libx265" << "-crf" << "25" << "-c:a" << "aac";
-        }
-    } else if (formatText.startsWith("MKV")) {
-        outputExtension = ".mkv";
-        args << "-c" << "copy";
-    } else if (formatText.startsWith("MP3")) {
-        outputStem = baseName + "_audio";
-        outputExtension = ".mp3";
-        args << "-vn" << "-c:a" << "libmp3lame" << "-b:a" << "320k";
-    } else if (formatText.startsWith("WAV")) {
-        outputStem = baseName + "_audio";
-        outputExtension = ".wav";
-        args << "-vn" << "-c:a" << "pcm_s16le";
-    } else if (formatText.startsWith("WEBM")) {
-        outputExtension = ".webm";
-        args << "-c:v" << "libvpx-vp9" << "-b:v" << "2M" << "-c:a" << "libopus";
-    }
-
-    if (!m_convertUsingHardware) {
-        m_convertCpuFallbackArgs = args;
-    }
-
-    const QString outFile = uniqueOutputPath(dir, outputStem, outputExtension);
-    args << outFile;
-    m_convertCpuFallbackArgs << outFile;
-
-    const QString ffmpegPath = QCoreApplication::applicationDirPath() + "/ffmpeg.exe";
-    if (!QFile::exists(ffmpegPath)) {
-        QMessageBox::critical(this, "FFmpeg ausente", "ffmpeg.exe não foi encontrado na pasta do aplicativo.");
-        logMessage("[Erro no Conversor] Dependência obrigatória ausente: ffmpeg.exe.");
+    const ConversionEnqueueResult result = m_conversionManager->enqueueConversion(request);
+    if (!result.accepted) {
+        QMessageBox::critical(this, "Não foi possível converter", result.error);
         return;
     }
-    m_convertProgramPath = ffmpegPath;
-    m_convertOutputPath = outFile;
+
+    m_manualConversionId = result.id;
 
     m_convertProgressBar->setRange(0, 0);
-    m_convertStatusLabel->setText("Status: Convertendo mídia em alta velocidade...");
-    if (m_stackedWidget->currentIndex() == 0) {
-        m_statusLabel->setText("Status: Conversão Automática acionada em alta velocidade...");
-        m_progressBar->setRange(0, 0); // Ativa barra indeterminada (animação pulsante mostrando processamento ativo!)
-        m_speedLabel->setText("Modo: Conversão em andamento...");
-        m_etaLabel->setText("Motor FFmpeg Acelerado");
-        m_cancelBtn->setEnabled(true); // Permite cancelar também durante a conversão automática
-        m_startBtn->setEnabled(false);
-    }
+    m_convertStatusLabel->setText("Status: Aguardando conversão...");
     m_startConvertBtn->setEnabled(false);
     m_cancelConvertBtn->setEnabled(true);
-
-    logMessage("\n========================================================");
-    logMessage(QString("[Conversor] Iniciando conversão para %1").arg(outFile));
-    logMessage("[Conversor] Comando: " + ffmpegPath + " " + args.join(" "));
-
-    m_convertProcess->start(m_convertProgramPath, args);
-    if (!m_convertProcess->waitForStarted()) {
-        QMessageBox::critical(this, "Erro", "Não foi possível acionar o executável do FFmpeg.");
-        m_convertProgressBar->setRange(0, 100);
-        m_convertProgressBar->setValue(0);
-        m_startConvertBtn->setEnabled(true);
-        m_cancelConvertBtn->setEnabled(false);
-    }
 }
 
 void MainWindow::onCancelConvertClicked()
 {
-    if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
-        m_convertCancellationRequested = true;
-        m_convertProcess->kill();
-        logMessage("[Conversor] Conversão interrompida pelo usuário.");
-        m_convertStatusLabel->setText("Status do Conversor: Operação cancelada.");
-        m_convertProgressBar->setRange(0, 100);
-        m_convertProgressBar->setValue(0);
-        m_startConvertBtn->setEnabled(true);
-        m_cancelConvertBtn->setEnabled(false);
-    }
-}
-
-void MainWindow::onConvertProcessOutput()
-{
-    if (!m_convertProcess) return;
-    QByteArray out = m_convertProcess->readAllStandardOutput();
-    QByteArray err = m_convertProcess->readAllStandardError();
-
-    if (!out.isEmpty()) logMessage("[Processo Conversor] " + QString::fromUtf8(out).trimmed());
-    if (!err.isEmpty()) {
-        QString errStr = QString::fromUtf8(err).trimmed();
-        if (errStr.contains("time=") || errStr.contains("size=") || errStr.contains("speed=")) {
-            int pos = errStr.indexOf("time=");
-            if (pos != -1) {
-                QString sub = errStr.mid(pos, 25);
-                m_convertStatusLabel->setText("Status: Convertendo (" + sub + ")...");
-                if (m_stackedWidget->currentIndex() == 0) {
-                    m_statusLabel->setText("Status da Conversão Automática: " + sub);
-                }
-            }
-            logMessage("[Processo Conversor] Progresso FFmpeg: " + errStr);
-        } else if (errStr.contains("Error") || errStr.contains("Invalid") || errStr.contains("No such file") || errStr.contains("failed") || errStr.contains("Unable")) {
-            logMessage("[Erro no Conversor] " + errStr);
-        } else {
-            logMessage("[Processo Conversor] " + errStr);
-        }
-    }
-}
-
-void MainWindow::onConvertProcessFinished(int exitCode)
-{
-    if (exitCode != 0 && m_convertUsingHardware && !m_convertFallbackAttempted
-        && !m_convertCancellationRequested && !m_convertProgramPath.isEmpty()) {
-        m_convertFallbackAttempted = true;
-        m_convertUsingHardware = false;
-        if (!m_convertOutputPath.isEmpty()) {
-            QFile::remove(m_convertOutputPath);
-        }
-        logMessage("[Conversor] Encoder de hardware indisponível; repetindo a conversão com CPU.");
-        m_convertStatusLabel->setText("Status: Aceleração indisponível. Convertendo com CPU...");
-        m_convertProgressBar->setRange(0, 0);
-        m_convertProcess->start(m_convertProgramPath, m_convertCpuFallbackArgs);
-        if (m_convertProcess->waitForStarted()) {
-            return;
-        }
-        logMessage("[Erro no Conversor] Não foi possível iniciar o fallback de CPU.");
-    }
-
-    m_convertProgressBar->setRange(0, 100);
-    m_startConvertBtn->setEnabled(true);
-    m_cancelConvertBtn->setEnabled(false);
-
-    if (m_stackedWidget->currentIndex() == 0) {
-        m_progressBar->setRange(0, 100);
-        m_startBtn->setEnabled(true);
-        m_cancelBtn->setEnabled(false);
-    }
-
-    if (exitCode == 0) {
-        m_convertProgressBar->setValue(100);
-        m_convertStatusLabel->setText("Status: Conversão finalizada com sucesso! Salvo na sua Biblioteca.");
-        if (m_stackedWidget->currentIndex() == 0) {
-            m_progressBar->setValue(100);
-            m_statusLabel->setText("Status: Conversão Automática concluída e salva no disco!");
-            m_speedLabel->setText("Velocidade: Concluído!");
-            m_etaLabel->setText("Pronto na Biblioteca!");
-        }
-        logMessage("[Sucesso] Arquivo convertido e salvo na pasta com sucesso!");
-        refreshLibrary();
-
-        if (m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
-            QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
-            if (itemStatus && itemStatus->text().contains("Convertendo")) {
-                const QFileInfo convertedFile(m_convertOutputPath);
-                if (convertedFile.exists() && convertedFile.isFile()) {
-                    if (auto item0 = m_downloadsQueueTable->item(0, 0)) {
-                        item0->setText(convertedFile.fileName());
-                        item0->setData(Qt::UserRole, convertedFile.absoluteFilePath());
-                    }
-                    if (auto item1 = m_downloadsQueueTable->item(0, 1)) item1->setText(convertedFile.suffix().toUpper());
-                    double sizeMB = static_cast<double>(convertedFile.size()) / (1024.0 * 1024.0);
-                    if (auto item2 = m_downloadsQueueTable->item(0, 2)) item2->setText(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
-                }
-                itemStatus->setText("✔ Concluído");
-                itemStatus->setForeground(QColor("#10b981"));
-            }
-        }
-
-        if (m_notifyCheckBox->isChecked()) {
-            QString savedLoc = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
-            QMessageBox::information(this, "Conversão Concluída", "O arquivo foi convertido com sucesso e salvo em:\n" + savedLoc);
-        }
-    } else {
-        m_convertProgressBar->setValue(0);
-        m_convertStatusLabel->setText("Status: Erro na conversão ou processo interrompido.");
-        logMessage(QString("[Erro] Conversor encerrou com código %1").arg(exitCode));
-        if (m_stackedWidget->currentIndex() == 0) {
-            m_progressBar->setValue(0);
-            m_statusLabel->setText("Status: Conversão interrompida ou com erro.");
-            m_speedLabel->setText("Velocidade de Download: 0.0 MB/s");
-            m_etaLabel->setText("Tempo Restante: --:--");
-        }
-        if (m_downloadsQueueTable && m_downloadsQueueTable->rowCount() > 0) {
-            QTableWidgetItem *itemStatus = m_downloadsQueueTable->item(0, 3);
-            if (itemStatus && itemStatus->text().contains("Convertendo")) {
-                itemStatus->setText("❌ Erro Conversão");
-                itemStatus->setForeground(QColor("#ef4444"));
-            }
-        }
+    if (m_manualConversionId != 0) {
+        m_conversionManager->cancelConversion(m_manualConversionId);
     }
 }
 
@@ -1227,24 +930,14 @@ void MainWindow::onDownloadQueueDoubleClicked(int row, int /*column*/)
     QTableWidgetItem *item = m_downloadsQueueTable->item(row, 0);
     if (!item) return;
 
-    QString fileName = item->text();
-    if (fileName.startsWith("A processar stream...")) {
-        QMessageBox::information(this, "Aguarde", "Este vídeo ainda está em processo de extração ou download.");
-        return;
-    }
+    const QString fileName = item->text();
+    const QString filePath = item->data(Qt::UserRole + 1).toString();
 
-    QString filePath = item->data(Qt::UserRole).toString();
-    if (filePath.isEmpty()) {
-        QDir dir(m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir);
-        filePath = dir.absoluteFilePath(fileName);
-    }
-
-    if (QFile::exists(filePath)) {
+    if (!filePath.isEmpty() && QFile::exists(filePath)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
         logMessage("[Fila de Downloads] Reproduzindo vídeo no player do Windows: " + fileName);
     } else {
-        QMessageBox::warning(this, "Aviso", "O arquivo selecionado não foi encontrado no disco ou ainda não concluiu o download:\n" + filePath);
-        refreshLibrary();
+        QMessageBox::information(this, "Aguarde", "Este item ainda não possui um arquivo final disponível.");
     }
 }
 
@@ -1361,11 +1054,11 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     dlgLayout->addStretch();
 
     QHBoxLayout *btnLayout = new QHBoxLayout();
-    QPushButton *btnOk = new QPushButton("BAIXAR MÍDIA", &dlg);
+    QPushButton *btnOk = new QPushButton("ADICIONAR À FILA", &dlg);
     btnOk->setObjectName("startBtn");
     btnOk->setCursor(Qt::PointingHandCursor);
     btnOk->setMinimumHeight(42);
-    btnOk->setFixedWidth(160);
+    btnOk->setFixedWidth(185);
     btnOk->setStyleSheet("font-size: 15px; font-weight: bold;");
     connect(btnOk, &QPushButton::clicked, &dlg, &QDialog::accept);
 
@@ -1431,7 +1124,7 @@ void MainWindow::onOpenFolderClicked()
 
 void MainWindow::onStartClicked()
 {
-    QString url = m_urlInput->text().trimmed();
+    const QString url = m_urlInput->text().trimmed();
     if (url.isEmpty()) {
         QMessageBox::warning(this, "Atenção", "Por favor, insira ou cole o link do vídeo na caixa de URL antes de prosseguir.");
         return;
@@ -1459,81 +1152,368 @@ void MainWindow::onStartClicked()
         return;
     }
 
-    m_autoConvertAfterDownload = doConvert;
-    m_autoConvertFormat = convertFormat;
     m_currentDownloadDir = customOutputDir;
-    m_lastDownloadedFile.clear();
 
-    QString defaultOutputDir = m_outputDirInput->text().trimmed();
+    const QString defaultOutputDir = m_outputDirInput->text().trimmed();
     QSettings settings("Tonho Studios", "PrismDownloader");
-    settings.setValue("outputFolder", defaultOutputDir); // Conserva a pasta padrão inalterada!
+    settings.setValue("outputFolder", defaultOutputDir);
     settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
     settings.setValue("defaultTimeRange", timeRange);
 
-    m_progressBar->setValue(0);
-    m_startBtn->setEnabled(false);
-    m_cancelBtn->setEnabled(true);
+    DownloadRequest request;
+    request.url = parsedUrl;
+    request.quality = selectedQuality;
+    request.timeRange = timeRange;
+    request.outputDirectory = customOutputDir;
+
+    const EnqueueResult result = m_downloadManager->enqueueDownload(request);
+    if (!result.accepted) {
+        QMessageBox::warning(this, "Não foi possível adicionar", result.error);
+        logMessage("[Fila] Item recusado: " + result.error);
+        return;
+    }
+
+    UiDownloadJob uiJob;
+    uiJob.request = request;
+    uiJob.autoConvert = doConvert;
+    uiJob.conversionFormat = convertFormat;
+    m_downloadJobs.insert(result.id, uiJob);
+    m_currentBatchJobs.insert(result.id);
 
     if (m_downloadsQueueTable) {
         m_downloadsQueueTable->insertRow(0);
-        
-        QString displayTitle = "A processar stream... (" + url.left(38) + "...)";
-        QTableWidgetItem *qTitle = new QTableWidgetItem(displayTitle);
-        qTitle->setFlags(qTitle->flags() ^ Qt::ItemIsEditable);
-        
-        QTableWidgetItem *qExt = new QTableWidgetItem(selectedQuality.left(10));
-        qExt->setFlags(qExt->flags() ^ Qt::ItemIsEditable);
-        qExt->setTextAlignment(Qt::AlignCenter);
-
-        QTableWidgetItem *qSize = new QTableWidgetItem("Calculando...");
-        qSize->setFlags(qSize->flags() ^ Qt::ItemIsEditable);
-        qSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-
-        QTableWidgetItem *qStatus = new QTableWidgetItem("⏳ Baixando...");
-        qStatus->setFlags(qStatus->flags() ^ Qt::ItemIsEditable);
-        qStatus->setTextAlignment(Qt::AlignCenter);
-        qStatus->setForeground(QColor("#38bdf8"));
-
-        m_downloadsQueueTable->setItem(0, 0, qTitle);
-        m_downloadsQueueTable->setItem(0, 1, qExt);
-        m_downloadsQueueTable->setItem(0, 2, qSize);
-        m_downloadsQueueTable->setItem(0, 3, qStatus);
+        for (int column = 0; column < m_downloadsQueueTable->columnCount(); ++column) {
+            auto *cell = new QTableWidgetItem;
+            cell->setTextAlignment(column == 0 ? Qt::AlignLeft | Qt::AlignVCenter : Qt::AlignCenter);
+            m_downloadsQueueTable->setItem(0, column, cell);
+        }
+        m_downloadsQueueTable->item(0, 0)->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(result.id));
+        updateJobRow(result.id);
+        m_downloadsQueueTable->selectRow(0);
     }
-    
-    logMessage("\n========================================================");
-    logMessage("[DownloadEngine] Acionando motor acelerado de extração e junção...");
+
+    logMessage(QString("[Fila] Download #%1 adicionado: %2").arg(result.id).arg(url));
     if (!timeRange.isEmpty()) {
-        logMessage("[Recorte] Faixa de tempo programada: " + timeRange);
+        logMessage(QString("[Download #%1] Recorte programado: %2").arg(result.id).arg(timeRange));
     }
-    if (m_autoConvertAfterDownload) {
-        logMessage("[Auto-Conversão] Programado para converter automaticamente para: " + m_autoConvertFormat);
+    if (doConvert) {
+        logMessage(QString("[Download #%1] Conversão automática programada: %2").arg(result.id).arg(convertFormat));
     }
-    if (customOutputDir != defaultOutputDir) {
-        logMessage("[Destino Temporário] Este download específico será salvo em: " + customOutputDir);
-    } else {
-        logMessage("[Destino Padrão] Mídia será salva na pasta padrão: " + customOutputDir);
-    }
-    
-    m_engine.startDownload(url.toStdString(), selectedQuality.toStdString(), timeRange.toStdString(), customOutputDir.toStdString());
+    m_urlInput->clear();
+    onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
 }
 
 void MainWindow::onCancelClicked()
 {
-    logMessage("[Alerta] Comando de cancelamento enviado para o worker...");
-    m_engine.cancelCurrent();
-    if (m_convertProcess && m_convertProcess->state() != QProcess::NotRunning) {
-        m_convertCancellationRequested = true;
-        m_convertProcess->kill();
-        logMessage("[Conversor] Conversão automática interrompida pelo usuário na tela inicial.");
+    const DownloadId id = selectedDownloadId();
+    if (id == 0) {
+        return;
+    }
+    m_downloadManager->cancelDownload(id);
+    m_conversionManager->cancelByDownloadId(id);
+}
+
+void MainWindow::onCancelAllClicked()
+{
+    logMessage("[Fila] Cancelamento de todos os downloads solicitado.");
+    m_downloadManager->cancelAll();
+    m_conversionManager->cancelAllAutomatic();
+}
+
+void MainWindow::onConcurrencyChanged(int value)
+{
+    m_downloadManager->setConcurrencyLimit(value);
+    QSettings("Tonho Studios", "PrismDownloader").setValue("maxConcurrentDownloads", value);
+}
+
+int MainWindow::findDownloadRow(DownloadId id) const
+{
+    if (!m_downloadsQueueTable || id == 0) {
+        return -1;
+    }
+    for (int row = 0; row < m_downloadsQueueTable->rowCount(); ++row) {
+        const QTableWidgetItem *item = m_downloadsQueueTable->item(row, 0);
+        if (item && item->data(Qt::UserRole).toULongLong() == id) {
+            return row;
+        }
+    }
+    return -1;
+}
+
+DownloadId MainWindow::selectedDownloadId() const
+{
+    if (!m_downloadsQueueTable || m_downloadsQueueTable->currentRow() < 0) {
+        return 0;
+    }
+    const QTableWidgetItem *item = m_downloadsQueueTable->item(m_downloadsQueueTable->currentRow(), 0);
+    return item ? item->data(Qt::UserRole).toULongLong() : 0;
+}
+
+void MainWindow::updateJobRow(DownloadId id)
+{
+    const int row = findDownloadRow(id);
+    auto iterator = m_downloadJobs.find(id);
+    if (row < 0 || iterator == m_downloadJobs.end()) {
+        return;
+    }
+    UiDownloadJob &job = iterator.value();
+    const QFileInfo file(job.filePath);
+    const QString title = file.exists() ? file.fileName() : job.request.url.toString();
+    const QString format = file.exists() ? file.suffix().toUpper() : job.request.quality;
+    const QString speedEta = (job.speed.isEmpty() ? "--" : job.speed)
+        + " / " + (job.eta.isEmpty() ? "--:--" : job.eta);
+    const QString size = file.exists()
+        ? QString("%1 MB").arg(static_cast<double>(file.size()) / (1024.0 * 1024.0), 0, 'f', 1)
+        : "Calculando...";
+
+    m_downloadsQueueTable->item(row, 0)->setText(title);
+    m_downloadsQueueTable->item(row, 0)->setData(Qt::UserRole + 1, job.filePath);
+    m_downloadsQueueTable->item(row, 1)->setText(format);
+    m_downloadsQueueTable->item(row, 2)->setText(QString::number(job.progress, 'f', 1) + "%");
+    m_downloadsQueueTable->item(row, 3)->setText(speedEta);
+    m_downloadsQueueTable->item(row, 4)->setText(size);
+    m_downloadsQueueTable->item(row, 5)->setText(job.statusText);
+
+    QColor color("#38bdf8");
+    if (job.status == DownloadStatus::Completed) color = QColor("#10b981");
+    if (job.status == DownloadStatus::Error) color = QColor("#ef4444");
+    if (job.status == DownloadStatus::Cancelled) color = QColor("#f59e0b");
+    m_downloadsQueueTable->item(row, 5)->setForeground(color);
+}
+
+void MainWindow::onQueueSelectionChanged()
+{
+    const DownloadId id = selectedDownloadId();
+    const auto iterator = m_downloadJobs.constFind(id);
+    m_cancelBtn->setEnabled(iterator != m_downloadJobs.cend() && !iterator->terminal);
+    updateSelectedMonitor();
+}
+
+void MainWindow::onDownloadProgress(DownloadId id, double percent, const QString &speed, const QString &eta)
+{
+    auto iterator = m_downloadJobs.find(id);
+    if (iterator == m_downloadJobs.end()) return;
+    iterator->progress = qBound(0.0, percent, 100.0);
+    iterator->speed = speed;
+    iterator->eta = eta;
+    updateJobRow(id);
+    updateSelectedMonitor();
+}
+
+void MainWindow::onDownloadStatus(DownloadId id, DownloadStatus status, const QString &message)
+{
+    auto iterator = m_downloadJobs.find(id);
+    if (iterator == m_downloadJobs.end()) return;
+    UiDownloadJob &job = iterator.value();
+
+    if (status == DownloadStatus::Completed && job.autoConvert && job.conversionId != 0 && !job.terminal) {
+        job.status = DownloadStatus::ConvertingGPU;
+        job.statusText = "Aguardando conversão";
+    } else if (!job.terminal || status == DownloadStatus::Cancelled) {
+        job.status = status;
+        job.statusText = message;
+        if (status == DownloadStatus::Completed) {
+            job.progress = 100.0;
+            job.terminal = true;
+        } else if (status == DownloadStatus::Error || status == DownloadStatus::Cancelled) {
+            job.terminal = true;
+        }
+    }
+
+    updateJobRow(id);
+    onQueueSelectionChanged();
+    maybeShowQueueSummary();
+}
+
+void MainWindow::onDownloadCompleted(DownloadId id, const QString &filePath)
+{
+    auto iterator = m_downloadJobs.find(id);
+    if (iterator == m_downloadJobs.end()) return;
+    UiDownloadJob &job = iterator.value();
+    job.filePath = filePath;
+    job.progress = 100.0;
+    m_currentDownloadDir = QFileInfo(filePath).absolutePath();
+
+    if (job.autoConvert) {
+        ConversionRequest request;
+        request.ownerDownloadId = id;
+        request.inputFile = filePath;
+        request.format = job.conversionFormat;
+        request.outputDirectory = job.request.outputDirectory;
+        request.gpuType = m_gpuDetector.getGPUType();
+        const ConversionEnqueueResult result = m_conversionManager->enqueueConversion(request);
+        if (result.accepted) {
+            job.conversionId = result.id;
+            job.status = DownloadStatus::ConvertingGPU;
+            job.statusText = "Aguardando conversão";
+        } else {
+            job.status = DownloadStatus::Error;
+            job.statusText = "Falha ao enfileirar conversão: " + result.error;
+            job.terminal = true;
+        }
+    }
+    updateJobRow(id);
+    refreshLibrary();
+}
+
+void MainWindow::onDownloadQueueStateChanged(int active, int pending)
+{
+    m_cancelAllBtn->setEnabled(m_downloadManager->hasWork() || m_conversionManager->hasAutomaticWork());
+    if (selectedDownloadId() == 0) {
+        m_statusLabel->setText(QString("Fila: %1 ativo(s), %2 aguardando").arg(active).arg(pending));
         m_progressBar->setRange(0, 100);
         m_progressBar->setValue(0);
-        m_statusLabel->setText("Status: Operação cancelada pelo usuário.");
-        m_speedLabel->setText("Velocidade de Download: 0.0 MB/s");
-        m_etaLabel->setText("Tempo Restante: --:--");
+        m_speedLabel->setText("Velocidade: acompanhe um item selecionando sua linha");
+        m_etaLabel->setText("Conversões aguardando: " + QString::number(m_conversionManager->pendingCount()));
     }
-    m_startBtn->setEnabled(true);
-    m_cancelBtn->setEnabled(false);
+    maybeShowQueueSummary();
+}
+
+void MainWindow::updateSelectedMonitor()
+{
+    const auto iterator = m_downloadJobs.constFind(selectedDownloadId());
+    if (iterator == m_downloadJobs.cend()) {
+        onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
+        return;
+    }
+    const UiDownloadJob &job = iterator.value();
+    m_progressBar->setRange(0, 100);
+    m_progressBar->setValue(qRound(job.progress));
+    m_statusLabel->setText("Status: " + job.statusText);
+    m_speedLabel->setText("Velocidade: " + (job.speed.isEmpty() ? "--" : job.speed));
+    m_etaLabel->setText("Tempo restante: " + (job.eta.isEmpty() ? "--:--" : job.eta));
+}
+
+void MainWindow::onConversionStatus(ConversionId id, DownloadId ownerDownloadId, const QString &message)
+{
+    if (ownerDownloadId == 0 && id == m_manualConversionId) {
+        m_convertStatusLabel->setText("Status: " + message);
+        m_convertProgressBar->setRange(0, 0);
+        return;
+    }
+    auto iterator = m_downloadJobs.find(ownerDownloadId);
+    if (iterator == m_downloadJobs.end()) return;
+    iterator->status = DownloadStatus::ConvertingGPU;
+    iterator->statusText = message;
+    updateJobRow(ownerDownloadId);
+    updateSelectedMonitor();
+}
+
+void MainWindow::onConversionCompleted(ConversionId id, DownloadId ownerDownloadId, const QString &outputFile)
+{
+    if (ownerDownloadId == 0 && id == m_manualConversionId) {
+        m_manualConversionId = 0;
+        m_convertInput->setText(outputFile);
+        m_convertProgressBar->setRange(0, 100);
+        m_convertProgressBar->setValue(100);
+        m_convertStatusLabel->setText("Status: Conversão finalizada com sucesso.");
+        m_startConvertBtn->setEnabled(true);
+        m_cancelConvertBtn->setEnabled(false);
+        refreshLibrary();
+        return;
+    }
+    auto iterator = m_downloadJobs.find(ownerDownloadId);
+    if (iterator == m_downloadJobs.end()) return;
+    iterator->filePath = outputFile;
+    iterator->status = DownloadStatus::Completed;
+    iterator->statusText = "Conversão concluída";
+    iterator->progress = 100.0;
+    iterator->terminal = true;
+    updateJobRow(ownerDownloadId);
+    updateSelectedMonitor();
+    refreshLibrary();
+    maybeShowQueueSummary();
+}
+
+void MainWindow::onConversionFailed(ConversionId id, DownloadId ownerDownloadId, const QString &message)
+{
+    if (ownerDownloadId == 0 && id == m_manualConversionId) {
+        m_manualConversionId = 0;
+        m_convertProgressBar->setRange(0, 100);
+        m_convertProgressBar->setValue(0);
+        m_convertStatusLabel->setText("Status: " + message);
+        m_startConvertBtn->setEnabled(true);
+        m_cancelConvertBtn->setEnabled(false);
+        return;
+    }
+    auto iterator = m_downloadJobs.find(ownerDownloadId);
+    if (iterator == m_downloadJobs.end()) return;
+    iterator->status = DownloadStatus::Error;
+    iterator->statusText = "Erro na conversão: " + message;
+    iterator->terminal = true;
+    updateJobRow(ownerDownloadId);
+    updateSelectedMonitor();
+    maybeShowQueueSummary();
+}
+
+void MainWindow::onConversionCancelled(ConversionId id, DownloadId ownerDownloadId)
+{
+    if (ownerDownloadId == 0 && id == m_manualConversionId) {
+        m_manualConversionId = 0;
+        m_convertProgressBar->setRange(0, 100);
+        m_convertProgressBar->setValue(0);
+        m_convertStatusLabel->setText("Status: Conversão cancelada.");
+        m_startConvertBtn->setEnabled(true);
+        m_cancelConvertBtn->setEnabled(false);
+        return;
+    }
+    auto iterator = m_downloadJobs.find(ownerDownloadId);
+    if (iterator == m_downloadJobs.end()) return;
+    iterator->status = DownloadStatus::Cancelled;
+    iterator->statusText = "Conversão cancelada";
+    iterator->terminal = true;
+    updateJobRow(ownerDownloadId);
+    updateSelectedMonitor();
+    maybeShowQueueSummary();
+}
+
+void MainWindow::maybeShowQueueSummary()
+{
+    if (m_closing || m_currentBatchJobs.isEmpty() || m_downloadManager->hasWork()
+        || m_conversionManager->hasAutomaticWork()) {
+        return;
+    }
+    int successes = 0;
+    int errors = 0;
+    int cancellations = 0;
+    for (DownloadId id : std::as_const(m_currentBatchJobs)) {
+        const auto iterator = m_downloadJobs.constFind(id);
+        if (iterator == m_downloadJobs.cend() || !iterator->terminal) return;
+        if (iterator->status == DownloadStatus::Completed) ++successes;
+        else if (iterator->status == DownloadStatus::Cancelled) ++cancellations;
+        else ++errors;
+    }
+    const QString summary = QString("Fila concluída: %1 sucesso(s), %2 erro(s), %3 cancelamento(s).")
+                                .arg(successes).arg(errors).arg(cancellations);
+    logMessage("[Fila] " + summary);
+    m_currentBatchJobs.clear();
+    if (m_notifyCheckBox->isChecked()) {
+        QMessageBox::information(this, "Resumo da fila", summary);
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (!m_downloadManager->hasWork() && !m_conversionManager->hasWork()) {
+        event->accept();
+        return;
+    }
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, "Trabalho em andamento",
+        "Há downloads ou conversões pendentes. Deseja cancelar toda a sessão e fechar?",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        event->ignore();
+        return;
+    }
+    m_closing = true;
+    m_downloadManager->cancelAll();
+    m_conversionManager->cancelAllAutomatic();
+    if (m_manualConversionId != 0) {
+        m_conversionManager->cancelConversion(m_manualConversionId);
+    }
+    event->accept();
 }
 
 void MainWindow::logMessage(const QString &msg)
@@ -1553,7 +1533,8 @@ bool MainWindow::shouldShowLogLine(const QString &line) const
     if (m_logFilterMode == 1) {
         // Apenas Processos (yt-dlp, FFmpeg, junção, conversão)
         return line.contains("[Processo", Qt::CaseInsensitive) ||
-               line.contains("[DownloadEngine", Qt::CaseInsensitive) ||
+               line.contains("[Download #", Qt::CaseInsensitive) ||
+               line.contains("[Conversão #", Qt::CaseInsensitive) ||
                line.contains("[Conversor]", Qt::CaseInsensitive) ||
                line.contains("[Recorte]", Qt::CaseInsensitive) ||
                line.contains("[Auto-Conversao]", Qt::CaseInsensitive) ||
@@ -1901,7 +1882,6 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
     QJsonObject obj = doc.object();
 
     QString tagName = obj.value("tag_name").toString().trimmed();
-    QString body = obj.value("body").toString();
     if (tagName.isEmpty()) {
         m_updateStatusLabel->setText("Versão " + NEOV_VERSION_TAG + " operacional (Nenhuma tag encontrada).");
         if (m_sidebarUpdateNotification) {
@@ -1964,92 +1944,6 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
         if (response == QMessageBox::Open) {
             QDesktopServices::openUrl(releaseUrl);
             logMessage("[Updater] Página oficial da release aberta no navegador.");
-        }
-    }
-    return;
-
-    // Comparar versão com a local
-    QString localVersion = NEOV_VERSION_TAG;
-    QString cleanLocal = localVersion; cleanLocal.remove("v", Qt::CaseInsensitive);
-    QString cleanRemote = tagName; cleanRemote.remove("v", Qt::CaseInsensitive);
-
-    if (cleanRemote == cleanLocal || cleanRemote.isEmpty()) {
-        m_updateStatusLabel->setText("Você está utilizando a versão mais recente (" + tagName + ").");
-        if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
-            m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-        }
-        logMessage("[Updater] A versão instalada já é a mais recente disponível.");
-        if (!silent) {
-            QMessageBox::information(this, "Atualizado", "O seu aplicativo Prism Downloader já está na versão mais atualizada (" + localVersion + ")!");
-        }
-        return;
-    }
-
-    // Se chegou aqui, temos uma NOVA VERSÃO no GitHub
-    m_updateStatusLabel->setText("🚀 Nova versão " + tagName + " disponível no GitHub!");
-    m_updateStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 14px;");
-    if (m_sidebarUpdateNotification) {
-        m_sidebarUpdateNotification->setText("🔔 Nova Versão " + tagName + "!");
-        m_sidebarUpdateNotification->setStyleSheet("color: #f59e0b; background-color: #2a1f0c; border: 1px solid #f59e0b; border-radius: 4px; padding: 4px; font-size: 12px; font-weight: bold; margin: 0 10px 2px 10px;");
-    }    logMessage("[Updater] ALERTA: Nova versão identificada no GitHub -> " + tagName);
-
-    QJsonArray assets = obj.value("assets").toArray();
-    QString downloadUrl = "";
-    QString assetName = "PrismDownloader_Setup.exe";
-    
-    // Prioridade 1: Buscar rigorosamente o instalador (.exe)
-    for (int i = 0; i < assets.size(); ++i) {
-        QJsonObject asset = assets.at(i).toObject();
-        QString name = asset.value("name").toString();
-        if (name.endsWith(".exe", Qt::CaseInsensitive)) {
-            downloadUrl = asset.value("browser_download_url").toString();
-            assetName = name;
-            break;
-        }
-    }
-    
-    // Prioridade 2 (Fallback): Se não houver .exe, buscar por pacote portável (.zip)
-    if (downloadUrl.isEmpty()) {
-        for (int i = 0; i < assets.size(); ++i) {
-            QJsonObject asset = assets.at(i).toObject();
-            QString name = asset.value("name").toString();
-            if (name.endsWith(".zip", Qt::CaseInsensitive)) {
-                downloadUrl = asset.value("browser_download_url").toString();
-                assetName = name;
-                break;
-            }
-        }
-    }
-
-    if (downloadUrl.isEmpty()) {
-        downloadUrl = obj.value("html_url").toString();
-    }
-
-    // Verificar se o download automático está ativado sem perguntar (Por padrão DESATIVADO)
-    if (m_autoDownloadUpdatesChk->isChecked() && !downloadUrl.isEmpty() && (downloadUrl.endsWith(".exe") || downloadUrl.endsWith(".zip"))) {
-        logMessage("[Updater] Download Automático Ativado: Baixando atualização silenciosamente...");
-        QDesktopServices::openUrl(QUrl(obj.value("html_url").toString()));
-        if (m_notifyCheckBox->isChecked()) {
-            QMessageBox::information(this, "Atualização Detectada", "Uma nova versão (" + tagName + ") foi detectada no GitHub!\nComo o download automático está habilitado, estamos baixando em segundo plano.");
-        }
-    } else {
-        // PERGUNTA AO USUÁRIO SE QUER ATUALIZAR (Nunca obrigatório)
-        QMessageBox::StandardButton res = QMessageBox::question(this, "Nova Versão Disponível",
-            QString("Uma nova versão do Prism Downloader (%1) foi disponibilizada no GitHub!\n\nVersão Atual: %2\nNova Versão: %1\n\nNovidades da Release:\n%3\n\nDeseja baixar e atualizar o aplicativo agora?")
-            .arg(tagName, localVersion, body.left(300)),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-
-        if (res == QMessageBox::Yes) {
-            if (downloadUrl.endsWith(".exe") || downloadUrl.endsWith(".zip")) {
-                QDesktopServices::openUrl(QUrl(obj.value("html_url").toString()));
-            } else {
-                QDesktopServices::openUrl(QUrl(downloadUrl));
-                logMessage("[Updater] Abrindo página da release do GitHub no navegador: " + downloadUrl);
-            }
-        } else {
-            logMessage("[Updater] O usuário optou por adiar a atualização desta vez.");
-            m_updateStatusLabel->setText("Atualização " + tagName + " adiada pelo usuário.");
         }
     }
 }

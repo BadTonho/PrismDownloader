@@ -13,9 +13,11 @@ As seguintes correções foram implementadas após esta análise:
 - O caminho final emitido pelo `yt-dlp` é propagado à interface, eliminando a seleção do arquivo “mais recente” para conversão automática e para a fila.
 - A conversão usa o encoder do fabricante correto (NVENC/AMF/QSV), tenta fallback seguro para CPU se o encoder de hardware falhar e não sobrescreve arquivos existentes.
 - O cancelamento de download encerra a árvore de processos no Windows; logs são texto simples e têm limite de 5.000 entradas.
-- CMake usa UTF-8, avisos elevados e caminho de Qt configurável. O instalador falha se FFmpeg/yt-dlp não estiverem presentes. Há teste CTest para a seleção de perfil.
+- Downloads agora usam uma fila de sessão identificada por `DownloadId`, com limite configurável de 1 a 5 (padrão 2), rejeição de URL duplicada ativa, cancelamento individual/global e estado isolado por linha.
+- Conversões automáticas e manuais compartilham uma fila FIFO com somente um FFmpeg ativo; “Cancelar todos” remove apenas as conversões automáticas.
+- CMake usa UTF-8, avisos elevados e caminho de Qt configurável. O instalador falha se FFmpeg/yt-dlp não estiverem presentes. Há testes CTest para perfis, concorrência, cancelamento e serialização das conversões.
 
-Pendências deliberadas: a atualização integrada só deve voltar quando houver uma infraestrutura de assinatura verificável (chave pública/assinatura de release ou validação Authenticode com certificado fixado). Também faltam testes de integração com `yt-dlp`/FFmpeg reais e paginação assíncrona da biblioteca para pastas muito grandes.
+Pendências deliberadas: a atualização integrada só deve voltar quando houver uma infraestrutura de assinatura verificável (chave pública/assinatura de release ou validação Authenticode com certificado fixado). Também faltam testes de integração com rede usando `yt-dlp`/FFmpeg reais e paginação assíncrona da biblioteca para pastas muito grandes.
 
 ## Resumo executivo
 
@@ -30,8 +32,8 @@ Prioridade recomendada:
 
 ## Validações realizadas
 
-- `cmake --build build --config Release --parallel 2`: executado com sucesso (build incremental).
-- `ctest --test-dir build -N`: **0 testes** configurados.
+- `cmake --build build --config Release`: executado com sucesso e sem avisos no build final.
+- `ctest --test-dir build -C Release --output-on-failure`: **2 de 2 testes aprovados**.
 - Os binários `yt-dlp.exe`, `ffmpeg.exe`, DLLs Qt e `platforms/qwindows.dll` existem no artefato local `build/Release`.
 - A árvore Git estava limpa no início da análise.
 

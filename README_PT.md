@@ -28,6 +28,10 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetiv
 
 ## 🔥 Funcionalidades de Destaque
 
+### 🚦 Fila simultânea da sessão
+* Adicione quantas URLs precisar e execute **de 1 a 5 downloads ao mesmo tempo** (padrão: 2), com progresso, velocidade, ETA, estado e cancelamento isolados por tarefa.
+* Conversões automáticas e manuais compartilham uma fila FIFO com exatamente um FFmpeg ativo, evitando sobrecarga da GPU/CPU.
+
 ### 🎬 1. Recorte de Faixa de Tempo (Time-Slice Extraction)
 * **Economize banda baixando trechos específicos!** 
 * Defina o intervalo exato de corte diretamente no painel (ex: das `00:03:15` às `00:05:45`). O motor processa e baixa exclusivamente os bytes necessários da nuvem em tempo recorde!
@@ -47,11 +51,11 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetiv
 
 ### 🛡️ 4. Sandboxing Gráfico e Zero Janelas de Terminal (`CREATE_NO_WINDOW`)
 * Esqueça aplicativos que ficam abrindo ou piscando janelas pretas do *CMD* ou *Windows Terminal* durante downloads!
-* O motor executa os binários em baixo nível via **`QProcess::startCommand`** usando travas do Kernel Win32 (`0x08000000`), garantindo uma operação 100% gráfica, silenciosa e com monitoramento nativo de `exit code` para evitar falsos positivos de conclusão.
+* O motor executa os binários via **`QProcess::start(program, arguments)`** usando travas do Kernel Win32 (`0x08000000`), garantindo uma operação 100% gráfica, silenciosa e com monitoramento nativo de `exit code` para evitar falsos positivos de conclusão.
 
 ### ☁️ 5. Central de Atualizações Tonho Studios
 * **Sincronia Global com o GitHub:** Checagem de versões assíncrona baseada na nuvem com suporte a modo silencioso de inicialização. 
-* **Atualizador Independente do Motor:** Capacidade de atualizar a inteligência do extrator de assinaturas (`yt-dlp`) com apenas um clique sem precisar reinstalar a suíte inteira!
+* **Links seguros de atualização:** Abre a página oficial do Prism Downloader ou do `yt-dlp` para atualização manual verificada pelo usuário; o aplicativo não baixa nem executa instaladores automaticamente.
 
 ---
 

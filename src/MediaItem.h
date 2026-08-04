@@ -9,6 +9,7 @@ enum class DownloadStatus {
     Downloading,
     Muxing,
     ConvertingGPU,
+    Cancelling,
     Completed,
     Error,
     Cancelled
