@@ -37,8 +37,8 @@
 // ============================================================================
 // CONFIGURAÇÃO OFICIAL DE VERSÃO (Mude apenas aqui para futuras Releases!)
 // ============================================================================
-static const QString NEOV_VERSION_TAG = "v1.1.5";    // Tag de verificação no GitHub
-static const QString NEOV_VERSION_NUMBER = "1.1.5";  // Número de exibição
+static const QString NEOV_VERSION_TAG = "v1.1.6";    // Tag de verificação no GitHub
+static const QString NEOV_VERSION_NUMBER = "1.1.6";  // Número de exibição
 
 namespace {
 constexpr int kMaximumLogEntries = 5000;

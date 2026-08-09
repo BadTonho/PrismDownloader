@@ -1,5 +1,5 @@
 #define MyAppName "Prism Downloader"
-#define MyAppVersion "1.1.5"
+#define MyAppVersion "1.1.6"
 #define MyAppPublisher "Tonho Studios"
 #define MyAppExeName "PrismDownloader.exe"
 
