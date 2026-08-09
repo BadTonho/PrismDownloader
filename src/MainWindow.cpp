@@ -17,13 +17,17 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QHeaderView>
+#include <QListWidget>
+#include <QListWidgetItem>
 #include <QTableWidgetItem>
+#include <QProcess>
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QApplication>
 #include <QCloseEvent>
 #include <QRegularExpression>
+#include <QUrlQuery>
 #include <QVersionNumber>
 
 #include <utility>
@@ -54,6 +58,34 @@ bool isValidTimeRange(const QString &timeRange)
         "^(\\d{1,3}):([0-5]\\d):([0-5]\\d)-(\\d{1,3}):([0-5]\\d):([0-5]\\d)$");
     const QRegularExpressionMatch match = pattern.match(timeRange);
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
+}
+
+QList<QPair<QString, QUrl>> parsePlaylistPreview(const QByteArray &output)
+{
+    QList<QPair<QString, QUrl>> items;
+    QSet<QString> seenUrls;
+    const QStringList lines = QString::fromUtf8(output).split('\n');
+    for (const QString &rawLine : lines) {
+        const QString line = rawLine.trimmed();
+        const int separator = line.indexOf('\t');
+        if (separator <= 0) {
+            continue;
+        }
+
+        const QString title = line.left(separator).trimmed();
+        const QUrl itemUrl(line.mid(separator + 1).trimmed());
+        if (title.isEmpty() || !itemUrl.isValid() || itemUrl.host().isEmpty()
+            || (itemUrl.scheme() != "http" && itemUrl.scheme() != "https")) {
+            continue;
+        }
+
+        const QString normalizedUrl = itemUrl.adjusted(QUrl::RemoveFragment).toString(QUrl::FullyEncoded);
+        if (!seenUrls.contains(normalizedUrl)) {
+            seenUrls.insert(normalizedUrl);
+            items.append(qMakePair(title, itemUrl));
+        }
+    }
+    return items;
 }
 
 }
@@ -858,6 +890,262 @@ void MainWindow::showDownloadPopup()
     m_downloadDialog->move(popupTopLeft);
 }
 
+void MainWindow::startPlaylistPreview(const QUrl &url)
+{
+    if (m_playlistPreviewProcess) {
+        return;
+    }
+
+    const QString program = QDir::toNativeSeparators(
+        QCoreApplication::applicationDirPath() + "/yt-dlp.exe");
+    if (!QFile::exists(program)) {
+        QMessageBox::warning(this, "Motor indisponível",
+                             "yt-dlp.exe não foi encontrado na pasta do aplicativo.");
+        return;
+    }
+
+    auto *process = new QProcess(this);
+    m_playlistPreviewProcess = process;
+    process->setProcessChannelMode(QProcess::SeparateChannels);
+
+    connect(process, &QProcess::finished, this,
+            [this, process](int exitCode, QProcess::ExitStatus) {
+        if (m_playlistPreviewProcess != process) {
+            process->deleteLater();
+            return;
+        }
+
+        const QList<QPair<QString, QUrl>> items =
+            parsePlaylistPreview(process->readAllStandardOutput());
+        const QString errorOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
+        m_playlistPreviewProcess = nullptr;
+        process->deleteLater();
+        m_startBtn->setEnabled(true);
+
+        if (items.isEmpty()) {
+            const QString detail = errorOutput.isEmpty()
+                ? "Nenhum vídeo foi encontrado nessa playlist."
+                : errorOutput;
+            QMessageBox::warning(this, "Playlist não identificada",
+                                 "Não foi possível listar os vídeos da playlist.\n\n" + detail);
+            logMessage("[Playlist] Não foi possível obter os itens da playlist.");
+            return;
+        }
+
+        if (exitCode != 0) {
+            logMessage(QString("[Playlist] yt-dlp retornou código %1, mas %2 item(ns) foram identificados.")
+                           .arg(exitCode).arg(items.size()));
+        } else {
+            logMessage(QString("[Playlist] %1 item(ns) encontrado(s) para seleção.").arg(items.size()));
+        }
+
+        QList<QPair<QString, QUrl>> selectedItems;
+        if (!showPlaylistSelectionDialog(items, selectedItems)) {
+            logMessage("[Playlist] Seleção de itens cancelada pelo usuário.");
+            return;
+        }
+        continueDownload(selectedItems);
+    });
+
+    connect(process, &QProcess::errorOccurred, this,
+            [this, process](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart || m_playlistPreviewProcess != process) {
+            return;
+        }
+        m_playlistPreviewProcess = nullptr;
+        process->deleteLater();
+        m_startBtn->setEnabled(true);
+        QMessageBox::warning(this, "Falha ao consultar playlist",
+                             "Não foi possível iniciar o yt-dlp para listar a playlist.");
+    });
+
+    m_startBtn->setEnabled(false);
+    logMessage("[Playlist] Consultando os vídeos disponíveis...");
+    const QStringList arguments = {
+        "--flat-playlist",
+        "--print", "%(title)s\t%(webpage_url)s",
+        "--skip-download",
+        "--quiet",
+        "--no-warnings",
+        "--no-color",
+        "--ignore-errors",
+        "--",
+        url.toString(QUrl::FullyEncoded)
+    };
+    process->start(program, arguments);
+}
+
+bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &items,
+                                             QList<QPair<QString, QUrl>> &selectedItems)
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle("Itens da playlist - Prism Studio Suite");
+    dialog.resize(760, 520);
+    dialog.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setSpacing(12);
+    layout->setContentsMargins(22, 20, 22, 18);
+
+    auto *title = new QLabel(
+        QString("Selecione os vídeos que deseja adicionar à fila (%1 encontrado(s)):").arg(items.size()),
+        &dialog);
+    title->setStyleSheet("font-weight: bold; font-size: 17px; color: #ffffff;");
+    layout->addWidget(title);
+
+    auto *list = new QListWidget(&dialog);
+    list->setAlternatingRowColors(true);
+    list->setSelectionMode(QAbstractItemView::NoSelection);
+    for (int index = 0; index < items.size(); ++index) {
+        const auto &item = items.at(index);
+        auto *listItem = new QListWidgetItem(
+            QString("%1. %2").arg(index + 1).arg(item.first), list);
+        listItem->setToolTip(item.second.toString());
+        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable);
+        listItem->setCheckState(Qt::Checked);
+    }
+    layout->addWidget(list, 1);
+
+    auto *selectionLayout = new QHBoxLayout();
+    auto *selectAllButton = new QPushButton("Selecionar todos", &dialog);
+    auto *clearButton = new QPushButton("Limpar seleção", &dialog);
+    selectionLayout->addWidget(selectAllButton);
+    selectionLayout->addWidget(clearButton);
+    selectionLayout->addStretch();
+    layout->addLayout(selectionLayout);
+
+    connect(selectAllButton, &QPushButton::clicked, &dialog, [list]() {
+        for (int index = 0; index < list->count(); ++index) {
+            list->item(index)->setCheckState(Qt::Checked);
+        }
+    });
+    connect(clearButton, &QPushButton::clicked, &dialog, [list]() {
+        for (int index = 0; index < list->count(); ++index) {
+            list->item(index)->setCheckState(Qt::Unchecked);
+        }
+    });
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    buttons->button(QDialogButtonBox::Ok)->setText("ADICIONAR SELECIONADOS");
+    buttons->button(QDialogButtonBox::Cancel)->setText("CANCELAR");
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+
+    for (int index = 0; index < list->count(); ++index) {
+        if (list->item(index)->checkState() == Qt::Checked) {
+            selectedItems.append(items.at(index));
+        }
+    }
+    if (selectedItems.isEmpty()) {
+        QMessageBox::information(this, "Nenhum item selecionado",
+                                 "Selecione pelo menos um vídeo para adicionar à fila.");
+        return false;
+    }
+    return true;
+}
+
+void MainWindow::continueDownload(const QList<QPair<QString, QUrl>> &items)
+{
+    if (items.isEmpty()) {
+        return;
+    }
+
+    QString selectedQuality, timeRange, convertFormat, customOutputDir;
+    bool doConvert = false;
+    if (!showFormatSelectionDialog(selectedQuality, timeRange, doConvert, convertFormat, customOutputDir)) {
+        logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
+        return;
+    }
+    if (!isValidTimeRange(timeRange)) {
+        QMessageBox::warning(this, "Recorte inválido",
+                             "Use o formato HH:MM:SS-HH:MM:SS, com início menor que o fim.");
+        return;
+    }
+    if (customOutputDir.isEmpty()
+        || (!QDir(customOutputDir).exists() && !QDir().mkpath(customOutputDir))) {
+        QMessageBox::critical(this, "Pasta inválida",
+                              "Não foi possível criar ou acessar a pasta de destino selecionada.");
+        return;
+    }
+
+    m_currentDownloadDir = customOutputDir;
+    const QString defaultOutputDir = m_outputDirInput->text().trimmed();
+    QSettings settings("Tonho Studios", "PrismDownloader");
+    settings.setValue("outputFolder", defaultOutputDir);
+    settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
+    settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
+    settings.setValue("defaultTimeRange", timeRange);
+
+    int addedCount = 0;
+    QStringList rejectedItems;
+    for (const auto &item : items) {
+        DownloadRequest request;
+        request.url = item.second;
+        request.quality = selectedQuality;
+        request.timeRange = timeRange;
+        request.outputDirectory = customOutputDir;
+
+        const EnqueueResult result = m_downloadManager->enqueueDownload(request);
+        if (!result.accepted) {
+            rejectedItems.append(item.first + ": " + result.error);
+            logMessage("[Fila] Item recusado: " + result.error);
+            continue;
+        }
+
+        UiDownloadJob uiJob;
+        uiJob.request = request;
+        uiJob.autoConvert = doConvert;
+        uiJob.conversionFormat = convertFormat;
+        m_downloadJobs.insert(result.id, uiJob);
+        m_currentBatchJobs.insert(result.id);
+
+        if (m_downloadsQueueTable) {
+            m_downloadsQueueTable->insertRow(0);
+            for (int column = 0; column < m_downloadsQueueTable->columnCount(); ++column) {
+                auto *cell = new QTableWidgetItem;
+                cell->setTextAlignment(column == 0 ? Qt::AlignLeft | Qt::AlignVCenter
+                                                   : Qt::AlignCenter);
+                m_downloadsQueueTable->setItem(0, column, cell);
+            }
+            m_downloadsQueueTable->item(0, 0)->setData(
+                Qt::UserRole, QVariant::fromValue<qulonglong>(result.id));
+            updateJobRow(result.id);
+            m_downloadsQueueTable->selectRow(0);
+        }
+
+        ++addedCount;
+        const QString itemLabel = item.first.isEmpty() ? item.second.toString() : item.first;
+        logMessage(QString("[Fila] Download #%1 adicionado: %2")
+                       .arg(result.id).arg(itemLabel));
+        if (!timeRange.isEmpty()) {
+            logMessage(QString("[Download #%1] Recorte programado: %2")
+                           .arg(result.id).arg(timeRange));
+        }
+        if (doConvert) {
+            logMessage(QString("[Download #%1] Conversão automática programada: %2")
+                           .arg(result.id).arg(convertFormat));
+        }
+    }
+
+    if (addedCount == 0) {
+        QMessageBox::warning(this, "Nenhum item adicionado",
+                             "Nenhum vídeo foi aceito pela fila de downloads.");
+        return;
+    }
+    if (!rejectedItems.isEmpty()) {
+        logMessage(QString("[Playlist] %1 item(ns) não foram adicionados.").arg(rejectedItems.size()));
+    }
+
+    m_urlInput->clear();
+    onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
+    showDownloadPopup();
+}
+
 void MainWindow::onConvertBrowseClicked()
 {
     QString file = QFileDialog::getOpenFileName(this, "Selecione a Mídia para Converter", m_outputDirInput->text(),
@@ -1190,73 +1478,20 @@ void MainWindow::onStartClicked()
         return;
     }
 
-    // Acionar a janela modal de opções (Foto 3) com suporte à pasta temporária e conversão pós-download!
-    QString selectedQuality, timeRange, convertFormat, customOutputDir;
-    bool doConvert = false;
-    if (!showFormatSelectionDialog(selectedQuality, timeRange, doConvert, convertFormat, customOutputDir)) {
-        logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
-        return;
-    }
-    if (!isValidTimeRange(timeRange)) {
-        QMessageBox::warning(this, "Recorte inválido", "Use o formato HH:MM:SS-HH:MM:SS, com início menor que o fim.");
-        return;
-    }
-    if (customOutputDir.isEmpty() || (!QDir(customOutputDir).exists() && !QDir().mkpath(customOutputDir))) {
-        QMessageBox::critical(this, "Pasta inválida", "Não foi possível criar ou acessar a pasta de destino selecionada.");
+    QUrlQuery query(parsedUrl);
+    const QString path = parsedUrl.path().toLower();
+    const bool looksLikePlaylist = query.hasQueryItem("list")
+        || query.hasQueryItem("playlist")
+        || path.contains("/playlist")
+        || path.contains("/sets/");
+    if (looksLikePlaylist) {
+        startPlaylistPreview(parsedUrl);
         return;
     }
 
-    m_currentDownloadDir = customOutputDir;
-
-    const QString defaultOutputDir = m_outputDirInput->text().trimmed();
-    QSettings settings("Tonho Studios", "PrismDownloader");
-    settings.setValue("outputFolder", defaultOutputDir);
-    settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
-    settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
-    settings.setValue("defaultTimeRange", timeRange);
-
-    DownloadRequest request;
-    request.url = parsedUrl;
-    request.quality = selectedQuality;
-    request.timeRange = timeRange;
-    request.outputDirectory = customOutputDir;
-
-    const EnqueueResult result = m_downloadManager->enqueueDownload(request);
-    if (!result.accepted) {
-        QMessageBox::warning(this, "Não foi possível adicionar", result.error);
-        logMessage("[Fila] Item recusado: " + result.error);
-        return;
-    }
-
-    UiDownloadJob uiJob;
-    uiJob.request = request;
-    uiJob.autoConvert = doConvert;
-    uiJob.conversionFormat = convertFormat;
-    m_downloadJobs.insert(result.id, uiJob);
-    m_currentBatchJobs.insert(result.id);
-
-    if (m_downloadsQueueTable) {
-        m_downloadsQueueTable->insertRow(0);
-        for (int column = 0; column < m_downloadsQueueTable->columnCount(); ++column) {
-            auto *cell = new QTableWidgetItem;
-            cell->setTextAlignment(column == 0 ? Qt::AlignLeft | Qt::AlignVCenter : Qt::AlignCenter);
-            m_downloadsQueueTable->setItem(0, column, cell);
-        }
-        m_downloadsQueueTable->item(0, 0)->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(result.id));
-        updateJobRow(result.id);
-        m_downloadsQueueTable->selectRow(0);
-    }
-
-    logMessage(QString("[Fila] Download #%1 adicionado: %2").arg(result.id).arg(url));
-    if (!timeRange.isEmpty()) {
-        logMessage(QString("[Download #%1] Recorte programado: %2").arg(result.id).arg(timeRange));
-    }
-    if (doConvert) {
-        logMessage(QString("[Download #%1] Conversão automática programada: %2").arg(result.id).arg(convertFormat));
-    }
-    m_urlInput->clear();
-    onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
-    showDownloadPopup();
+    QList<QPair<QString, QUrl>> items;
+    items.append(qMakePair(QString(), parsedUrl));
+    continueDownload(items);
 }
 
 void MainWindow::onCancelClicked()

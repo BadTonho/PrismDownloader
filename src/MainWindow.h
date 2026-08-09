@@ -21,12 +21,14 @@
 #include <QTimer>
 #include <QHash>
 #include <QSet>
+#include <QList>
 #include <QSpinBox>
 #include "DownloadManager.h"
 #include "ConversionManager.h"
 #include "GPUDetector.h"
 
 class QCloseEvent;
+class QProcess;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -87,6 +89,10 @@ private:
     void updateSelectedMonitor();
     void maybeShowQueueSummary();
     void showDownloadPopup();
+    void startPlaylistPreview(const QUrl &url);
+    void continueDownload(const QList<QPair<QString, QUrl>> &items);
+    bool showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &items,
+                                     QList<QPair<QString, QUrl>> &selectedItems);
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -179,6 +185,7 @@ private:
 
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;
+    QProcess *m_playlistPreviewProcess{nullptr};
     GPUDetector m_gpuDetector;
     bool m_closing{false};
 };
