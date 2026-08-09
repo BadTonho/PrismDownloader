@@ -189,12 +189,12 @@ void MainWindow::setupUI()
     m_navDownloadBtn = new QPushButton("Downloads", sidebar);
     m_navDownloadBtn->setObjectName("navBtn");
     m_navDownloadBtn->setCheckable(true);
+    m_navDownloadBtn->setChecked(true);
     m_navDownloadBtn->setCursor(Qt::PointingHandCursor);
 
     m_navLibraryBtn = new QPushButton("Biblioteca", sidebar);
     m_navLibraryBtn->setObjectName("navBtn");
     m_navLibraryBtn->setCheckable(true);
-    m_navLibraryBtn->setChecked(true);
     m_navLibraryBtn->setCursor(Qt::PointingHandCursor);
 
     m_navConverterBtn = new QPushButton("Conversor de vídeo", sidebar);
@@ -271,7 +271,7 @@ void MainWindow::setupUI()
     QVBoxLayout *downloadDialogLayout = new QVBoxLayout(m_downloadDialog);
     downloadDialogLayout->setContentsMargins(0, 0, 0, 0);
 
-    QWidget *pageDownloads = new QWidget(m_downloadDialog);
+    QWidget *pageDownloads = new QWidget(m_stackedWidget);
     pageDownloads->setObjectName("downloadPage");
     QVBoxLayout *downloadsLayout = new QVBoxLayout(pageDownloads);
     downloadsLayout->setSpacing(20);
@@ -352,15 +352,15 @@ void MainWindow::setupUI()
     downloadsLayout->addLayout(paramLayout);
 
     // PAINEL CENTRAL DE PROCESSAMENTO E MONITORAMENTO AO VIVO
-    QGroupBox *centralPanel = new QGroupBox("Área de Processamento e Monitoramento de Download", pageDownloads);
+    QGroupBox *centralPanel = new QGroupBox("Área de Processamento e Monitoramento de Download", m_downloadDialog);
     QVBoxLayout *centerLayout = new QVBoxLayout(centralPanel);
     centerLayout->setSpacing(16);
     centerLayout->setContentsMargins(20, 30, 20, 24);
 
-    m_statusLabel = new QLabel("Status: Pronto. Aguardando você inserir uma URL acima para começar...", pageDownloads);
+    m_statusLabel = new QLabel("Status: Pronto. Aguardando você inserir uma URL acima para começar...", centralPanel);
     m_statusLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #10b981;");
 
-    m_progressBar = new QProgressBar(pageDownloads);
+    m_progressBar = new QProgressBar(centralPanel);
     m_progressBar->setRange(0, 100);
     m_progressBar->setValue(0);
     m_progressBar->setTextVisible(true);
@@ -368,36 +368,36 @@ void MainWindow::setupUI()
     m_progressBar->setStyleSheet("font-size: 14px;");
 
     QHBoxLayout *statsLayout = new QHBoxLayout();
-    m_speedLabel = new QLabel("Velocidade de Download: 0.0 MB/s", pageDownloads);
+    m_speedLabel = new QLabel("Velocidade de Download: 0.0 MB/s", centralPanel);
     m_speedLabel->setStyleSheet("font-size: 13px; color: #cbd5e1;");
-    m_etaLabel = new QLabel("Tempo Restante: --:--", pageDownloads);
+    m_etaLabel = new QLabel("Tempo Restante: --:--", centralPanel);
     m_etaLabel->setStyleSheet("font-size: 13px; color: #cbd5e1;");
     statsLayout->addWidget(m_speedLabel);
     statsLayout->addStretch();
     statsLayout->addWidget(m_etaLabel);
 
     QHBoxLayout *actionBottomLayout = new QHBoxLayout();
-    m_cancelBtn = new QPushButton("CANCELAR SELECIONADO", pageDownloads);
+    m_cancelBtn = new QPushButton("CANCELAR SELECIONADO", centralPanel);
     m_cancelBtn->setObjectName("cancelBtn");
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
     m_cancelBtn->setMinimumHeight(40);
     m_cancelBtn->setFixedWidth(210);
     m_cancelBtn->setEnabled(false);
 
-    m_cancelAllBtn = new QPushButton("CANCELAR TODOS", pageDownloads);
+    m_cancelAllBtn = new QPushButton("CANCELAR TODOS", centralPanel);
     m_cancelAllBtn->setObjectName("cancelBtn");
     m_cancelAllBtn->setCursor(Qt::PointingHandCursor);
     m_cancelAllBtn->setMinimumHeight(40);
     m_cancelAllBtn->setFixedWidth(160);
     m_cancelAllBtn->setEnabled(false);
 
-    QLabel *concurrencyLabel = new QLabel("Simultâneos:", pageDownloads);
-    m_concurrencySpin = new QSpinBox(pageDownloads);
+    QLabel *concurrencyLabel = new QLabel("Simultâneos:", centralPanel);
+    m_concurrencySpin = new QSpinBox(centralPanel);
     m_concurrencySpin->setRange(1, 5);
     m_concurrencySpin->setValue(2);
     m_concurrencySpin->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
 
-    m_notifyCheckBox = new QCheckBox("Exibir resumo quando toda a fila terminar", pageDownloads);
+    m_notifyCheckBox = new QCheckBox("Exibir resumo quando toda a fila terminar", centralPanel);
     bool notifyPref = settings.value("showNotifications", false).toBool();
     m_notifyCheckBox->setChecked(notifyPref);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
@@ -409,7 +409,7 @@ void MainWindow::setupUI()
     actionBottomLayout->addWidget(m_cancelBtn);
     actionBottomLayout->addWidget(m_cancelAllBtn);
 
-    m_downloadsQueueTable = new QTableWidget(0, 6, pageDownloads);
+    m_downloadsQueueTable = new QTableWidget(0, 6, centralPanel);
     QStringList queueHeaders;
     queueHeaders << "Vídeo / Arquivo" << "Formato" << "Progresso" << "Velocidade / ETA" << "Tamanho" << "Status";
     m_downloadsQueueTable->setHorizontalHeaderLabels(queueHeaders);
@@ -434,8 +434,10 @@ void MainWindow::setupUI()
     centerLayout->addWidget(m_downloadsQueueTable, 1);
     centerLayout->addLayout(actionBottomLayout);
 
-    downloadsLayout->addWidget(centralPanel, 1);
-    downloadDialogLayout->addWidget(pageDownloads);
+    downloadsLayout->addStretch(1);
+    downloadDialogLayout->setContentsMargins(18, 16, 18, 18);
+    downloadDialogLayout->addWidget(centralPanel);
+    m_stackedWidget->addWidget(pageDownloads);
 
     // ---> TELA 1: BIBLIOTECA DE MÍDIAS <---
     QWidget *pageLibrary = new QWidget(m_stackedWidget);
@@ -812,7 +814,7 @@ void MainWindow::setupUI()
 
     connect(m_downloadDialog, &QDialog::finished, this, [this]() {
         if (m_closing) return;
-        if (m_navLibraryBtn) m_navLibraryBtn->setChecked(true);
+        if (m_navDownloadBtn) m_navDownloadBtn->setChecked(true);
         if (m_stackedWidget) m_stackedWidget->setCurrentIndex(0);
     });
 
@@ -821,6 +823,7 @@ void MainWindow::setupUI()
 void MainWindow::switchPage(int index)
 {
     if (index == 0) {
+        if (m_stackedWidget) m_stackedWidget->setCurrentIndex(0);
         showDownloadPopup();
         return;
     }
@@ -830,9 +833,8 @@ void MainWindow::switchPage(int index)
     }
 
     if (m_stackedWidget) {
-        const int pageIndex = index - 1;
-        if (pageIndex >= 0 && pageIndex < m_stackedWidget->count()) {
-            m_stackedWidget->setCurrentIndex(pageIndex);
+        if (index >= 0 && index < m_stackedWidget->count()) {
+            m_stackedWidget->setCurrentIndex(index);
         }
         if (index == 1) { // Se abriu a aba Biblioteca, atualizar a tabela
             refreshLibrary();
@@ -1254,6 +1256,7 @@ void MainWindow::onStartClicked()
     }
     m_urlInput->clear();
     onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
+    showDownloadPopup();
 }
 
 void MainWindow::onCancelClicked()
