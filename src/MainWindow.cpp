@@ -189,12 +189,12 @@ void MainWindow::setupUI()
     m_navDownloadBtn = new QPushButton("Downloads", sidebar);
     m_navDownloadBtn->setObjectName("navBtn");
     m_navDownloadBtn->setCheckable(true);
-    m_navDownloadBtn->setChecked(true);
     m_navDownloadBtn->setCursor(Qt::PointingHandCursor);
 
     m_navLibraryBtn = new QPushButton("Biblioteca", sidebar);
     m_navLibraryBtn->setObjectName("navBtn");
     m_navLibraryBtn->setCheckable(true);
+    m_navLibraryBtn->setChecked(true);
     m_navLibraryBtn->setCursor(Qt::PointingHandCursor);
 
     m_navConverterBtn = new QPushButton("Conversor de vídeo", sidebar);
@@ -816,9 +816,6 @@ void MainWindow::setupUI()
         if (m_stackedWidget) m_stackedWidget->setCurrentIndex(0);
     });
 
-    // Mantém o fluxo anterior: a área de downloads já aparece ao iniciar,
-    // mas agora como popup independente do conteúdo principal.
-    QTimer::singleShot(0, this, &MainWindow::showDownloadPopup);
 }
 
 void MainWindow::switchPage(int index)
