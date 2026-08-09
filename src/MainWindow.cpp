@@ -1013,23 +1013,116 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
                                              QList<QPair<QString, QUrl>> &selectedItems)
 {
     QDialog dialog(this);
+    dialog.setObjectName("playlistSelectionDialog");
     dialog.setWindowTitle("Itens da playlist - Prism Studio Suite");
-    dialog.resize(760, 520);
-    dialog.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
+    dialog.resize(900, 650);
+    dialog.setMinimumSize(760, 520);
+    dialog.setStyleSheet(this->styleSheet() + R"(
+        QDialog#playlistSelectionDialog { background-color: #151515; }
+        QFrame#playlistHeader {
+            background-color: #1d2924;
+            border: 1px solid #275b45;
+            border-radius: 10px;
+        }
+        QLabel#playlistKicker {
+            color: #10b981;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        QLabel#playlistTitle { color: #ffffff; font-size: 20px; font-weight: bold; }
+        QLabel#playlistSubtitle { color: #a3a3a3; font-size: 13px; }
+        QLabel#playlistSelectionCount { color: #10b981; font-weight: bold; font-size: 13px; }
+        QLineEdit#playlistSearch {
+            background-color: #202020;
+            border: 1px solid #3b4b43;
+            border-radius: 7px;
+            padding: 9px 12px;
+            color: #ffffff;
+        }
+        QLineEdit#playlistSearch:focus { border-color: #10b981; background-color: #252525; }
+        QListWidget#playlistItems {
+            background-color: #1b1b1b;
+            border: 1px solid #303030;
+            border-radius: 8px;
+            outline: none;
+        }
+        QListWidget#playlistItems::item {
+            min-height: 30px;
+            padding: 5px 10px;
+            border-bottom: 1px solid #292929;
+            color: #ededed;
+        }
+        QListWidget#playlistItems::item:hover { background-color: #25372f; }
+        QListWidget#playlistItems::item:selected { background-color: #25372f; }
+        QPushButton#playlistSecondaryButton {
+            background-color: #252525;
+            color: #d4d4d4;
+            border: 1px solid #424242;
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-weight: bold;
+        }
+        QPushButton#playlistSecondaryButton:hover { border-color: #10b981; color: #ffffff; }
+        QPushButton#playlistConfirmButton {
+            background-color: #10b981;
+            color: #021810;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        QPushButton#playlistConfirmButton:hover { background-color: #059669; }
+        QPushButton#playlistConfirmButton:disabled { background-color: #2c2c2c; color: #737373; }
+    )");
 
     auto *layout = new QVBoxLayout(&dialog);
-    layout->setSpacing(12);
-    layout->setContentsMargins(22, 20, 22, 18);
+    layout->setSpacing(14);
+    layout->setContentsMargins(24, 22, 24, 20);
 
-    auto *title = new QLabel(
-        QString("Selecione os vídeos que deseja adicionar à fila (%1 encontrado(s)):").arg(items.size()),
-        &dialog);
-    title->setStyleSheet("font-weight: bold; font-size: 17px; color: #ffffff;");
-    layout->addWidget(title);
+    auto *header = new QFrame(&dialog);
+    header->setObjectName("playlistHeader");
+    auto *headerLayout = new QVBoxLayout(header);
+    headerLayout->setSpacing(4);
+    headerLayout->setContentsMargins(18, 14, 18, 14);
+
+    auto *kicker = new QLabel("PLAYLIST ENCONTRADA", header);
+    kicker->setObjectName("playlistKicker");
+    auto *title = new QLabel("Escolha os vídeos que entrarão na fila", header);
+    title->setObjectName("playlistTitle");
+    auto *subtitle = new QLabel(
+        QString("%1 vídeo(s) disponível(is). Todos começam selecionados.").arg(items.size()), header);
+    subtitle->setObjectName("playlistSubtitle");
+    headerLayout->addWidget(kicker);
+    headerLayout->addWidget(title);
+    headerLayout->addWidget(subtitle);
+    layout->addWidget(header);
+
+    auto *searchInput = new QLineEdit(&dialog);
+    searchInput->setObjectName("playlistSearch");
+    searchInput->setPlaceholderText("Filtrar por título...");
+    searchInput->setClearButtonEnabled(true);
+    layout->addWidget(searchInput);
+
+    auto *toolbar = new QHBoxLayout();
+    auto *selectionCount = new QLabel(&dialog);
+    selectionCount->setObjectName("playlistSelectionCount");
+    auto *selectAllButton = new QPushButton("Selecionar todos", &dialog);
+    selectAllButton->setObjectName("playlistSecondaryButton");
+    auto *clearButton = new QPushButton("Limpar seleção", &dialog);
+    clearButton->setObjectName("playlistSecondaryButton");
+    toolbar->addWidget(selectionCount);
+    toolbar->addStretch();
+    toolbar->addWidget(selectAllButton);
+    toolbar->addWidget(clearButton);
+    layout->addLayout(toolbar);
 
     auto *list = new QListWidget(&dialog);
-    list->setAlternatingRowColors(true);
+    list->setObjectName("playlistItems");
+    list->setAlternatingRowColors(false);
     list->setSelectionMode(QAbstractItemView::NoSelection);
+    list->setSpacing(1);
     for (int index = 0; index < items.size(); ++index) {
         const auto &item = items.at(index);
         auto *listItem = new QListWidgetItem(
@@ -1040,31 +1133,50 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
     }
     layout->addWidget(list, 1);
 
-    auto *selectionLayout = new QHBoxLayout();
-    auto *selectAllButton = new QPushButton("Selecionar todos", &dialog);
-    auto *clearButton = new QPushButton("Limpar seleção", &dialog);
-    selectionLayout->addWidget(selectAllButton);
-    selectionLayout->addWidget(clearButton);
-    selectionLayout->addStretch();
-    layout->addLayout(selectionLayout);
+    auto *footer = new QHBoxLayout();
+    auto *cancelButton = new QPushButton("Cancelar", &dialog);
+    cancelButton->setObjectName("playlistSecondaryButton");
+    auto *confirmButton = new QPushButton("ADICIONAR SELECIONADOS", &dialog);
+    confirmButton->setObjectName("playlistConfirmButton");
+    confirmButton->setMinimumHeight(42);
+    footer->addStretch();
+    footer->addWidget(cancelButton);
+    footer->addWidget(confirmButton);
+    layout->addLayout(footer);
 
-    connect(selectAllButton, &QPushButton::clicked, &dialog, [list]() {
+    const auto updateSelectionState = [list, selectionCount, confirmButton, total = items.size()]() {
+        int selectedCount = 0;
+        for (int index = 0; index < list->count(); ++index) {
+            if (list->item(index)->checkState() == Qt::Checked) {
+                ++selectedCount;
+            }
+        }
+        selectionCount->setText(QString("%1 de %2 selecionado(s)").arg(selectedCount).arg(total));
+        confirmButton->setEnabled(selectedCount > 0);
+    };
+
+    connect(selectAllButton, &QPushButton::clicked, &dialog, [list, updateSelectionState]() {
         for (int index = 0; index < list->count(); ++index) {
             list->item(index)->setCheckState(Qt::Checked);
         }
+        updateSelectionState();
     });
-    connect(clearButton, &QPushButton::clicked, &dialog, [list]() {
+    connect(clearButton, &QPushButton::clicked, &dialog, [list, updateSelectionState]() {
         for (int index = 0; index < list->count(); ++index) {
             list->item(index)->setCheckState(Qt::Unchecked);
         }
+        updateSelectionState();
     });
-
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    buttons->button(QDialogButtonBox::Ok)->setText("ADICIONAR SELECIONADOS");
-    buttons->button(QDialogButtonBox::Cancel)->setText("CANCELAR");
-    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    layout->addWidget(buttons);
+    connect(list, &QListWidget::itemChanged, &dialog, updateSelectionState);
+    connect(searchInput, &QLineEdit::textChanged, &dialog, [list](const QString &filter) {
+        for (int index = 0; index < list->count(); ++index) {
+            QListWidgetItem *item = list->item(index);
+            item->setHidden(!item->text().contains(filter, Qt::CaseInsensitive));
+        }
+    });
+    connect(confirmButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
+    updateSelectionState();
 
     if (dialog.exec() != QDialog::Accepted) {
         return false;
