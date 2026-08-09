@@ -172,7 +172,7 @@ void MainWindow::setupUI()
     rootLayout->setContentsMargins(0, 0, 0, 0);
 
     // ==========================================
-    // 1. BARRA LATERAL (SIDEBAR NAVIGATION) - ESTILO ATUBE
+    // 1. BARRA LATERAL (SIDEBAR NAVIGATION)
     // ==========================================
     QFrame *sidebar = new QFrame(this);
     sidebar->setObjectName("sidebar");
@@ -254,8 +254,25 @@ void MainWindow::setupUI()
     m_stackedWidget->setObjectName("mainArea");
     rootLayout->addWidget(m_stackedWidget);
 
-    // ---> TELA 0: DOWNLOADS (LINHA ATUBE CATCHER) <---
-    QWidget *pageDownloads = new QWidget(m_stackedWidget);
+    // ---> POPUP DE DOWNLOADS <---
+    // A fila continua pertencendo à MainWindow; apenas a apresentação fica
+    // isolada em uma janela reutilizável e não modal.
+    m_downloadDialog = new QDialog(this);
+    m_downloadDialog->setObjectName("downloadPopup");
+    m_downloadDialog->setWindowTitle("Downloads - Prism Downloader");
+    m_downloadDialog->setWindowFlags(Qt::Dialog | Qt::WindowTitleHint
+                                     | Qt::WindowCloseButtonHint
+                                     | Qt::WindowMinMaxButtonsHint);
+    m_downloadDialog->setWindowModality(Qt::NonModal);
+    m_downloadDialog->setAttribute(Qt::WA_DeleteOnClose, false);
+    m_downloadDialog->setMinimumSize(860, 540);
+    m_downloadDialog->resize(960, 600);
+
+    QVBoxLayout *downloadDialogLayout = new QVBoxLayout(m_downloadDialog);
+    downloadDialogLayout->setContentsMargins(0, 0, 0, 0);
+
+    QWidget *pageDownloads = new QWidget(m_downloadDialog);
+    pageDownloads->setObjectName("downloadPage");
     QVBoxLayout *downloadsLayout = new QVBoxLayout(pageDownloads);
     downloadsLayout->setSpacing(20);
     downloadsLayout->setContentsMargins(28, 26, 28, 24);
@@ -280,7 +297,7 @@ void MainWindow::setupUI()
     topInputLayout->addWidget(m_startBtn, 0);
     downloadsLayout->addLayout(topInputLayout);
 
-    // LINHA SECUNDÁRIA: PERFIL DE SAÍDA E PASTA (ESTILO ATUBE)
+    // LINHA SECUNDÁRIA: PERFIL DE SAÍDA E PASTA
     QGridLayout *paramLayout = new QGridLayout();
     paramLayout->setSpacing(12);
     paramLayout->setContentsMargins(0, 0, 0, 8);
@@ -418,7 +435,7 @@ void MainWindow::setupUI()
     centerLayout->addLayout(actionBottomLayout);
 
     downloadsLayout->addWidget(centralPanel, 1);
-    m_stackedWidget->addWidget(pageDownloads);
+    downloadDialogLayout->addWidget(pageDownloads);
 
     // ---> TELA 1: BIBLIOTECA DE MÍDIAS <---
     QWidget *pageLibrary = new QWidget(m_stackedWidget);
@@ -792,16 +809,54 @@ void MainWindow::setupUI()
     connect(m_concurrencySpin, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::onConcurrencyChanged);
     connect(m_browseDirBtn, &QPushButton::clicked, this, &MainWindow::onBrowseClicked);
     connect(m_openFolderBtn, &QPushButton::clicked, this, &MainWindow::onOpenFolderClicked);
+
+    connect(m_downloadDialog, &QDialog::finished, this, [this]() {
+        if (m_closing) return;
+        if (m_navLibraryBtn) m_navLibraryBtn->setChecked(true);
+        if (m_stackedWidget) m_stackedWidget->setCurrentIndex(0);
+    });
+
+    // Mantém o fluxo anterior: a área de downloads já aparece ao iniciar,
+    // mas agora como popup independente do conteúdo principal.
+    QTimer::singleShot(0, this, &MainWindow::showDownloadPopup);
 }
 
 void MainWindow::switchPage(int index)
 {
+    if (index == 0) {
+        showDownloadPopup();
+        return;
+    }
+
+    if (m_downloadDialog) {
+        m_downloadDialog->hide();
+    }
+
     if (m_stackedWidget) {
-        m_stackedWidget->setCurrentIndex(index);
+        const int pageIndex = index - 1;
+        if (pageIndex >= 0 && pageIndex < m_stackedWidget->count()) {
+            m_stackedWidget->setCurrentIndex(pageIndex);
+        }
         if (index == 1) { // Se abriu a aba Biblioteca, atualizar a tabela
             refreshLibrary();
         }
     }
+}
+
+void MainWindow::showDownloadPopup()
+{
+    if (!m_downloadDialog) return;
+
+    m_navDownloadBtn->setChecked(true);
+    m_downloadDialog->show();
+    m_downloadDialog->raise();
+    m_downloadDialog->activateWindow();
+
+    // Centraliza o popup em relação à janela principal sempre que ele for
+    // reaberto, sem impedir que o usuário o reposicione manualmente depois.
+    const QPoint popupTopLeft = frameGeometry().center()
+        - QPoint(m_downloadDialog->width() / 2, m_downloadDialog->height() / 2);
+    m_downloadDialog->move(popupTopLeft);
 }
 
 void MainWindow::onConvertBrowseClicked()
@@ -942,7 +997,7 @@ void MainWindow::onDownloadQueueDoubleClicked(int row, int /*column*/)
 }
 
 // ==========================================
-// DIÁLOGO MODAL ESTILO ATUBE CATCHER (FOTO 3)
+// DIÁLOGO MODAL DE SELEÇÃO DE FORMATO
 // ==========================================
 bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir)
 {
@@ -1602,6 +1657,13 @@ void MainWindow::setupStyles()
             color: #dedede;
             font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 13px;
+        }
+        QDialog#downloadPopup {
+            background-color: #121212;
+            color: #dedede;
+        }
+        QWidget#downloadPage {
+            background-color: #121212;
         }
         QWidget {
             color: #dedede;

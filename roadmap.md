@@ -6,7 +6,7 @@ Este documento descreve o planejamento e as etapas de desenvolvimento para a cri
 
 ## 🚀 1. Visão Geral do Projeto (Overview)
 
-* **Objetivo:** Substituir ferramentas legadas e lentas (como o aTube Catcher) por um aplicativo desktop moderno, inteligente e ágil, capaz de lidar com vídeos muito longos (cursos, lives, podcasts) sem trarações ou lentidão no computador.
+* **Objetivo:** Substituir ferramentas legadas e lentas por um aplicativo desktop moderno, inteligente e ágil, capaz de lidar com vídeos muito longos (cursos, lives, podcasts) sem trarações ou lentidão no computador.
 * **Diferenciais Chave:**
   1. **Download + Muxing Instantâneo (*Stream Copy*):** Priorizar a união de faixas originais de áudio e vídeo sem recodificar (takes de segundos, 0% de sobrecarga).
   2. **Detecção Inteligente de Hardware:** Quando a conversão for necessária (ex: trocar formato, comprimir ou converter para áudio), detectar automaticamente a placa de vídeo do usuário e usar aceleração dedicada.
@@ -36,7 +36,7 @@ Como o app será distribuído para diversos usuários no futuro, o motor integra
 * [x] **1.2. Definição de Recursos MVP (Versão 1.0):** 🏁 (Concluído e Alinhado!)
   * ⚡ **Download Multiresolução:** Baixar vídeos em alta qualidade (4K, 2K, 1080p, 720p, 60fps) do YouTube e outras plataformas.
   * 🎵 **Extração de Áudio Direto:** Modo de conversão instantânea para MP3 ou FLAC em máxima qualidade (ideal para músicas, podcasts e áudio aulas).
-  * 🏎️ **Motor "Zero-Lag" para Vídeos Longos (Stream Copy):** Evitar o grande problema do aTube Catcher alavancando junção instantânea (*muxing*) sem sobrecarregar a CPU.
+  * 🏎️ **Motor "Zero-Lag" para Vídeos Longos (Stream Copy):** Evitar gargalos de processamento alavancando junção instantânea (*muxing*) sem sobrecarregar a CPU.
   * 🚀 **Aceleração por Hardware em GPU:** Acionar chips dedicados de vídeo nas conversões de arquivos (NVIDIA NVENC para a sua GTX 1660 Super, e detecção limpa para AMD/Intel).
   * 📚 **Suporte a Playlists e Vídeos Longos:** Gerenciador estável de fila, mostrando velocidade real (MB/s) e tempo restante.
   * ✂️ **Recorte Inteligente de Faixa de Tempo:** Poder recortar e baixar apenas um trecho específico de um vídeo ou live (Ex: das `10:15` às `18:40`) sem descarregar horas inteiras desnecessariamente.

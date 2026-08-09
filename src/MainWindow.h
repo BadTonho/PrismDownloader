@@ -86,9 +86,11 @@ private:
     void updateJobRow(DownloadId id);
     void updateSelectedMonitor();
     void maybeShowQueueSummary();
+    void showDownloadPopup();
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
+    QDialog *m_downloadDialog{nullptr};
     QPushButton *m_navDownloadBtn;
     QPushButton *m_navLibraryBtn;
     QPushButton *m_navConverterBtn;
@@ -98,7 +100,7 @@ private:
     QPushButton *m_sidebarUpdateBtn;
     QLabel *m_sidebarUpdateNotification;
 
-    // Componentes da Tela de Downloads (Página 0 - Estilo aTube Catcher)
+    // Componentes da Tela de Downloads (popup principal)
     QLineEdit *m_urlInput;
     QComboBox *m_qualityCombo;
     QLineEdit *m_timeRangeInput;
