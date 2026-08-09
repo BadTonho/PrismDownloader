@@ -29,6 +29,7 @@
 
 class QCloseEvent;
 class QProcess;
+class QProgressDialog;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -90,6 +91,7 @@ private:
     void maybeShowQueueSummary();
     void showDownloadPopup();
     void startPlaylistPreview(const QUrl &url);
+    void closePlaylistPreviewDialog();
     void continueDownload(const QList<QPair<QString, QUrl>> &items);
     bool showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &items,
                                      QList<QPair<QString, QUrl>> &selectedItems);
@@ -186,6 +188,7 @@ private:
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;
     QProcess *m_playlistPreviewProcess{nullptr};
+    QProgressDialog *m_playlistPreviewDialog{nullptr};
     GPUDetector m_gpuDetector;
     bool m_closing{false};
 };

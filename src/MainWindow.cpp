@@ -19,6 +19,7 @@
 #include <QHeaderView>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QProgressDialog>
 #include <QTableWidgetItem>
 #include <QProcess>
 #include <QNetworkRequest>
@@ -890,6 +891,16 @@ void MainWindow::showDownloadPopup()
     m_downloadDialog->move(popupTopLeft);
 }
 
+void MainWindow::closePlaylistPreviewDialog()
+{
+    if (!m_playlistPreviewDialog) {
+        return;
+    }
+    m_playlistPreviewDialog->hide();
+    m_playlistPreviewDialog->deleteLater();
+    m_playlistPreviewDialog = nullptr;
+}
+
 void MainWindow::startPlaylistPreview(const QUrl &url)
 {
     if (m_playlistPreviewProcess) {
@@ -920,6 +931,7 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
         const QString errorOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
         m_playlistPreviewProcess = nullptr;
         process->deleteLater();
+        closePlaylistPreviewDialog();
         m_startBtn->setEnabled(true);
 
         if (items.isEmpty()) {
@@ -954,12 +966,34 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
         }
         m_playlistPreviewProcess = nullptr;
         process->deleteLater();
+        closePlaylistPreviewDialog();
         m_startBtn->setEnabled(true);
         QMessageBox::warning(this, "Falha ao consultar playlist",
                              "Não foi possível iniciar o yt-dlp para listar a playlist.");
     });
 
     m_startBtn->setEnabled(false);
+    m_playlistPreviewDialog = new QProgressDialog(
+        "Consultando os vídeos da playlist...\nIsso pode levar alguns segundos.",
+        "Cancelar", 0, 0, this);
+    m_playlistPreviewDialog->setWindowTitle("Consultando playlist");
+    m_playlistPreviewDialog->setWindowModality(Qt::WindowModal);
+    m_playlistPreviewDialog->setMinimumDuration(0);
+    m_playlistPreviewDialog->setAutoClose(false);
+    m_playlistPreviewDialog->setAutoReset(false);
+    m_playlistPreviewDialog->show();
+    connect(m_playlistPreviewDialog, &QProgressDialog::canceled, this, [this, process]() {
+        if (m_playlistPreviewProcess != process) {
+            return;
+        }
+        m_playlistPreviewProcess = nullptr;
+        process->kill();
+        process->deleteLater();
+        closePlaylistPreviewDialog();
+        m_startBtn->setEnabled(true);
+        logMessage("[Playlist] Consulta cancelada pelo usuário.");
+    });
+
     logMessage("[Playlist] Consultando os vídeos disponíveis...");
     const QStringList arguments = {
         "--flat-playlist",
