@@ -31,6 +31,13 @@ class QCloseEvent;
 class QProcess;
 class QProgressDialog;
 
+struct PlaylistItem {
+    QString title;
+    QUrl url;
+    QString duration;
+    QUrl thumbnailUrl;
+};
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -92,9 +99,10 @@ private:
     void showDownloadPopup();
     void startPlaylistPreview(const QUrl &url);
     void closePlaylistPreviewDialog();
-    void continueDownload(const QList<QPair<QString, QUrl>> &items);
-    bool showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &items,
-                                     QList<QPair<QString, QUrl>> &selectedItems);
+    void continueDownload(const QList<PlaylistItem> &items);
+    bool showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
+                                     QList<PlaylistItem> &selectedItems);
+    void showPlaylistItemDetailsDialog(const PlaylistItem &item);
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;

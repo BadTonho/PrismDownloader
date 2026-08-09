@@ -20,6 +20,7 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QProgressDialog>
+#include <QPixmap>
 #include <QTableWidgetItem>
 #include <QProcess>
 #include <QNetworkRequest>
@@ -61,29 +62,32 @@ bool isValidTimeRange(const QString &timeRange)
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
 }
 
-QList<QPair<QString, QUrl>> parsePlaylistPreview(const QByteArray &output)
+QList<PlaylistItem> parsePlaylistPreview(const QByteArray &output)
 {
-    QList<QPair<QString, QUrl>> items;
+    QList<PlaylistItem> items;
     QSet<QString> seenUrls;
     const QStringList lines = QString::fromUtf8(output).split('\n');
     for (const QString &rawLine : lines) {
         const QString line = rawLine.trimmed();
-        const int separator = line.indexOf('\t');
-        if (separator <= 0) {
+        const QStringList fields = line.split('\t');
+        if (fields.size() < 2) {
             continue;
         }
 
-        const QString title = line.left(separator).trimmed();
-        const QUrl itemUrl(line.mid(separator + 1).trimmed());
-        if (title.isEmpty() || !itemUrl.isValid() || itemUrl.host().isEmpty()
-            || (itemUrl.scheme() != "http" && itemUrl.scheme() != "https")) {
+        PlaylistItem item;
+        item.title = fields.at(0).trimmed();
+        item.url = QUrl(fields.at(1).trimmed());
+        item.duration = fields.value(2).trimmed();
+        item.thumbnailUrl = QUrl(fields.value(3).trimmed());
+        if (item.title.isEmpty() || !item.url.isValid() || item.url.host().isEmpty()
+            || (item.url.scheme() != "http" && item.url.scheme() != "https")) {
             continue;
         }
 
-        const QString normalizedUrl = itemUrl.adjusted(QUrl::RemoveFragment).toString(QUrl::FullyEncoded);
+        const QString normalizedUrl = item.url.adjusted(QUrl::RemoveFragment).toString(QUrl::FullyEncoded);
         if (!seenUrls.contains(normalizedUrl)) {
             seenUrls.insert(normalizedUrl);
-            items.append(qMakePair(title, itemUrl));
+            items.append(item);
         }
     }
     return items;
@@ -926,7 +930,7 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
             return;
         }
 
-        const QList<QPair<QString, QUrl>> items =
+        const QList<PlaylistItem> items =
             parsePlaylistPreview(process->readAllStandardOutput());
         const QString errorOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
         m_playlistPreviewProcess = nullptr;
@@ -951,7 +955,7 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
             logMessage(QString("[Playlist] %1 item(ns) encontrado(s) para seleção.").arg(items.size()));
         }
 
-        QList<QPair<QString, QUrl>> selectedItems;
+        QList<PlaylistItem> selectedItems;
         if (!showPlaylistSelectionDialog(items, selectedItems)) {
             logMessage("[Playlist] Seleção de itens cancelada pelo usuário.");
             return;
@@ -997,7 +1001,7 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
     logMessage("[Playlist] Consultando os vídeos disponíveis...");
     const QStringList arguments = {
         "--flat-playlist",
-        "--print", "%(title)s\t%(webpage_url)s",
+        "--print", "%(title)s\t%(webpage_url)s\t%(duration_string)s\t%(thumbnail)s",
         "--skip-download",
         "--quiet",
         "--no-warnings",
@@ -1009,8 +1013,8 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
     process->start(program, arguments);
 }
 
-bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &items,
-                                             QList<QPair<QString, QUrl>> &selectedItems)
+bool MainWindow::showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
+                                             QList<PlaylistItem> &selectedItems)
 {
     QDialog dialog(this);
     dialog.setObjectName("playlistSelectionDialog");
@@ -1055,6 +1059,17 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
         }
         QListWidget#playlistItems::item:hover { background-color: #25372f; }
         QListWidget#playlistItems::item:selected { background-color: #25372f; }
+        QWidget#playlistItemRow { background-color: #1b1b1b; border-bottom: 1px solid #292929; }
+        QCheckBox#playlistItemCheck { padding-left: 6px; }
+        QPushButton#playlistItemTitle {
+            background: transparent;
+            border: none;
+            color: #ededed;
+            font-size: 13px;
+            padding: 7px 8px;
+            text-align: left;
+        }
+        QPushButton#playlistItemTitle:hover { color: #10b981; text-decoration: underline; }
         QPushButton#playlistSecondaryButton {
             background-color: #252525;
             color: #d4d4d4;
@@ -1092,7 +1107,7 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
     auto *title = new QLabel("Escolha os vídeos que entrarão na fila", header);
     title->setObjectName("playlistTitle");
     auto *subtitle = new QLabel(
-        QString("%1 vídeo(s) disponível(is). Todos começam selecionados.").arg(items.size()), header);
+        QString("%1 vídeo(s) disponível(is). Clique em um nome para ver miniatura e duração.").arg(items.size()), header);
     subtitle->setObjectName("playlistSubtitle");
     headerLayout->addWidget(kicker);
     headerLayout->addWidget(title);
@@ -1123,13 +1138,34 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
     list->setAlternatingRowColors(false);
     list->setSelectionMode(QAbstractItemView::NoSelection);
     list->setSpacing(1);
+    QList<QCheckBox *> itemChecks;
     for (int index = 0; index < items.size(); ++index) {
-        const auto &item = items.at(index);
-        auto *listItem = new QListWidgetItem(
-            QString("%1. %2").arg(index + 1).arg(item.first), list);
-        listItem->setToolTip(item.second.toString());
-        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable);
-        listItem->setCheckState(Qt::Checked);
+        const PlaylistItem item = items.at(index);
+        auto *listItem = new QListWidgetItem(list);
+        listItem->setToolTip(item.url.toString());
+        listItem->setSizeHint(QSize(0, 44));
+
+        auto *row = new QWidget(list);
+        row->setObjectName("playlistItemRow");
+        auto *rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(4, 0, 8, 0);
+        rowLayout->setSpacing(4);
+
+        auto *check = new QCheckBox(row);
+        check->setObjectName("playlistItemCheck");
+        check->setChecked(true);
+        auto *itemTitle = new QPushButton(QString("%1. %2").arg(index + 1).arg(item.title), row);
+        itemTitle->setObjectName("playlistItemTitle");
+        itemTitle->setCursor(Qt::PointingHandCursor);
+        itemTitle->setToolTip("Ver informações deste vídeo");
+        rowLayout->addWidget(check);
+        rowLayout->addWidget(itemTitle, 1);
+        list->setItemWidget(listItem, row);
+        itemChecks.append(check);
+
+        connect(itemTitle, &QPushButton::clicked, &dialog, [this, item]() {
+            showPlaylistItemDetailsDialog(item);
+        });
     }
     layout->addWidget(list, 1);
 
@@ -1144,10 +1180,10 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
     footer->addWidget(confirmButton);
     layout->addLayout(footer);
 
-    const auto updateSelectionState = [list, selectionCount, confirmButton, total = items.size()]() {
+    const auto updateSelectionState = [itemChecks, selectionCount, confirmButton, total = items.size()]() {
         int selectedCount = 0;
-        for (int index = 0; index < list->count(); ++index) {
-            if (list->item(index)->checkState() == Qt::Checked) {
+        for (QCheckBox *check : itemChecks) {
+            if (check->isChecked()) {
                 ++selectedCount;
             }
         }
@@ -1155,23 +1191,24 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
         confirmButton->setEnabled(selectedCount > 0);
     };
 
-    connect(selectAllButton, &QPushButton::clicked, &dialog, [list, updateSelectionState]() {
-        for (int index = 0; index < list->count(); ++index) {
-            list->item(index)->setCheckState(Qt::Checked);
+    connect(selectAllButton, &QPushButton::clicked, &dialog, [itemChecks, updateSelectionState]() {
+        for (QCheckBox *check : itemChecks) {
+            check->setChecked(true);
         }
         updateSelectionState();
     });
-    connect(clearButton, &QPushButton::clicked, &dialog, [list, updateSelectionState]() {
-        for (int index = 0; index < list->count(); ++index) {
-            list->item(index)->setCheckState(Qt::Unchecked);
+    connect(clearButton, &QPushButton::clicked, &dialog, [itemChecks, updateSelectionState]() {
+        for (QCheckBox *check : itemChecks) {
+            check->setChecked(false);
         }
         updateSelectionState();
     });
-    connect(list, &QListWidget::itemChanged, &dialog, updateSelectionState);
-    connect(searchInput, &QLineEdit::textChanged, &dialog, [list](const QString &filter) {
+    for (QCheckBox *check : itemChecks) {
+        connect(check, &QCheckBox::checkStateChanged, &dialog, updateSelectionState);
+    }
+    connect(searchInput, &QLineEdit::textChanged, &dialog, [list, items](const QString &filter) {
         for (int index = 0; index < list->count(); ++index) {
-            QListWidgetItem *item = list->item(index);
-            item->setHidden(!item->text().contains(filter, Qt::CaseInsensitive));
+            list->item(index)->setHidden(!items.at(index).title.contains(filter, Qt::CaseInsensitive));
         }
     });
     connect(confirmButton, &QPushButton::clicked, &dialog, &QDialog::accept);
@@ -1182,8 +1219,8 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
         return false;
     }
 
-    for (int index = 0; index < list->count(); ++index) {
-        if (list->item(index)->checkState() == Qt::Checked) {
+    for (int index = 0; index < itemChecks.size(); ++index) {
+        if (itemChecks.at(index)->isChecked()) {
             selectedItems.append(items.at(index));
         }
     }
@@ -1195,7 +1232,94 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<QPair<QString, QUrl>> &
     return true;
 }
 
-void MainWindow::continueDownload(const QList<QPair<QString, QUrl>> &items)
+void MainWindow::showPlaylistItemDetailsDialog(const PlaylistItem &item)
+{
+    QDialog dialog(this);
+    dialog.setObjectName("playlistDetailsDialog");
+    dialog.setWindowTitle("Informações do vídeo - Prism Studio Suite");
+    dialog.resize(580, 520);
+    dialog.setMinimumSize(580, 500);
+    dialog.setStyleSheet(this->styleSheet() + R"(
+        QDialog#playlistDetailsDialog { background-color: #151515; }
+        QLabel#playlistThumbnail {
+            background-color: #202020;
+            border: 1px solid #31483d;
+            border-radius: 9px;
+            color: #a3a3a3;
+        }
+        QLabel#playlistDetailsTitle { color: #ffffff; font-size: 18px; font-weight: bold; }
+        QLabel#playlistDetailsMeta { color: #10b981; font-size: 14px; font-weight: bold; }
+        QLabel#playlistDetailsUrl { color: #a3a3a3; font-size: 11px; }
+        QPushButton#playlistDetailsClose {
+            background-color: #10b981;
+            color: #021810;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 18px;
+            font-weight: bold;
+        }
+        QPushButton#playlistDetailsClose:hover { background-color: #059669; }
+    )");
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setSpacing(14);
+    layout->setContentsMargins(22, 20, 22, 20);
+
+    auto *thumbnail = new QLabel("Carregando miniatura...", &dialog);
+    thumbnail->setObjectName("playlistThumbnail");
+    thumbnail->setAlignment(Qt::AlignCenter);
+    thumbnail->setFixedSize(536, 300);
+    layout->addWidget(thumbnail, 0, Qt::AlignHCenter);
+
+    auto *title = new QLabel(item.title, &dialog);
+    title->setObjectName("playlistDetailsTitle");
+    title->setWordWrap(true);
+    layout->addWidget(title);
+
+    const QString duration = item.duration.isEmpty() || item.duration == "NA"
+        ? "Duração não informada pela playlist"
+        : item.duration;
+    auto *durationLabel = new QLabel("Duração: " + duration, &dialog);
+    durationLabel->setObjectName("playlistDetailsMeta");
+    layout->addWidget(durationLabel);
+
+    auto *urlLabel = new QLabel(item.url.toString(QUrl::FullyEncoded), &dialog);
+    urlLabel->setObjectName("playlistDetailsUrl");
+    urlLabel->setWordWrap(true);
+    layout->addWidget(urlLabel);
+
+    auto *closeButton = new QPushButton("FECHAR", &dialog);
+    closeButton->setObjectName("playlistDetailsClose");
+    closeButton->setMinimumHeight(40);
+    connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    layout->addWidget(closeButton, 0, Qt::AlignRight);
+
+    if (!item.thumbnailUrl.isValid() || item.thumbnailUrl.host().isEmpty()
+        || (item.thumbnailUrl.scheme() != "http" && item.thumbnailUrl.scheme() != "https")) {
+        thumbnail->setText("Miniatura não disponível para este vídeo.");
+    } else {
+        auto *thumbnailManager = new QNetworkAccessManager(&dialog);
+        QNetworkRequest request(item.thumbnailUrl);
+        request.setHeader(QNetworkRequest::UserAgentHeader,
+                          "PrismDownloader/1.1 (playlist details)");
+        QNetworkReply *reply = thumbnailManager->get(request);
+        connect(reply, &QNetworkReply::finished, &dialog, [reply, thumbnail]() {
+            const QByteArray imageData = reply->readAll();
+            QPixmap image;
+            if (reply->error() == QNetworkReply::NoError && image.loadFromData(imageData)) {
+                thumbnail->setPixmap(image.scaled(thumbnail->size(), Qt::KeepAspectRatio,
+                                                  Qt::SmoothTransformation));
+            } else {
+                thumbnail->setText("Não foi possível carregar a miniatura.");
+            }
+            reply->deleteLater();
+        });
+    }
+
+    dialog.exec();
+}
+
+void MainWindow::continueDownload(const QList<PlaylistItem> &items)
 {
     if (items.isEmpty()) {
         return;
@@ -1231,14 +1355,14 @@ void MainWindow::continueDownload(const QList<QPair<QString, QUrl>> &items)
     QStringList rejectedItems;
     for (const auto &item : items) {
         DownloadRequest request;
-        request.url = item.second;
+        request.url = item.url;
         request.quality = selectedQuality;
         request.timeRange = timeRange;
         request.outputDirectory = customOutputDir;
 
         const EnqueueResult result = m_downloadManager->enqueueDownload(request);
         if (!result.accepted) {
-            rejectedItems.append(item.first + ": " + result.error);
+            rejectedItems.append(item.title + ": " + result.error);
             logMessage("[Fila] Item recusado: " + result.error);
             continue;
         }
@@ -1265,7 +1389,7 @@ void MainWindow::continueDownload(const QList<QPair<QString, QUrl>> &items)
         }
 
         ++addedCount;
-        const QString itemLabel = item.first.isEmpty() ? item.second.toString() : item.first;
+        const QString itemLabel = item.title.isEmpty() ? item.url.toString() : item.title;
         logMessage(QString("[Fila] Download #%1 adicionado: %2")
                        .arg(result.id).arg(itemLabel));
         if (!timeRange.isEmpty()) {
@@ -1635,8 +1759,8 @@ void MainWindow::onStartClicked()
         return;
     }
 
-    QList<QPair<QString, QUrl>> items;
-    items.append(qMakePair(QString(), parsedUrl));
+    QList<PlaylistItem> items;
+    items.append({{}, parsedUrl, {}, {}});
     continueDownload(items);
 }
 
