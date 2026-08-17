@@ -128,15 +128,19 @@ bool encoderWorks(const QString &ffmpeg, const QString &encoder, const QString &
                   << QStringLiteral("prism_vaapi");
     }
     arguments << QStringLiteral("-f") << QStringLiteral("lavfi")
-        << QStringLiteral("-i");
+        << QStringLiteral("-i")
+        // Keep this input graph software-only. The lavfi demuxer is created
+        // before -filter_hw_device is associated with an output graph, so an
+        // hwupload placed here has no hardware-device reference.
+        << QStringLiteral("color=size=128x128:rate=1")
+        << QStringLiteral("-frames:v") << QStringLiteral("1");
     if (encoder.endsWith(QStringLiteral("_vaapi"))) {
-        // VAAPI encoders require frames in a hardware surface. This also
-        // prevents a false negative caused by FFmpeg's software test frame.
-        arguments << QStringLiteral("color=size=16x16:rate=1,format=nv12,hwupload");
-    } else {
-        arguments << QStringLiteral("color=size=16x16:rate=1");
+        // Attach hwupload to the output filter graph, after the named VAAPI
+        // device has been selected. This mirrors ConversionManager and avoids
+        // rejecting a working render node during the startup probe.
+        arguments << QStringLiteral("-vf") << QStringLiteral("format=nv12,hwupload");
     }
-    arguments << QStringLiteral("-frames:v") << QStringLiteral("1")
+    arguments
         << QStringLiteral("-c:v") << encoder
         << QStringLiteral("-f") << QStringLiteral("null") << QStringLiteral("-");
     QProcess probe;
