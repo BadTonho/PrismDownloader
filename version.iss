@@ -1,1 +1,1 @@
-#define PRISM_VERSION "1.1.6"
+#define PRISM_VERSION "1.1.7"

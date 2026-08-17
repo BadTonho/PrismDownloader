@@ -30,6 +30,7 @@
 class QCloseEvent;
 class QProcess;
 class QProgressDialog;
+class YtDlpUpdateService;
 
 struct PlaylistItem {
     QString title;
@@ -81,6 +82,7 @@ private slots:
     // Slots do Sistema de Atualização via GitHub e yt-dlp
     void checkForUpdates(bool silent = false);
     void onUpdateReplyFinished(QNetworkReply *reply, bool silent);
+    void checkYtDlpUpdates(bool silent = false);
     void updateYtdlpEngine();
 
 private:
@@ -189,9 +191,12 @@ private:
     QCheckBox *m_checkUpdatesOnStartChk;
     QCheckBox *m_autoDownloadUpdatesChk;
     QLabel *m_updateStatusLabel;
+    QLabel *m_ytdlpStatusLabel{nullptr};
     QProgressBar *m_updateProgressBar{nullptr};
     QPushButton *m_checkUpdateBtn;
     QPushButton *m_updateYtdlpBtn;
+    YtDlpUpdateService *m_ytdlpUpdateService{nullptr};
+    bool m_ytdlpCheckSilent{true};
 
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;

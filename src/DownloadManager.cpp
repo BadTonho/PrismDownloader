@@ -40,7 +40,8 @@ struct DownloadManager::Job {
 
 DownloadManager::DownloadManager(QObject *parent, const QString &programPath)
     : QObject(parent),
-      m_programPath(MediaToolResolver::resolve(MediaTool::YtDlp, programPath))
+      m_programPath(MediaToolResolver::resolve(MediaTool::YtDlp, programPath)),
+      m_programPathOverride(programPath)
 {
 }
 
@@ -62,7 +63,7 @@ DownloadManager::~DownloadManager()
 
 EnqueueResult DownloadManager::enqueueDownload(const DownloadRequest &request)
 {
-    if (m_programPath.isEmpty() || !QFile::exists(m_programPath)) {
+    if (!refreshProgramPath()) {
         return {false, 0, MediaToolResolver::missingMessage(MediaTool::YtDlp)};
     }
     if (!request.url.isValid() || request.url.host().isEmpty()
@@ -192,6 +193,11 @@ void DownloadManager::schedule()
 
 void DownloadManager::startJob(Job *job)
 {
+    if (!refreshProgramPath()) {
+        failToStart(job->id, MediaToolResolver::missingMessage(MediaTool::YtDlp));
+        return;
+    }
+
     auto *process = new QProcess(this);
     job->process = process;
     process->setWorkingDirectory(QCoreApplication::applicationDirPath());
@@ -256,6 +262,12 @@ void DownloadManager::startJob(Job *job)
 #else
     process->start(m_programPath, buildArguments(job->request));
 #endif
+}
+
+bool DownloadManager::refreshProgramPath()
+{
+    m_programPath = MediaToolResolver::resolve(MediaTool::YtDlp, m_programPathOverride);
+    return !m_programPath.isEmpty() && QFile::exists(m_programPath);
 }
 
 void DownloadManager::readProcessOutput(DownloadId id, bool flushRemainder)

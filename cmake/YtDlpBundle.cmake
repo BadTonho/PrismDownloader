@@ -1,0 +1,53 @@
+# Binários Nightly do yt-dlp fixados para tornar cada release do Prism reproduzível.
+set(PRISM_YTDLP_CHANNEL "nightly")
+set(PRISM_YTDLP_VERSION "2026.08.17.073947")
+set(PRISM_YTDLP_LINUX_SHA256 "7de6f20acccb99d4f926a5e2665bb13f5074b74225c3c428dbd80ac3df53de31")
+set(PRISM_YTDLP_WINDOWS_SHA256 "49c155019a7cba07c0f9ea0f6429db9f5fd4f68a951e51964295e302fcdafc50")
+set(PRISM_YTDLP_RELEASE_BASE_URL
+    "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/download/${PRISM_YTDLP_VERSION}")
+
+function(prism_prepare_bundled_ytdlp output_variable)
+    if(WIN32)
+        set(asset_name "yt-dlp.exe")
+        set(expected_sha256 "${PRISM_YTDLP_WINDOWS_SHA256}")
+    elseif(UNIX AND NOT APPLE)
+        set(asset_name "yt-dlp_linux")
+        set(expected_sha256 "${PRISM_YTDLP_LINUX_SHA256}")
+    else()
+        message(FATAL_ERROR "O bundle do yt-dlp está configurado apenas para Linux amd64 e Windows x64.")
+    endif()
+
+    if(PRISM_BUNDLED_YTDLP_PATH)
+        set(bundle_path "${PRISM_BUNDLED_YTDLP_PATH}")
+        if(NOT EXISTS "${bundle_path}")
+            message(FATAL_ERROR "PRISM_BUNDLED_YTDLP_PATH não existe: ${bundle_path}")
+        endif()
+    else()
+        if(NOT PRISM_FETCH_BUNDLED_YTDLP)
+            message(FATAL_ERROR "Defina PRISM_BUNDLED_YTDLP_PATH ou habilite PRISM_FETCH_BUNDLED_YTDLP para criar um pacote com o yt-dlp embutido.")
+        endif()
+        set(bundle_directory "${CMAKE_BINARY_DIR}/third_party/yt-dlp/${PRISM_YTDLP_VERSION}")
+        set(bundle_path "${bundle_directory}/${asset_name}")
+        file(MAKE_DIRECTORY "${bundle_directory}")
+        if(NOT EXISTS "${bundle_path}")
+            message(STATUS "Baixando yt-dlp ${PRISM_YTDLP_CHANNEL} ${PRISM_YTDLP_VERSION} (${asset_name})")
+            file(DOWNLOAD "${PRISM_YTDLP_RELEASE_BASE_URL}/${asset_name}" "${bundle_path}"
+                 TLS_VERIFY ON
+                 STATUS download_status
+                 EXPECTED_HASH "SHA256=${expected_sha256}"
+                 SHOW_PROGRESS)
+            list(GET download_status 0 download_code)
+            list(GET download_status 1 download_message)
+            if(NOT download_code EQUAL 0)
+                file(REMOVE "${bundle_path}")
+                message(FATAL_ERROR "Falha ao baixar o yt-dlp embutido: ${download_message}")
+            endif()
+        endif()
+    endif()
+
+    file(SHA256 "${bundle_path}" actual_sha256)
+    if(NOT actual_sha256 STREQUAL expected_sha256)
+        message(FATAL_ERROR "Checksum inválido para ${bundle_path}. Esperado ${expected_sha256}, recebido ${actual_sha256}.")
+    endif()
+    set(${output_variable} "${bundle_path}" PARENT_SCOPE)
+endfunction()

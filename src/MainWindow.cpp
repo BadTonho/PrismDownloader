@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "MediaToolResolver.h"
 #include "PrismVersion.h"
+#include "YtDlpUpdateService.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QColor>
@@ -103,6 +104,16 @@ QList<PlaylistItem> parsePlaylistPreview(const QByteArray &output)
     return items;
 }
 
+QString ytdlpCurrentDescription()
+{
+    const MediaToolInfo info = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
+    if (!info.isAvailable()) {
+        return QStringLiteral("yt-dlp: nenhuma cópia funcional foi localizada.");
+    }
+    return QStringLiteral("yt-dlp em uso: %1 (%2)")
+        .arg(info.version, MediaToolResolver::sourceLabel(info.source));
+}
+
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -116,6 +127,98 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUI();
     setupStyles();
+
+    m_ytdlpUpdateService = new YtDlpUpdateService(this);
+    if (m_ytdlpStatusLabel) {
+        m_ytdlpStatusLabel->setText(ytdlpCurrentDescription());
+    }
+    connect(m_ytdlpUpdateService, &YtDlpUpdateService::releaseChecked, this,
+            [this](const YtDlpReleaseInfo &release) {
+        const MediaToolInfo current = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
+        const bool updateAvailable = !current.isAvailable()
+            || MediaToolResolver::isVersionNewer(release.version, current.version);
+        if (m_ytdlpStatusLabel) {
+            m_ytdlpStatusLabel->setText(updateAvailable
+                ? QString("%1 — Nightly %2 disponível.")
+                      .arg(ytdlpCurrentDescription(), release.version)
+                : QString("%1 — Nightly %2 já está em uso.")
+                      .arg(ytdlpCurrentDescription(), release.version));
+        }
+        if (m_updateYtdlpBtn) {
+            m_updateYtdlpBtn->setEnabled(true);
+            m_updateYtdlpBtn->setText(updateAvailable
+                ? QStringLiteral("ATUALIZAR YT-DLP NIGHTLY AGORA")
+                : QStringLiteral("VERIFICAR YT-DLP NIGHTLY"));
+        }
+        logMessage(updateAvailable
+            ? QString("[Motor Extrator] Nightly %1 disponível; atualização aguarda confirmação.")
+                  .arg(release.version)
+            : QString("[Motor Extrator] yt-dlp já está atualizado na Nightly %1.")
+                  .arg(release.version));
+        if (!m_ytdlpCheckSilent && !updateAvailable) {
+            QMessageBox::information(this, "yt-dlp", m_ytdlpStatusLabel->text());
+        }
+    });
+    connect(m_ytdlpUpdateService, &YtDlpUpdateService::checkFailed, this,
+            [this](const QString &message) {
+        if (m_ytdlpStatusLabel) {
+            m_ytdlpStatusLabel->setText(ytdlpCurrentDescription() + " — " + message);
+        }
+        if (m_updateYtdlpBtn) {
+            m_updateYtdlpBtn->setEnabled(true);
+            m_updateYtdlpBtn->setText("VERIFICAR YT-DLP NIGHTLY");
+        }
+        logMessage("[Motor Extrator] " + message);
+        if (!m_ytdlpCheckSilent) {
+            QMessageBox::warning(this, "yt-dlp", message);
+        }
+    });
+    connect(m_ytdlpUpdateService, &YtDlpUpdateService::updateProgress, this,
+            [this](qint64 received, qint64 total) {
+        if (!m_updateProgressBar) return;
+        m_updateProgressBar->setVisible(true);
+        if (total > 0) {
+            m_updateProgressBar->setRange(0, 100);
+            m_updateProgressBar->setValue(static_cast<int>((received * 100) / total));
+        } else {
+            m_updateProgressBar->setRange(0, 0);
+        }
+    });
+    connect(m_ytdlpUpdateService, &YtDlpUpdateService::updateCompleted, this,
+            [this](const QString &version, const QString &path) {
+        if (m_updateProgressBar) {
+            m_updateProgressBar->setVisible(false);
+            m_updateProgressBar->setRange(0, 100);
+        }
+        if (m_ytdlpStatusLabel) {
+            m_ytdlpStatusLabel->setText(ytdlpCurrentDescription()
+                                        + QString(" — Nightly %1 instalada.").arg(version));
+        }
+        if (m_updateYtdlpBtn) {
+            m_updateYtdlpBtn->setEnabled(true);
+            m_updateYtdlpBtn->setText("VERIFICAR YT-DLP NIGHTLY");
+        }
+        logMessage(QString("[Motor Extrator] yt-dlp Nightly %1 atualizado em %2.")
+                       .arg(version, QDir::toNativeSeparators(path)));
+        QMessageBox::information(this, "yt-dlp atualizado",
+                                 "O yt-dlp Nightly foi atualizado e será usado nas próximas tarefas.");
+    });
+    connect(m_ytdlpUpdateService, &YtDlpUpdateService::updateFailed, this,
+            [this](const QString &message) {
+        if (m_updateProgressBar) {
+            m_updateProgressBar->setVisible(false);
+            m_updateProgressBar->setRange(0, 100);
+        }
+        if (m_ytdlpStatusLabel) {
+            m_ytdlpStatusLabel->setText(ytdlpCurrentDescription() + " — " + message);
+        }
+        if (m_updateYtdlpBtn) {
+            m_updateYtdlpBtn->setEnabled(true);
+            m_updateYtdlpBtn->setText("VERIFICAR YT-DLP NIGHTLY");
+        }
+        logMessage("[Motor Extrator] " + message);
+        QMessageBox::warning(this, "Falha ao atualizar yt-dlp", message);
+    });
 
     m_gpuDetector.detect();
 
@@ -191,6 +294,7 @@ MainWindow::MainWindow(QWidget *parent)
         QTimer::singleShot(2500, this, [this]() {
             logMessage("[Updater] Iniciando checagem automática silenciosa de novas versões no GitHub...");
             checkForUpdates(true); // silent = true ao iniciar para não interromper o usuário com pop-up se não houver update
+            checkYtDlpUpdates(true);
         });
     } else {
         logMessage("[Updater] Busca automática de atualizações ao iniciar está desativada nas configurações.");
@@ -801,17 +905,25 @@ void MainWindow::setupUI()
     m_updateStatusLabel = new QLabel("Versão " + NEOV_VERSION_TAG + " (Release) operacional. Aguardando verificação...", updateGroup);
     m_updateStatusLabel->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
 
+    QLabel *lblYtdlpStatusKey = new QLabel("Motor yt-dlp:", updateGroup);
+    lblYtdlpStatusKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
+    m_ytdlpStatusLabel = new QLabel("Localizando versão e origem do motor...", updateGroup);
+    m_ytdlpStatusLabel->setWordWrap(true);
+    m_ytdlpStatusLabel->setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;");
+
     upGrid->addWidget(lblServerKey, 0, 0);
     upGrid->addWidget(lblServerVal, 0, 1);
     upGrid->addWidget(lblUpStatusKey, 1, 0);
     upGrid->addWidget(m_updateStatusLabel, 1, 1);
+    upGrid->addWidget(lblYtdlpStatusKey, 2, 0);
+    upGrid->addWidget(m_ytdlpStatusLabel, 2, 1);
     upGrid->setColumnStretch(1, 1);
     upLayout->addLayout(upGrid);
 
     m_checkUpdatesOnStartChk = new QCheckBox("Verificar novas atualizações automaticamente ao iniciar o aplicativo", updateGroup);
     m_checkUpdatesOnStartChk->setCursor(Qt::PointingHandCursor);
     
-    m_autoDownloadUpdatesChk = new QCheckBox("Download integrado desativado até haver verificação criptográfica de atualizações", updateGroup);
+    m_autoDownloadUpdatesChk = new QCheckBox("Atualização automática do aplicativo desativada; o yt-dlp exige confirmação e SHA-256", updateGroup);
     m_autoDownloadUpdatesChk->setCursor(Qt::PointingHandCursor);
     m_autoDownloadUpdatesChk->setStyleSheet("color: #f59e0b; font-weight: bold;");
 
@@ -826,9 +938,12 @@ void MainWindow::setupUI()
     m_checkUpdateBtn->setObjectName("startBtn");
     m_checkUpdateBtn->setCursor(Qt::PointingHandCursor);
     m_checkUpdateBtn->setMinimumHeight(40);
-    connect(m_checkUpdateBtn, &QPushButton::clicked, this, [this]() { checkForUpdates(false); });
+    connect(m_checkUpdateBtn, &QPushButton::clicked, this, [this]() {
+        checkForUpdates(false);
+        checkYtDlpUpdates(false);
+    });
 
-    m_updateYtdlpBtn = new QPushButton("ABRIR PÁGINA OFICIAL DO MOTOR (YT-DLP)", updateGroup);
+    m_updateYtdlpBtn = new QPushButton("VERIFICAR YT-DLP NIGHTLY", updateGroup);
     m_updateYtdlpBtn->setObjectName("browseBtn");
     m_updateYtdlpBtn->setCursor(Qt::PointingHandCursor);
     m_updateYtdlpBtn->setMinimumHeight(40);
@@ -2426,6 +2541,24 @@ void MainWindow::checkForUpdates(bool silent)
     });
 }
 
+void MainWindow::checkYtDlpUpdates(bool silent)
+{
+    if (!m_ytdlpUpdateService || m_ytdlpUpdateService->isBusy()) {
+        return;
+    }
+    m_ytdlpCheckSilent = silent;
+    if (m_ytdlpStatusLabel) {
+        m_ytdlpStatusLabel->setText(ytdlpCurrentDescription()
+                                    + " — consultando a Nightly oficial...");
+    }
+    if (m_updateYtdlpBtn) {
+        m_updateYtdlpBtn->setEnabled(false);
+        m_updateYtdlpBtn->setText("VERIFICANDO YT-DLP...");
+    }
+    logMessage("[Motor Extrator] Consultando a release Nightly oficial do yt-dlp...");
+    m_ytdlpUpdateService->checkLatestRelease();
+}
+
 void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
 {
     reply->deleteLater();
@@ -2534,13 +2667,46 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
 
 void MainWindow::updateYtdlpEngine()
 {
-#ifdef Q_OS_LINUX
-    m_updateStatusLabel->setText("No Linux, atualize o yt-dlp pelo sistema: sudo apt update && sudo apt upgrade yt-dlp");
-    logMessage("[Motor Extrator] No Linux, o yt-dlp é atualizado pelo APT.");
-#else
-    const QUrl officialReleaseUrl("https://github.com/yt-dlp/yt-dlp/releases/latest");
-    QDesktopServices::openUrl(officialReleaseUrl);
-    m_updateStatusLabel->setText("Página oficial do yt-dlp aberta para atualização manual e verificação do arquivo.");
-    logMessage("[Motor Extrator] Atualização automática desativada; página oficial aberta no navegador.");
-#endif
+    if (!m_ytdlpUpdateService || m_ytdlpUpdateService->isBusy()) {
+        return;
+    }
+    if (!m_ytdlpUpdateService->hasLatestRelease()) {
+        checkYtDlpUpdates(false);
+        return;
+    }
+
+    const MediaToolInfo current = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
+    if (current.isAvailable()
+        && !MediaToolResolver::isVersionNewer(m_ytdlpUpdateService->latestVersion(), current.version)) {
+        QMessageBox::information(this, "yt-dlp", ytdlpCurrentDescription()
+                                 + " já é igual ou mais recente que a Nightly publicada.");
+        return;
+    }
+    if (m_downloadManager->hasWork() || m_conversionManager->hasWork() || m_playlistPreviewProcess) {
+        QMessageBox::warning(this, "Atualização adiada",
+                             "Conclua ou cancele downloads, conversões e prévias antes de atualizar o yt-dlp.");
+        return;
+    }
+
+    const QMessageBox::StandardButton response = QMessageBox::question(
+        this,
+        "Atualizar yt-dlp Nightly",
+        QString("A versão Nightly %1 será baixada da release oficial, validada por SHA-256 e salva apenas na pasta de dados do seu usuário.\n\nDeseja continuar?")
+            .arg(m_ytdlpUpdateService->latestVersion()),
+        QMessageBox::Yes | QMessageBox::Cancel,
+        QMessageBox::Yes);
+    if (response != QMessageBox::Yes) {
+        return;
+    }
+
+    if (m_updateYtdlpBtn) {
+        m_updateYtdlpBtn->setEnabled(false);
+        m_updateYtdlpBtn->setText("ATUALIZANDO YT-DLP...");
+    }
+    if (m_updateProgressBar) {
+        m_updateProgressBar->setVisible(true);
+        m_updateProgressBar->setRange(0, 0);
+    }
+    logMessage("[Motor Extrator] Atualização Nightly confirmada pelo usuário; baixando checksum e binário.");
+    m_ytdlpUpdateService->installLatestRelease();
 }

@@ -60,7 +60,9 @@ private:
     bool m_shuttingDown{false};
     bool m_cancellingAll{false};
     QString m_programPath;
+    QString m_programPathOverride;
 
+    bool refreshProgramPath();
     void schedule();
     void startJob(Job *job);
     void readProcessOutput(DownloadId id, bool flushRemainder = false);

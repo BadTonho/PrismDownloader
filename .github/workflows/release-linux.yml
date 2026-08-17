@@ -1,4 +1,4 @@
-name: Release Linux
+name: Release packages
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools \
-            ffmpeg yt-dlp dpkg-dev
+            ffmpeg dpkg-dev
 
       - name: Verify tag matches project version
         shell: bash
@@ -45,7 +45,10 @@ jobs:
           test -n "$package_file"
           dpkg-deb --info "$package_file"
           dpkg-deb --contents "$package_file" | grep -q 'usr/bin/prism-downloader'
+          dpkg-deb --contents "$package_file" | grep -q 'usr/lib/prism-downloader/yt-dlp'
           dpkg-deb --contents "$package_file" | grep -q 'usr/share/applications/prism-downloader.desktop'
+          dpkg-deb --field "$package_file" Depends | grep -q 'ffmpeg'
+          ! dpkg-deb --field "$package_file" Depends | grep -q 'yt-dlp'
 
       - name: Install package smoke test
         shell: bash
@@ -60,3 +63,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" package/*.deb --title "Prism Downloader $GITHUB_REF_NAME" --generate-notes
+
+  build-windows:
+    name: Build and test Windows x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.7.2
+          arch: win64_msvc2019_64
+
+      - name: Configure, build and test
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build --config Release --parallel
+          ctest --test-dir build -C Release --output-on-failure
+          if (-not (Test-Path "build/Release/yt-dlp.exe")) { throw "yt-dlp.exe was not copied to the Windows release layout" }

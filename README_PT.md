@@ -55,7 +55,8 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** oferece um fluxo lim
 
 ### ☁️ 5. Central de Atualizações Tonho Studios
 * **Sincronia Global com o GitHub:** Checagem de versões assíncrona baseada na nuvem com suporte a modo silencioso de inicialização. 
-* **Links seguros de atualização:** Abre a página oficial do Prism Downloader ou do `yt-dlp` para atualização manual verificada pelo usuário; o aplicativo não baixa nem executa instaladores automaticamente.
+* **Motor yt-dlp incluído e atualizável:** Os pacotes trazem uma Nightly oficial do `yt-dlp`. A central mostra a versão, a origem e a Nightly mais recente; o download só ocorre após confirmação e validação do checksum SHA-256.
+* **Preferência pela versão mais nova:** Uma instalação manual mais recente no `PATH` também é reconhecida. O Prism nunca altera essa instalação: suas atualizações ficam apenas na pasta de dados do usuário.
 
 ---
 
@@ -67,7 +68,7 @@ Acesse a [página de Releases Oficiais no GitHub](https://github.com/BadTonho/Pr
 | :--- | :--- |
 | ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
 | 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
-| 🐧 **[`prism-downloader_X.Y.Z_amd64.deb`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | Pacote para **Linux Mint 22 / Ubuntu 24.04 amd64**. Instale com `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. FFmpeg e yt-dlp são dependências do sistema. |
+| 🐧 **[`prism-downloader_X.Y.Z_amd64.deb`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | Pacote para **Linux Mint 22 / Ubuntu 24.04 amd64**. Instale com `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. Inclui `yt-dlp` Nightly; o APT instala o FFmpeg. |
 
 ---
 
@@ -79,7 +80,7 @@ Instale os requisitos de desenvolvimento e gere o pacote:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools ffmpeg yt-dlp dpkg-dev
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
@@ -87,7 +88,7 @@ cpack --config build/CPackConfig.cmake -G DEB -B package
 sudo apt install ./package/prism-downloader_*.deb
 ```
 
-O pacote é destinado inicialmente ao Mint 22 e Ubuntu 24.04 em `amd64`. Ele usa o `ffmpeg` e o `yt-dlp` do sistema, que podem ser atualizados pelo APT. As novas versões do aplicativo ficam no GitHub; esta primeira versão Linux não fornece repositório APT/PPA.
+O pacote é destinado inicialmente ao Mint 22 e Ubuntu 24.04 em `amd64`. Ele inclui o `yt-dlp_linux` Nightly oficial em `/usr/lib/prism-downloader/yt-dlp` e usa o `ffmpeg` do sistema. O CMake baixa a versão Nightly fixada e valida o SHA-256 durante a configuração; portanto, a criação do pacote requer acesso à internet. O aplicativo pode instalar uma Nightly nova sem `sudo` na pasta de dados do usuário e também escolhe uma cópia mais recente instalada manualmente no `PATH`.
 
 ### Windows 10 / 11 (64-bit)
 

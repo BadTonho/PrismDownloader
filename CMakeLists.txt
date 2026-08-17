@@ -11,6 +11,14 @@ project(PrismDownloader VERSION ${PRISM_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(WIN32 OR (UNIX AND NOT APPLE))
+    option(PRISM_FETCH_BUNDLED_YTDLP "Baixar o yt-dlp Nightly fixado para o pacote" ON)
+    set(PRISM_BUNDLED_YTDLP_PATH "" CACHE FILEPATH
+        "Caminho alternativo para o yt-dlp Nightly validado")
+    include(cmake/YtDlpBundle.cmake)
+    prism_prepare_bundled_ytdlp(PRISM_BUNDLED_YTDLP_PATH)
+endif()
+
 # Caminho opcional para uma instalação local do Qt. No Linux, normalmente o Qt
 # é descoberto pelas dependências instaladas pelo gerenciador de pacotes.
 if(WIN32)
@@ -39,6 +47,8 @@ set(PRISM_SOURCES
     src/DownloadProfile.h
     src/MediaToolResolver.h
     src/MediaToolResolver.cpp
+    src/YtDlpUpdateService.h
+    src/YtDlpUpdateService.cpp
     src/GPUDetector.h
     src/GPUDetector.cpp
     src/DownloadManager.h
@@ -91,6 +101,17 @@ else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+if(WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${PRISM_BUNDLED_YTDLP_PATH}"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/yt-dlp.exe"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yt-dlp/NOTICE.md"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/YT-DLP-NOTICE.md"
+    )
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(PrismDownloaderTests
@@ -109,6 +130,17 @@ if(BUILD_TESTING)
     target_include_directories(PrismMediaToolResolverTests PRIVATE src)
     target_link_libraries(PrismMediaToolResolverTests PRIVATE Qt6::Core)
     target_compile_features(PrismMediaToolResolverTests PRIVATE cxx_std_17)
+
+    add_executable(PrismYtDlpUpdateServiceTests
+        tests/YtDlpUpdateServiceTests.cpp
+        src/YtDlpUpdateService.h
+        src/YtDlpUpdateService.cpp
+        src/MediaToolResolver.h
+        src/MediaToolResolver.cpp
+    )
+    target_include_directories(PrismYtDlpUpdateServiceTests PRIVATE src)
+    target_link_libraries(PrismYtDlpUpdateServiceTests PRIVATE Qt6::Core Qt6::Network)
+    target_compile_features(PrismYtDlpUpdateServiceTests PRIVATE cxx_std_17)
 
     add_executable(PrismFakeMediaTool tests/FakeMediaTool.cpp)
     target_link_libraries(PrismFakeMediaTool PRIVATE Qt6::Core)
@@ -130,7 +162,7 @@ if(BUILD_TESTING)
     target_link_libraries(PrismQueueManagerTests PRIVATE Qt6::Core)
     target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_17)
 
-    foreach(target PrismDownloaderTests PrismMediaToolResolverTests PrismFakeMediaTool PrismQueueManagerTests)
+    foreach(target PrismDownloaderTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismFakeMediaTool PrismQueueManagerTests)
         if(MSVC)
             target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
         else()
@@ -140,6 +172,7 @@ if(BUILD_TESTING)
 
     add_test(NAME PrismDownloader.ProfileSelection COMMAND PrismDownloaderTests)
     add_test(NAME PrismDownloader.MediaToolResolver COMMAND PrismMediaToolResolverTests)
+    add_test(NAME PrismDownloader.YtDlpUpdateService COMMAND PrismYtDlpUpdateServiceTests)
     add_test(NAME PrismDownloader.QueueManagers
              COMMAND PrismQueueManagerTests $<TARGET_FILE:PrismFakeMediaTool>)
 endif()
@@ -147,11 +180,17 @@ endif()
 if(UNIX AND NOT APPLE)
     include(GNUInstallDirs)
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(PROGRAMS "${PRISM_BUNDLED_YTDLP_PATH}"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/prism-downloader
+            RENAME yt-dlp)
     install(FILES resources/prism-downloader.desktop
             DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     install(FILES app_icon.png
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps
             RENAME prism-downloader.png)
+    install(FILES third_party/yt-dlp/NOTICE.md
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/prism-downloader
+            RENAME YT-DLP-NOTICE.md)
 
     set(CPACK_GENERATOR "DEB")
     set(CPACK_PACKAGE_NAME "prism-downloader")
@@ -161,7 +200,7 @@ if(UNIX AND NOT APPLE)
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Tonho Studios")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "ffmpeg, yt-dlp")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "ffmpeg")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)
