@@ -18,6 +18,10 @@ struct ConversionRequest {
     QString format;
     QString outputDirectory;
     GPUType gpuType{GPUType::CPU_ONLY};
+    // Optional details from the Linux hardware probe. Older callers can keep
+    // using gpuType and the manager will select the legacy encoder mapping.
+    QString gpuCodec;
+    QString gpuDevice;
 };
 
 struct ConversionEnqueueResult {

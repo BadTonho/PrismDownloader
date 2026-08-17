@@ -1535,6 +1535,10 @@ void MainWindow::onStartConvertClicked()
     request.format = m_convertFormatCombo->currentText();
     request.outputDirectory = outFolder;
     request.gpuType = m_gpuDetector.getGPUType();
+    if (m_gpuDetector.hasHardwareAcceleration()) {
+        request.gpuCodec = QString::fromStdString(m_gpuDetector.getRecommendedCodec());
+        request.gpuDevice = QString::fromStdString(m_gpuDetector.getHardwareDevice());
+    }
 
     const ConversionEnqueueResult result = m_conversionManager->enqueueConversion(request);
     if (!result.accepted) {
@@ -1997,6 +2001,10 @@ void MainWindow::onDownloadCompleted(DownloadId id, const QString &filePath)
         request.format = job.conversionFormat;
         request.outputDirectory = job.request.outputDirectory;
         request.gpuType = m_gpuDetector.getGPUType();
+        if (m_gpuDetector.hasHardwareAcceleration()) {
+            request.gpuCodec = QString::fromStdString(m_gpuDetector.getRecommendedCodec());
+            request.gpuDevice = QString::fromStdString(m_gpuDetector.getHardwareDevice());
+        }
         const ConversionEnqueueResult result = m_conversionManager->enqueueConversion(request);
         if (result.accepted) {
             job.conversionId = result.id;

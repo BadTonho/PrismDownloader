@@ -40,9 +40,9 @@ Developed by **Tonho Studios**, **Prism Downloader** brings a clean desktop work
 * **Save bandwidth by downloading only what you need!**
 * Define the exact start and end times directly in the panel (e.g., from `00:03:15` to `00:05:45`). The engine requests and downloads only the target section in record time.
 
-### ⚡ 2. Low-Level Graphics Acceleration (NVIDIA NVENC, AMD & QSV)
-* **Hardware Acceleration with Safe Fallback:** Windows uses native device detection; Linux queries encoders exposed by the installed FFmpeg. NVIDIA NVENC, AMD AMF, and Intel QSV are used when available, while CPU conversion remains the reliable fallback.
-* All format conversions utilize hardware codecs (`h264_nvenc`), sparing 100% of your CPU and completing rendering jobs in mere seconds.
+### ⚡ 2. Low-Level Graphics Acceleration (NVENC, VAAPI, AMF & QSV)
+* **Hardware Acceleration with Safe Fallback:** Windows uses native device detection; Linux tests the encoders exposed by FFmpeg and the DRM device (`/dev/dri`). NVIDIA NVENC, AMD/Intel VAAPI, AMD AMF, and Intel QSV are used only when they actually initialize; CPU conversion remains the reliable fallback.
+* The selected codec is shown on the conversion screen. On AMD Linux systems the backend is normally `h264_vaapi`/`hevc_vaapi`, while FFmpeg falls back to CPU if the driver or device permissions are unavailable.
 
 ### 📡 3. Real-Time Log Terminal with Telemetry Filters
 * Track every step of the download, conversion, and audio extraction through an integrated terminal in the application's dedicated tab.

@@ -36,9 +36,9 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** oferece um fluxo lim
 * **Economize banda baixando trechos específicos!** 
 * Defina o intervalo exato de corte diretamente no painel (ex: das `00:03:15` às `00:05:45`). O motor processa e baixa exclusivamente os bytes necessários da nuvem em tempo recorde!
 
-### ⚡ 2. Aceleração Gráfica de Baixo Nível (NVIDIA NVENC & AMD)
-* **Aceleração de hardware com fallback seguro:** No Windows, a detecção é nativa; no Linux, o aplicativo consulta os encoders disponibilizados pelo FFmpeg instalado. NVIDIA NVENC, AMD AMF e Intel QSV são usados quando disponíveis, com conversão por CPU como fallback confiável.
-* Todas as conversões de formatos utilizam codecs de hardware (`h264_nvenc`), poupando 100% da sua CPU e reduzindo tempos de renderização a meros segundos.
+### ⚡ 2. Aceleração Gráfica de Baixo Nível (NVENC, VAAPI, AMF & QSV)
+* **Aceleração de hardware com fallback seguro:** No Windows, a detecção é nativa; no Linux, o aplicativo testa os encoders disponibilizados pelo FFmpeg e o dispositivo DRM (`/dev/dri`). NVIDIA NVENC, AMD/Intel VAAPI, AMD AMF e Intel QSV são usados quando realmente inicializam; caso contrário, a conversão por CPU continua disponível.
+* O codec selecionado é mostrado na tela de conversão. Em placas AMD no Linux, o backend normalmente é `h264_vaapi`/`hevc_vaapi`, enquanto o FFmpeg faz fallback para CPU se o driver ou a permissão do dispositivo não estiverem disponíveis.
 
 ### 📡 3. Terminal de Logs em Tempo Real com Filtros de Telemetria
 * Acompanhe cada etapa de download, conversão e extração de áudio através de um terminal integrado na aba dedicada do aplicativo.

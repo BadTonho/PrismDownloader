@@ -11,15 +11,27 @@
 
 namespace {
 
-QString encoderFor(GPUType type, bool hevc)
+QString encoderFor(const ConversionRequest &request, bool hevc)
 {
-    switch (type) {
+    if (request.gpuType != GPUType::CPU_ONLY && !request.gpuCodec.isEmpty()) {
+        QString codec = request.gpuCodec;
+        if (codec.startsWith(QStringLiteral("h264_"))) {
+            codec.replace(0, 5, hevc ? QStringLiteral("hevc_") : QStringLiteral("h264_"));
+        } else if (!hevc && codec.startsWith(QStringLiteral("hevc_"))) {
+            codec.replace(0, 5, QStringLiteral("h264_"));
+        }
+        return codec;
+    }
+
+    switch (request.gpuType) {
     case GPUType::NVIDIA:
         return hevc ? "hevc_nvenc" : "h264_nvenc";
     case GPUType::AMD:
         return hevc ? "hevc_amf" : "h264_amf";
     case GPUType::INTEL:
         return hevc ? "hevc_qsv" : "h264_qsv";
+    case GPUType::VAAPI:
+        return hevc ? "hevc_vaapi" : "h264_vaapi";
     case GPUType::CPU_ONLY:
         return {};
     }
@@ -319,11 +331,20 @@ void ConversionManager::prepareArguments(Job *job)
     const QString format = job->request.format;
 
     if (format.startsWith("MP4 (H.264")) {
-        const QString encoder = encoderFor(job->request.gpuType, false);
-        job->usesHardware = !encoder.isEmpty();
+        const QString encoder = encoderFor(job->request, false);
+        const bool usesVaapi = encoder.endsWith(QStringLiteral("_vaapi"));
+        job->usesHardware = !encoder.isEmpty()
+            && (!usesVaapi || !job->request.gpuDevice.isEmpty());
+        if (job->usesHardware && usesVaapi) {
+            hardwareArgs.insert(1, job->request.gpuDevice);
+            hardwareArgs.insert(1, QStringLiteral("-vaapi_device"));
+        }
         if (job->usesHardware) {
             hardwareArgs << "-c:v" << encoder;
-            if (job->request.gpuType == GPUType::NVIDIA) {
+            if (usesVaapi) {
+                hardwareArgs << "-vf" << "format=nv12,hwupload";
+            }
+            if (job->request.gpuType == GPUType::NVIDIA && !usesVaapi) {
                 hardwareArgs << "-preset" << "p4" << "-cq" << "23";
             } else {
                 hardwareArgs << "-b:v" << "5M";
@@ -335,11 +356,20 @@ void ConversionManager::prepareArguments(Job *job)
         cpuArgs << "-c:v" << "libx264" << "-crf" << "23" << "-c:a" << "aac";
     } else if (format.startsWith("MP4 (HEVC")) {
         stem = input.completeBaseName() + "_hevc";
-        const QString encoder = encoderFor(job->request.gpuType, true);
-        job->usesHardware = !encoder.isEmpty();
+        const QString encoder = encoderFor(job->request, true);
+        const bool usesVaapi = encoder.endsWith(QStringLiteral("_vaapi"));
+        job->usesHardware = !encoder.isEmpty()
+            && (!usesVaapi || !job->request.gpuDevice.isEmpty());
+        if (job->usesHardware && usesVaapi) {
+            hardwareArgs.insert(1, job->request.gpuDevice);
+            hardwareArgs.insert(1, QStringLiteral("-vaapi_device"));
+        }
         if (job->usesHardware) {
             hardwareArgs << "-c:v" << encoder;
-            if (job->request.gpuType == GPUType::NVIDIA) {
+            if (usesVaapi) {
+                hardwareArgs << "-vf" << "format=nv12,hwupload";
+            }
+            if (job->request.gpuType == GPUType::NVIDIA && !usesVaapi) {
                 hardwareArgs << "-preset" << "p4" << "-cq" << "25";
             } else {
                 hardwareArgs << "-b:v" << "4M";

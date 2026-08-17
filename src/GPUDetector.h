@@ -7,6 +7,7 @@ enum class GPUType {
     NVIDIA,
     AMD,
     INTEL,
+    VAAPI,
     CPU_ONLY
 };
 
@@ -20,12 +21,14 @@ public:
     GPUType getGPUType() const;
     std::string getGPUName() const;
     std::string getRecommendedCodec() const;
+    std::string getHardwareDevice() const;
     bool hasHardwareAcceleration() const;
 
 private:
     GPUType m_type = GPUType::CPU_ONLY;
     std::string m_name = "CPU Multi-Thread Fallback";
     std::string m_codec = "libx264";
+    std::string m_device;
 
 };
 
