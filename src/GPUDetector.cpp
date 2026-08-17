@@ -1,59 +1,100 @@
 #include "GPUDetector.h"
-#include <iostream>
+
+#include "MediaToolResolver.h"
+
+#include <QProcess>
+#include <QStringList>
+
 #include <algorithm>
+#include <cctype>
+#include <iostream>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
-void GPUDetector::detect() {
-    std::cout << "[GPUDetector] Iniciando sondagem nativa de hardware em C++ puro via API Win32...\n";
 
-    std::string totalDump = "";
-#ifdef _WIN32
-    DISPLAY_DEVICEA dd;
-    dd.cb = sizeof(dd);
-    DWORD devNum = 0;
-    while (EnumDisplayDevicesA(NULL, devNum, &dd, 0)) {
-        totalDump += dd.DeviceString;
-        totalDump += " ";
-        devNum++;
+namespace {
+
+std::string lowerCase(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
+        return static_cast<char>(std::tolower(character));
+    });
+    return value;
+}
+
+#ifdef Q_OS_LINUX
+std::string ffmpegEncoderDump()
+{
+    const QString ffmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
+    if (ffmpeg.isEmpty()) {
+        return {};
     }
+
+    QProcess probe;
+    probe.setProcessChannelMode(QProcess::MergedChannels);
+    probe.start(ffmpeg, QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")});
+    if (!probe.waitForStarted(1000) || !probe.waitForFinished(4000)
+        || probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {
+        return {};
+    }
+    return probe.readAllStandardOutput().toStdString();
+}
 #endif
 
-    std::cout << "[GPUDetector] Resposta Bruta da Sondagem Win32 (Placas Localizadas):\n  -> " << totalDump << "\n";
+}
 
-    std::string lower = totalDump;
-    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+void GPUDetector::detect()
+{
+    std::cout << "[GPUDetector] Sondando aceleradores de vídeo disponíveis...\n";
 
-    // Prioridade por fabricante de hardware
-    if (lower.find("cuda") != std::string::npos || 
-        lower.find("nvenc") != std::string::npos || 
-        lower.find("nvidia") != std::string::npos ||
-        lower.find("geforce") != std::string::npos ||
-        lower.find("1660") != std::string::npos) {
-        
+    std::string totalDump;
+#ifdef _WIN32
+    DISPLAY_DEVICEA displayDevice{};
+    displayDevice.cb = sizeof(displayDevice);
+    DWORD deviceNumber = 0;
+    while (EnumDisplayDevicesA(nullptr, deviceNumber, &displayDevice, 0)) {
+        totalDump += displayDevice.DeviceString;
+        totalDump += " ";
+        ++deviceNumber;
+    }
+#elif defined(Q_OS_LINUX)
+    // A lista de encoders descreve o que o FFmpeg instalado realmente oferece.
+    // A conversão ainda faz fallback para CPU caso um driver não esteja utilizável.
+    totalDump = ffmpegEncoderDump();
+#endif
+
+    std::cout << "[GPUDetector] Capacidades encontradas:\n  -> " << totalDump << "\n";
+
+    const std::string lower = lowerCase(totalDump);
+    if (lower.find("h264_nvenc") != std::string::npos
+        || lower.find("hevc_nvenc") != std::string::npos
+        || lower.find("nvidia") != std::string::npos
+        || lower.find("geforce") != std::string::npos) {
         m_type = GPUType::NVIDIA;
-        m_name = "NVIDIA GeForce (NVENC Hardware Accelerated - GTX Compatível)";
+        m_name = "NVIDIA (NVENC disponível no FFmpeg)";
         m_codec = "h264_nvenc";
-        std::cout << "⚡ [SUCESSO] Hardware NVIDIA Detectado! Otimizado para GTX 1660 Super!\n";
-        
-    } else if (lower.find("amf") != std::string::npos || lower.find("radeon") != std::string::npos || lower.find("amd") != std::string::npos) {
+        std::cout << "[GPUDetector] Encoder NVIDIA NVENC disponível.\n";
+    } else if (lower.find("h264_amf") != std::string::npos
+               || lower.find("hevc_amf") != std::string::npos
+               || lower.find("radeon") != std::string::npos
+               || lower.find("amd") != std::string::npos) {
         m_type = GPUType::AMD;
-        m_name = "AMD Radeon (AMF Hardware Accelerated)";
+        m_name = "AMD (AMF disponível no FFmpeg)";
         m_codec = "h264_amf";
-        std::cout << "⚡ [SUCESSO] Hardware AMD Radeon Detectado!\n";
-        
-    } else if (lower.find("qsv") != std::string::npos || lower.find("intel") != std::string::npos) {
+        std::cout << "[GPUDetector] Encoder AMD AMF disponível.\n";
+    } else if (lower.find("h264_qsv") != std::string::npos
+               || lower.find("hevc_qsv") != std::string::npos
+               || lower.find("intel") != std::string::npos) {
         m_type = GPUType::INTEL;
-        m_name = "Intel HD/Iris/Arc (QuickSync QSV Accelerated)";
+        m_name = "Intel (Quick Sync disponível no FFmpeg)";
         m_codec = "h264_qsv";
-        std::cout << "⚡ [SUCESSO] Hardware Intel QuickSync Detectado!\n";
-        
+        std::cout << "[GPUDetector] Encoder Intel Quick Sync disponível.\n";
     } else {
         m_type = GPUType::CPU_ONLY;
-        m_name = "CPU Multi-Thread (Fallback limpo sem GPU dedicada identificada)";
+        m_name = "CPU Multi-Thread (aceleração não disponível)";
         m_codec = "libx264";
-        std::cout << "ℹ️ [INFO] Modo fallback otimizado de CPU selecionado.\n";
+        std::cout << "[GPUDetector] Usando fallback de CPU.\n";
     }
 }
 
@@ -61,6 +102,7 @@ GPUType GPUDetector::getGPUType() const { return m_type; }
 std::string GPUDetector::getGPUName() const { return m_name; }
 std::string GPUDetector::getRecommendedCodec() const { return m_codec; }
 
-bool GPUDetector::hasHardwareAcceleration() const {
+bool GPUDetector::hasHardwareAcceleration() const
+{
     return m_type != GPUType::CPU_ONLY;
 }

@@ -1,6 +1,7 @@
 #include "DownloadManager.h"
 
 #include "DownloadProfile.h"
+#include "MediaToolResolver.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -13,6 +14,12 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#endif
+
+#ifdef Q_OS_LINUX
+#include <csignal>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -33,9 +40,7 @@ struct DownloadManager::Job {
 
 DownloadManager::DownloadManager(QObject *parent, const QString &programPath)
     : QObject(parent),
-      m_programPath(programPath.isEmpty()
-                        ? QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/yt-dlp.exe")
-                        : QDir::toNativeSeparators(programPath))
+      m_programPath(MediaToolResolver::resolve(MediaTool::YtDlp, programPath))
 {
 }
 
@@ -57,8 +62,8 @@ DownloadManager::~DownloadManager()
 
 EnqueueResult DownloadManager::enqueueDownload(const DownloadRequest &request)
 {
-    if (!QFile::exists(m_programPath)) {
-        return {false, 0, "yt-dlp.exe não foi encontrado na pasta do aplicativo."};
+    if (m_programPath.isEmpty() || !QFile::exists(m_programPath)) {
+        return {false, 0, MediaToolResolver::missingMessage(MediaTool::YtDlp)};
     }
     if (!request.url.isValid() || request.url.host().isEmpty()
         || (request.url.scheme() != "https" && request.url.scheme() != "http")) {
@@ -119,7 +124,9 @@ bool DownloadManager::cancelDownload(DownloadId id)
     emit jobStatus(id, DownloadStatus::Cancelling, "Cancelando download...");
     emit jobLog(id, "Cancelamento solicitado; encerrando a árvore de processos.");
     terminateProcessTree(job);
+#ifndef Q_OS_LINUX
     job->process->kill();
+#endif
     return true;
 }
 
@@ -231,7 +238,8 @@ void DownloadManager::startJob(Job *job)
     });
     connect(process, &QProcess::errorOccurred, this, [this, id = job->id](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart) {
-            failToStart(id, "Não foi possível iniciar yt-dlp.exe.");
+            failToStart(id, "Não foi possível iniciar "
+                            + MediaToolResolver::executableName(MediaTool::YtDlp) + ".");
         }
     });
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
@@ -239,7 +247,15 @@ void DownloadManager::startJob(Job *job)
         finishJob(id, exitCode, exitStatus);
     });
 
+#ifdef Q_OS_LINUX
+    // yt-dlp pode iniciar o FFmpeg. Uma sessão própria permite sinalizar toda
+    // a árvore de processos quando o usuário cancela a tarefa.
+    QStringList sessionArguments;
+    sessionArguments << m_programPath << buildArguments(job->request);
+    process->start(QStringLiteral("/usr/bin/setsid"), sessionArguments);
+#else
     process->start(m_programPath, buildArguments(job->request));
+#endif
 }
 
 void DownloadManager::readProcessOutput(DownloadId id, bool flushRemainder)
@@ -372,6 +388,11 @@ void DownloadManager::terminateProcessTree(Job *job)
     if (job && job->nativeJobHandle) {
         TerminateJobObject(static_cast<HANDLE>(job->nativeJobHandle), 1);
     }
+#elif defined(Q_OS_LINUX)
+    if (job && job->process && job->process->processId() > 0) {
+        const pid_t sessionLeader = static_cast<pid_t>(job->process->processId());
+        ::kill(-sessionLeader, SIGTERM);
+    }
 #else
     Q_UNUSED(job);
 #endif
@@ -395,8 +416,11 @@ QString DownloadManager::normalizedUrl(const QUrl &url) const
 QStringList DownloadManager::buildArguments(const DownloadRequest &request) const
 {
     QStringList arguments;
-    arguments << "--progress" << "--newline" << "--no-mtime" << "--windows-filenames"
-              << "--print" << "after_move:__PRISM_OUTPUT__%(filepath)s"
+    arguments << "--progress" << "--newline" << "--no-mtime";
+#ifdef Q_OS_WIN
+    arguments << "--windows-filenames";
+#endif
+    arguments << "--print" << "after_move:__PRISM_OUTPUT__%(filepath)s"
               << "-P" << QDir::toNativeSeparators(request.outputDirectory)
               << "-o" << "%(title).180B [%(id)s].%(ext)s";
 

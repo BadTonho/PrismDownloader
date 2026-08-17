@@ -1,4 +1,6 @@
 #include "MainWindow.h"
+#include "MediaToolResolver.h"
+#include "PrismVersion.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QColor>
@@ -34,14 +36,22 @@
 
 #include <utility>
 
-// ============================================================================
-// CONFIGURAÇÃO OFICIAL DE VERSÃO (Mude apenas aqui para futuras Releases!)
-// ============================================================================
-static const QString NEOV_VERSION_TAG = "v1.1.6";    // Tag de verificação no GitHub
-static const QString NEOV_VERSION_NUMBER = "1.1.6";  // Número de exibição
+static const QString NEOV_VERSION_TAG = QStringLiteral(PRISM_VERSION_TAG);
+static const QString NEOV_VERSION_NUMBER = QStringLiteral(PRISM_VERSION_NUMBER);
 
 namespace {
 constexpr int kMaximumLogEntries = 5000;
+
+QString platformLabel()
+{
+#ifdef Q_OS_WIN
+    return QStringLiteral("Windows");
+#elif defined(Q_OS_LINUX)
+    return QStringLiteral("Linux");
+#else
+    return QStringLiteral("Desktop");
+#endif
+}
 
 qint64 toSeconds(const QRegularExpressionMatch &match, int hourIndex, int minuteIndex, int secondIndex)
 {
@@ -559,7 +569,7 @@ void MainWindow::setupUI()
 
     QLabel *lblConvFormat = new QLabel("Formato de Saída:", pageConverter);
     m_convertFormatCombo = new QComboBox(pageConverter);
-    m_convertFormatCombo->addItem("MP4 (H.264 / NVENC - Compatibilidade Universal)");
+    m_convertFormatCombo->addItem("MP4 (H.264 / Aceleração quando disponível)");
     m_convertFormatCombo->addItem("MP4 (HEVC / H.265 - Compressão de Alta Densidade)");
     m_convertFormatCombo->addItem("MKV (Matroska - Container Sem Perdas)");
     m_convertFormatCombo->addItem("MP3 (Áudio MP3 Alta Fidelidade - 320kbps)");
@@ -911,11 +921,10 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
         return;
     }
 
-    const QString program = QDir::toNativeSeparators(
-        QCoreApplication::applicationDirPath() + "/yt-dlp.exe");
-    if (!QFile::exists(program)) {
+    const QString program = MediaToolResolver::resolve(MediaTool::YtDlp);
+    if (program.isEmpty() || !QFile::exists(program)) {
         QMessageBox::warning(this, "Motor indisponível",
-                             "yt-dlp.exe não foi encontrado na pasta do aplicativo.");
+                             MediaToolResolver::missingMessage(MediaTool::YtDlp));
         return;
     }
 
@@ -1204,7 +1213,7 @@ bool MainWindow::showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
         updateSelectionState();
     });
     for (QCheckBox *check : itemChecks) {
-        connect(check, &QCheckBox::checkStateChanged, &dialog, updateSelectionState);
+        connect(check, &QCheckBox::toggled, &dialog, updateSelectionState);
     }
     connect(searchInput, &QLineEdit::textChanged, &dialog, [list, items](const QString &filter) {
         for (int index = 0; index < list->count(); ++index) {
@@ -1529,7 +1538,7 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
 
     if (QFile::exists(filePath)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
-        logMessage("[Biblioteca] Reproduzindo arquivo no player do Windows: " + fileName);
+        logMessage("[Biblioteca] Abrindo arquivo no player padrão do sistema: " + fileName);
     } else {
         QMessageBox::warning(this, "Aviso", "O arquivo selecionado não foi encontrado fisicamente no disco:\n" + filePath);
         refreshLibrary();
@@ -1547,7 +1556,7 @@ void MainWindow::onDownloadQueueDoubleClicked(int row, int /*column*/)
 
     if (!filePath.isEmpty() && QFile::exists(filePath)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
-        logMessage("[Fila de Downloads] Reproduzindo vídeo no player do Windows: " + fileName);
+        logMessage("[Fila de Downloads] Abrindo vídeo no player padrão do sistema: " + fileName);
     } else {
         QMessageBox::information(this, "Aguarde", "Este item ainda não possui um arquivo final disponível.");
     }
@@ -1589,8 +1598,8 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     struct Prof { QString q; QString f; QString r; };
     Prof profs[4] = {
         {"4K / Melhor Disponível no Servidor", "MP4 / Container Original", "Ultra HD / Máxima"},
-        {"1080p Full HD", "H.264 / NVENC Acelerado", "1920x1080 (60/30 fps)"},
-        {"720p HD", "H.264 / NVENC Otimizado", "1280x720 (Balanceado)"},
+        {"1080p Full HD", "H.264 / Aceleração quando disponível", "1920x1080 (60/30 fps)"},
+        {"720p HD", "H.264 / Aceleração quando disponível", "1280x720 (Balanceado)"},
         {"Áudio MP3 (Extração Direta)", "MP3 Estéreo Alta Fidelidade", "320 kbps (Apenas Áudio)"}
     };
 
@@ -1624,7 +1633,7 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     chkConv->setCursor(Qt::PointingHandCursor);
     
     QComboBox *comboConv = new QComboBox(&dlg);
-    comboConv->addItem("MP4 (H.264 / NVENC - Compatibilidade Universal)");
+    comboConv->addItem("MP4 (H.264 / Aceleração quando disponível)");
     comboConv->addItem("MP4 (HEVC / H.265 - Compressão de Alta Densidade)");
     comboConv->addItem("MKV (Matroska - Container Sem Perdas)");
     comboConv->addItem("MP3 (Áudio MP3 Alta Fidelidade - 320kbps)");
@@ -1681,8 +1690,14 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     btnCancel->setFixedWidth(140);
     connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
 
-    QLabel *lblAccel = new QLabel("⚡ Motor NVIDIA NVENC Operante", &dlg);
-    lblAccel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
+    const QString accelerationStatus = m_gpuDetector.hasHardwareAcceleration()
+        ? "⚡ Aceleração disponível: "
+            + QString::fromStdString(m_gpuDetector.getRecommendedCodec()).toUpper()
+        : "ℹ️ Conversão será feita pela CPU";
+    QLabel *lblAccel = new QLabel(accelerationStatus, &dlg);
+    lblAccel->setStyleSheet(m_gpuDetector.hasHardwareAcceleration()
+                                ? "color: #10b981; font-weight: bold; font-size: 13px;"
+                                : "color: #f59e0b; font-weight: bold; font-size: 13px;");
 
     btnLayout->addWidget(btnOk);
     btnLayout->addWidget(btnCancel);
@@ -1730,7 +1745,7 @@ void MainWindow::onOpenFolderClicked()
     QString dir = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
     if (!dir.isEmpty()) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
-        logMessage("[System] Abrindo a pasta no Windows Explorer: " + dir);
+        logMessage("[System] Abrindo a pasta no gerenciador de arquivos: " + dir);
     }
 }
 
@@ -2401,7 +2416,9 @@ void MainWindow::checkForUpdates(bool silent)
 
     QUrl url("https://api.github.com/repos/BadTonho/PrismDownloader/releases/latest");
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, "PrismDownloader-Updater/1.0 (Windows; Qt)");
+    request.setHeader(QNetworkRequest::UserAgentHeader,
+                      "PrismDownloader-Updater/" + NEOV_VERSION_NUMBER
+                          + " (" + platformLabel() + "; Qt)");
     
     QNetworkReply *reply = m_networkManager->get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, silent]() {
@@ -2517,8 +2534,13 @@ void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
 
 void MainWindow::updateYtdlpEngine()
 {
+#ifdef Q_OS_LINUX
+    m_updateStatusLabel->setText("No Linux, atualize o yt-dlp pelo sistema: sudo apt update && sudo apt upgrade yt-dlp");
+    logMessage("[Motor Extrator] No Linux, o yt-dlp é atualizado pelo APT.");
+#else
     const QUrl officialReleaseUrl("https://github.com/yt-dlp/yt-dlp/releases/latest");
     QDesktopServices::openUrl(officialReleaseUrl);
     m_updateStatusLabel->setText("Página oficial do yt-dlp aberta para atualização manual e verificação do arquivo.");
     logMessage("[Motor Extrator] Atualização automática desativada; página oficial aberta no navegador.");
+#endif
 }

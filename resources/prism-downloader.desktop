@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Prism Downloader
+Comment=Baixe e converta vídeos e áudios
+Exec=prism-downloader
+Icon=prism-downloader
+Terminal=false
+Categories=AudioVideo;Qt;
+Keywords=video;audio;download;yt-dlp;ffmpeg;
+StartupNotify=true

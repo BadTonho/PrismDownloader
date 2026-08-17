@@ -18,7 +18,7 @@
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17"></a>
   <a href="https://www.qt.io/"><img src="https://img.shields.io/badge/Qt_GUI-6.7%20Dark%20Tech-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Qt 6"></a>
   <a href="https://developer.nvidia.com/video-codec-sdk"><img src="https://img.shields.io/badge/NVIDIA-NVENC%20Hardware-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="NVIDIA NVENC"></a>
-  <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-00a859?style=for-the-badge&logo=linux&logoColor=white" alt="Windows and Linux">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-6b21a8?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="MIT License"></a>
 </p>
 
@@ -26,7 +26,7 @@
 
 ## ⚡ What is Prism Downloader?
 
-Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize the audio and video download and processing experience on Windows desktops. Like an optical prism that bends and organizes beams of light, the suite combines the power of high-performance **C++17** with industry-standard engines (`yt-dlp` and `FFmpeg`) executed directly on the Win32 API to deliver an ultra-fast, clean, secure, and transparent workflow.
+Developed by **Tonho Studios**, **Prism Downloader** brings a clean desktop workflow for downloading and processing audio and video. It combines high-performance **C++17**, **Qt 6**, and the industry-standard `yt-dlp` and `FFmpeg` engines on Windows and Linux.
 
 ---
 
@@ -41,7 +41,7 @@ Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize t
 * Define the exact start and end times directly in the panel (e.g., from `00:03:15` to `00:05:45`). The engine requests and downloads only the target section in record time.
 
 ### ⚡ 2. Low-Level Graphics Acceleration (NVIDIA NVENC, AMD & QSV)
-* **High-Speed RAM Detection (0.001ms):** The system queries the native Win32 API (`EnumDisplayDevicesA`) during startup to identify dedicated graphics processors (fully optimized for **NVIDIA GeForce GTX 1660 SUPER** and above, as well as **AMD Radeon AMF** and **Intel QSV**).
+* **Hardware Acceleration with Safe Fallback:** Windows uses native device detection; Linux queries encoders exposed by the installed FFmpeg. NVIDIA NVENC, AMD AMF, and Intel QSV are used when available, while CPU conversion remains the reliable fallback.
 * All format conversions utilize hardware codecs (`h264_nvenc`), sparing 100% of your CPU and completing rendering jobs in mere seconds.
 
 ### 📡 3. Real-Time Log Terminal with Telemetry Filters
@@ -53,9 +53,9 @@ Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize t
   * 📌 **System & General:** Auto-updater, hardware detection notifications, and engine status logs.
   * 🧹 **Clear Terminal:** Clear the display buffer instantly.
 
-### 🛡️ 4. Graphical Sandboxing and Zero Terminal Windows (`CREATE_NO_WINDOW`)
-* No more black CMD or Windows Terminal windows flashing on your screen while downloading!
-* The engine executes binaries through **`QProcess::start(program, arguments)`** using Win32 Kernel creation flags (`0x08000000`), ensuring a 100% graphical, silent operation with strict `exit code` monitoring to prevent false positive reports.
+### 🛡️ 4. Graphical Process Management
+* No terminal window is opened while downloads run.
+* The engine uses **`QProcess::start(program, arguments)`** with strict exit-code monitoring. On Linux, each download has its own session so cancellation also stops child FFmpeg processes.
 
 ### ☁️ 5. Tonho Studios Update Center
 * **GitHub Cloud Synchronization:** Asynchronous update checking on startup with support for silent backgrounds.
@@ -65,16 +65,35 @@ Developed by **Tonho Studios**, **Prism Downloader** was born to revolutionize t
 
 ## 📦 Installation & Usage
 
-Visit our [Official Releases Page on GitHub](https://github.com/BadTonho/PrismDownloader/releases/latest) to download the standalone Windows binaries (pre-packaged with FFmpeg and yt-dlp):
+Visit the [Official GitHub Releases page](https://github.com/BadTonho/PrismDownloader/releases/latest) to download the package for your platform:
 
 | Package | Purpose |
 | :--- | :--- |
 | ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Official Tonho Studios Installer** (Recommended). Complete setup wizard in Portuguese (Brazil) with Desktop shortcut creation. |
 | 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Portable Archive**. Extract anywhere on your Hard Drive or USB flash drive and run immediately. |
+| 🐧 **[`prism-downloader_X.Y.Z_amd64.deb`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | Package for **Linux Mint 22 / Ubuntu 24.04 amd64**. Install with `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. FFmpeg and yt-dlp are system dependencies. |
 
 ---
 
 ## 🛠️ Compiling from Source (For Developers)
+
+### Linux Mint 22 / Ubuntu 24.04 (amd64)
+
+Install the development requirements and build:
+
+```bash
+sudo apt update
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools ffmpeg yt-dlp dpkg-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+cpack --config build/CPackConfig.cmake -G DEB -B package
+sudo apt install ./package/prism-downloader_*.deb
+```
+
+The package targets Mint 22 and Ubuntu 24.04 on `amd64`. It intentionally relies on the system `ffmpeg` and `yt-dlp`, which can be updated through APT. Application releases are published on GitHub; this first Linux release does not provide an APT repository.
+
+### Windows 10 / 11 (64-bit)
 
 To build the native application on your Windows machine:
 
@@ -116,5 +135,5 @@ The community is free to use, modify, and redistribute this project, **provided 
 
 <p align="center">
   <b>Developed with ☕ and passion by <a href="https://github.com/BadTonho">Tonho Studios</a></b><br>
-  <i>All rights reserved • C++ Engineering & Premium Windows Visual Experience.</i>
+  <i>All rights reserved • C++ Engineering & Premium Desktop Visual Experience.</i>
 </p>

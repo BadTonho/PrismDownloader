@@ -142,6 +142,30 @@ ConversionRequest conversionFor(const QString &input, const QString &output, Dow
     return request;
 }
 
+bool testMissingToolsAreReported()
+{
+    QTemporaryDir output;
+    if (!check(output.isValid(), "temporary missing-tool directory")) return false;
+
+    DownloadManager downloadManager(nullptr, output.filePath("missing-yt-dlp"));
+    const EnqueueResult downloadResult = downloadManager.enqueueDownload(requestFor(output.path(), 99));
+    if (!check(!downloadResult.accepted && !downloadResult.error.isEmpty(),
+               "missing yt-dlp is reported before scheduling")) {
+        return false;
+    }
+
+    const QString input = output.filePath("input.mp4");
+    QFile inputFile(input);
+    if (!check(inputFile.open(QIODevice::WriteOnly), "create missing-tool conversion input")) return false;
+    inputFile.close();
+
+    ConversionManager conversionManager(nullptr, output.filePath("missing-ffmpeg"));
+    const ConversionEnqueueResult conversionResult =
+        conversionManager.enqueueConversion(conversionFor(input, output.path(), 0));
+    return check(!conversionResult.accepted && !conversionResult.error.isEmpty(),
+                 "missing FFmpeg is reported before scheduling");
+}
+
 bool testConversionQueue(const QString &toolPath)
 {
     QTemporaryDir output;
@@ -206,7 +230,8 @@ int main(int argc, char *argv[])
         return 2;
     }
     const QString toolPath = QString::fromLocal8Bit(argv[1]);
-    const bool success = testDownloadScheduling(toolPath)
+    const bool success = testMissingToolsAreReported()
+        && testDownloadScheduling(toolPath)
         && testDuplicateCancellationAndLimit(toolPath)
         && testConversionQueue(toolPath);
     return success ? 0 : 1;

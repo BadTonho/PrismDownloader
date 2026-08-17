@@ -26,6 +26,12 @@ int main(int argc, char *argv[])
     const QStringList arguments = application.arguments().mid(1);
     QTextStream output(stdout);
 
+#ifdef Q_OS_LINUX
+    if (arguments.contains("--windows-filenames")) {
+        return 6;
+    }
+#endif
+
     if (arguments.contains("--print")) {
         const int destinationIndex = arguments.indexOf("-P");
         if (destinationIndex < 0 || destinationIndex + 1 >= arguments.size()) {

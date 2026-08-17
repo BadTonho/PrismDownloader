@@ -14,7 +14,7 @@
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17"></a>
   <a href="https://www.qt.io/"><img src="https://img.shields.io/badge/Qt_GUI-6.7%20Dark%20Tech-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Qt 6"></a>
   <a href="https://developer.nvidia.com/video-codec-sdk"><img src="https://img.shields.io/badge/NVIDIA-NVENC%20Hardware-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="NVIDIA NVENC"></a>
-  <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-00a859?style=for-the-badge&logo=linux&logoColor=white" alt="Windows e Linux">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-6b21a8?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="MIT License"></a>
 </p>
 
@@ -22,7 +22,7 @@
 
 ## ⚡ O que é o Prism Downloader?
 
-Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetivo de revolucionar a experiência de download e processamento de áudio e vídeo em desktops Windows. Como um prisma óptico que deforma e organiza feixes de dados, a suíte combina o poder da linguagem de programação de alta performance **C++17** com motores consagrados na indústria (`yt-dlp` e `FFmpeg`) executados diretamente na API Win32 do Windows para oferecer um fluxo ultrarápido, limpo, seguro e transparente.
+Desenvolvido pela **Tonho Studios**, o **Prism Downloader** oferece um fluxo limpo de desktop para download e processamento de áudio e vídeo. A suíte combina **C++17**, **Qt 6** e os motores consagrados `yt-dlp` e `FFmpeg` no Windows e no Linux.
 
 ---
 
@@ -37,7 +37,7 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetiv
 * Defina o intervalo exato de corte diretamente no painel (ex: das `00:03:15` às `00:05:45`). O motor processa e baixa exclusivamente os bytes necessários da nuvem em tempo recorde!
 
 ### ⚡ 2. Aceleração Gráfica de Baixo Nível (NVIDIA NVENC & AMD)
-* **Detecção via RAM (0.001ms):** O sistema interroga a API nativa Win32 (`EnumDisplayDevicesA`) no segundo em que o app inicia para identificar processadores gráficos dedicados (compatível com **NVIDIA GeForce GTX 1660 SUPER** e superiores, além de **AMD Radeon AMF**).
+* **Aceleração de hardware com fallback seguro:** No Windows, a detecção é nativa; no Linux, o aplicativo consulta os encoders disponibilizados pelo FFmpeg instalado. NVIDIA NVENC, AMD AMF e Intel QSV são usados quando disponíveis, com conversão por CPU como fallback confiável.
 * Todas as conversões de formatos utilizam codecs de hardware (`h264_nvenc`), poupando 100% da sua CPU e reduzindo tempos de renderização a meros segundos.
 
 ### 📡 3. Terminal de Logs em Tempo Real com Filtros de Telemetria
@@ -49,9 +49,9 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetiv
   * 📌 **Sistema & Gerais:** Notificações do Auto-updater, detecções de hardware e status de rotina.
   * 🧹 **Limpar Terminal:** Limpeza instantânea do buffer de exibição.
 
-### 🛡️ 4. Sandboxing Gráfico e Zero Janelas de Terminal (`CREATE_NO_WINDOW`)
-* Esqueça aplicativos que ficam abrindo ou piscando janelas pretas do *CMD* ou *Windows Terminal* durante downloads!
-* O motor executa os binários via **`QProcess::start(program, arguments)`** usando travas do Kernel Win32 (`0x08000000`), garantindo uma operação 100% gráfica, silenciosa e com monitoramento nativo de `exit code` para evitar falsos positivos de conclusão.
+### 🛡️ 4. Gerenciamento Gráfico de Processos
+* Nenhuma janela de terminal é aberta durante os downloads.
+* O motor usa **`QProcess::start(program, arguments)`** e monitora o código de saída. No Linux, cada download recebe uma sessão própria para que o cancelamento também finalize subprocessos do FFmpeg.
 
 ### ☁️ 5. Central de Atualizações Tonho Studios
 * **Sincronia Global com o GitHub:** Checagem de versões assíncrona baseada na nuvem com suporte a modo silencioso de inicialização. 
@@ -61,16 +61,35 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** nasceu com o objetiv
 
 ## 📦 Como Instalar e Usar
 
-Acesse a nossa aba de [Releases Oficiais no GitHub](https://github.com/BadTonho/PrismDownloader/releases/latest) para baixar os pacotes completos prontos para uso no Windows (já acompanham motores FFmpeg e yt-dlp embutidos):
+Acesse a [página de Releases Oficiais no GitHub](https://github.com/BadTonho/PrismDownloader/releases/latest) para baixar o pacote da sua plataforma:
 
 | Pacote Disponível | O que oferece? |
 | :--- | :--- |
 | ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Instalador Oficial da Tonho Studios** (Recomendado). Assistente de instalação completo em Português do Brasil com criação de atalho na Área de Trabalho. |
 | 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Pacote Portável sem Instalação.** Basta extrair a pasta no seu HD ou Pen Drive e executar diretamente. |
+| 🐧 **[`prism-downloader_X.Y.Z_amd64.deb`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | Pacote para **Linux Mint 22 / Ubuntu 24.04 amd64**. Instale com `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. FFmpeg e yt-dlp são dependências do sistema. |
 
 ---
 
 ## 🛠️ Como Compilar o Projeto do Zero (Para Desenvolvedores)
+
+### Linux Mint 22 / Ubuntu 24.04 (amd64)
+
+Instale os requisitos de desenvolvimento e gere o pacote:
+
+```bash
+sudo apt update
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools ffmpeg yt-dlp dpkg-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+cpack --config build/CPackConfig.cmake -G DEB -B package
+sudo apt install ./package/prism-downloader_*.deb
+```
+
+O pacote é destinado inicialmente ao Mint 22 e Ubuntu 24.04 em `amd64`. Ele usa o `ffmpeg` e o `yt-dlp` do sistema, que podem ser atualizados pelo APT. As novas versões do aplicativo ficam no GitHub; esta primeira versão Linux não fornece repositório APT/PPA.
+
+### Windows 10 / 11 (64-bit)
 
 Se você deseja compilar este projeto nativo em sua própria estação de trabalho Windows:
 
@@ -112,5 +131,5 @@ Isso significa que a comunidade possui liberdade legal para utilizar, auditar e 
 
 <p align="center">
   <b>Desenvolvido com ☕ e extrema dedicação por <a href="https://github.com/BadTonho">Tonho Studios</a></b><br>
-  <i>Todos os direitos reservados • Engenharia em C++ e Performance Visual no Windows.</i>
+  <i>Todos os direitos reservados • Engenharia em C++ e Performance Visual para Desktop.</i>
 </p>

@@ -1,0 +1,62 @@
+name: Release Linux
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    name: Build Debian package (amd64)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build and runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools \
+            ffmpeg yt-dlp dpkg-dev
+
+      - name: Verify tag matches project version
+        shell: bash
+        run: |
+          project_version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          test -n "$project_version"
+          test "v$project_version" = "$GITHUB_REF_NAME"
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build and test
+        run: |
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
+
+      - name: Create and inspect Debian package
+        run: |
+          cpack --config build/CPackConfig.cmake -G DEB -B package
+          package_file=$(find package -maxdepth 1 -name '*.deb' -print -quit)
+          test -n "$package_file"
+          dpkg-deb --info "$package_file"
+          dpkg-deb --contents "$package_file" | grep -q 'usr/bin/prism-downloader'
+          dpkg-deb --contents "$package_file" | grep -q 'usr/share/applications/prism-downloader.desktop'
+
+      - name: Install package smoke test
+        shell: bash
+        run: |
+          package_file=$(find package -maxdepth 1 -name '*.deb' -print -quit)
+          sudo apt-get install --yes "$package_file"
+          smoke_status=0
+          timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || smoke_status=$?
+          test "$smoke_status" -eq 124
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" package/*.deb --title "Prism Downloader $GITHUB_REF_NAME" --generate-notes

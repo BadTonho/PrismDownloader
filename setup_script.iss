@@ -1,5 +1,6 @@
+#include "version.iss"
 #define MyAppName "Prism Downloader"
-#define MyAppVersion "1.1.6"
+#define MyAppVersion PRISM_VERSION
 #define MyAppPublisher "Tonho Studios"
 #define MyAppExeName "PrismDownloader.exe"
 

@@ -1,5 +1,7 @@
 #include "ConversionManager.h"
 
+#include "MediaToolResolver.h"
+
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -49,9 +51,7 @@ struct ConversionManager::Job {
 
 ConversionManager::ConversionManager(QObject *parent, const QString &programPath)
     : QObject(parent),
-      m_programPath(programPath.isEmpty()
-                        ? QCoreApplication::applicationDirPath() + "/ffmpeg.exe"
-                        : programPath)
+      m_programPath(MediaToolResolver::resolve(MediaTool::Ffmpeg, programPath))
 {
 }
 
@@ -73,8 +73,8 @@ ConversionManager::~ConversionManager()
 
 ConversionEnqueueResult ConversionManager::enqueueConversion(const ConversionRequest &request)
 {
-    if (!QFile::exists(m_programPath)) {
-        return {false, 0, "ffmpeg.exe não foi encontrado na pasta do aplicativo."};
+    if (m_programPath.isEmpty() || !QFile::exists(m_programPath)) {
+        return {false, 0, MediaToolResolver::missingMessage(MediaTool::Ffmpeg)};
     }
     if (request.inputFile.isEmpty() || !QFile::exists(request.inputFile)) {
         return {false, 0, "O arquivo de origem da conversão não existe."};
@@ -219,7 +219,8 @@ void ConversionManager::startActiveProcess(const QStringList &arguments)
         connect(process, &QProcess::errorOccurred, this, [this, process, jobId](QProcess::ProcessError error) {
             if (error == QProcess::FailedToStart && m_active
                 && m_active->id == jobId && m_active->process == process) {
-                finishActiveFailure("Não foi possível iniciar ffmpeg.exe.");
+                finishActiveFailure("Não foi possível iniciar "
+                                    + MediaToolResolver::executableName(MediaTool::Ffmpeg) + ".");
             }
         });
     }
