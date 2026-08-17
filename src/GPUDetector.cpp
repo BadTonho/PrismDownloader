@@ -34,8 +34,19 @@ std::string ffmpegEncoderDump()
     QProcess probe;
     probe.setProcessChannelMode(QProcess::MergedChannels);
     probe.start(ffmpeg, QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")});
-    if (!probe.waitForStarted(1000) || !probe.waitForFinished(4000)
-        || probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {
+    if (!probe.waitForStarted(1000)) {
+        if (probe.state() != QProcess::NotRunning) {
+            probe.kill();
+            probe.waitForFinished(1000);
+        }
+        return {};
+    }
+    if (!probe.waitForFinished(4000)) {
+        probe.kill();
+        probe.waitForFinished(1000);
+        return {};
+    }
+    if (probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {
         return {};
     }
     return probe.readAllStandardOutput().toStdString();
