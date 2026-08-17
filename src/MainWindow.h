@@ -98,7 +98,7 @@ private:
     void updateJobRow(DownloadId id);
     void updateSelectedMonitor();
     void maybeShowQueueSummary();
-    void showDownloadPopup();
+    void showDownloadsPage();
     void startPlaylistPreview(const QUrl &url);
     void closePlaylistPreviewDialog();
     void continueDownload(const QList<PlaylistItem> &items);
@@ -108,7 +108,6 @@ private:
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
-    QDialog *m_downloadDialog{nullptr};
     QPushButton *m_navDownloadBtn;
     QPushButton *m_navLibraryBtn;
     QPushButton *m_navConverterBtn;
