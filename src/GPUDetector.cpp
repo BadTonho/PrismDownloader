@@ -24,16 +24,18 @@ std::string lowerCase(std::string value)
 }
 
 #ifdef Q_OS_LINUX
-std::string ffmpegEncoderDump()
+bool encoderWorks(const QString &ffmpeg, const QString &encoder)
 {
-    const QString ffmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
-    if (ffmpeg.isEmpty()) {
-        return {};
-    }
-
     QProcess probe;
-    probe.setProcessChannelMode(QProcess::MergedChannels);
-    probe.start(ffmpeg, QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")});
+    probe.start(ffmpeg, QStringList{
+        QStringLiteral("-hide_banner"),
+        QStringLiteral("-loglevel"), QStringLiteral("error"),
+        QStringLiteral("-f"), QStringLiteral("lavfi"),
+        QStringLiteral("-i"), QStringLiteral("color=size=16x16:rate=1"),
+        QStringLiteral("-frames:v"), QStringLiteral("1"),
+        QStringLiteral("-c:v"), encoder,
+        QStringLiteral("-f"), QStringLiteral("null"), QStringLiteral("-")
+    });
     if (!probe.waitForStarted(1000)) {
         if (probe.state() != QProcess::NotRunning) {
             probe.kill();
@@ -47,9 +49,32 @@ std::string ffmpegEncoderDump()
         return {};
     }
     if (probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {
+        return false;
+    }
+    return true;
+}
+
+QString findUsableHardwareEncoder()
+{
+    const QString ffmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
+    if (ffmpeg.isEmpty()) {
         return {};
     }
-    return probe.readAllStandardOutput().toStdString();
+
+    // A lista de encoders não basta: distribuições costumam compilar NVENC,
+    // QSV e AMF mesmo em máquinas sem o driver correspondente. Este teste
+    // renderiza um frame mínimo e só aceita o encoder que realmente inicializa.
+    const QStringList candidates{
+        QStringLiteral("h264_nvenc"),
+        QStringLiteral("h264_amf"),
+        QStringLiteral("h264_qsv")
+    };
+    for (const QString &candidate : candidates) {
+        if (encoderWorks(ffmpeg, candidate)) {
+            return candidate;
+        }
+    }
+    return {};
 }
 #endif
 
@@ -70,9 +95,7 @@ void GPUDetector::detect()
         ++deviceNumber;
     }
 #elif defined(Q_OS_LINUX)
-    // A lista de encoders descreve o que o FFmpeg instalado realmente oferece.
-    // A conversão ainda faz fallback para CPU caso um driver não esteja utilizável.
-    totalDump = ffmpegEncoderDump();
+    totalDump = findUsableHardwareEncoder().toStdString();
 #endif
 
     std::cout << "[GPUDetector] Capacidades encontradas:\n  -> " << totalDump << "\n";
