@@ -22,6 +22,7 @@ public:
     std::string getGPUName() const;
     std::string getRecommendedCodec() const;
     std::string getHardwareDevice() const;
+    std::string getDiagnostic() const;
     bool hasHardwareAcceleration() const;
 
 private:
@@ -29,6 +30,7 @@ private:
     std::string m_name = "CPU Multi-Thread Fallback";
     std::string m_codec = "libx264";
     std::string m_device;
+    std::string m_diagnostic;
 
 };
 

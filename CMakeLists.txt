@@ -201,6 +201,9 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Tonho Studios")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "ffmpeg")
+    # AMD/Intel VAAPI uses the Mesa driver on the supported Ubuntu/Mint targets.
+    # Keep this optional so NVIDIA-only systems are not made to depend on it.
+    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "mesa-va-drivers")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)

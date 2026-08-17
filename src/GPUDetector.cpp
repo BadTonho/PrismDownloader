@@ -31,6 +31,7 @@ struct DetectedHardware {
     QString encoder;
     QString device;
     GPUType type{GPUType::CPU_ONLY};
+    QString diagnostic;
 };
 
 bool runProbe(QProcess &probe, const QString &program, const QStringList &arguments,
@@ -156,16 +157,36 @@ DetectedHardware findUsableHardwareEncoder()
     };
     for (const QString &candidate : candidates) {
         if (ffmpegListsEncoder(ffmpeg, candidate) && encoderWorks(ffmpeg, candidate)) {
-            return {candidate, {}, typeForEncoder(candidate)};
+            DetectedHardware usable;
+            usable.encoder = candidate;
+            usable.type = typeForEncoder(candidate);
+            return usable;
         }
     }
 
     if (ffmpegListsEncoder(ffmpeg, QStringLiteral("h264_vaapi"))) {
-        for (const QString &device : vaapiRenderDevices()) {
+        const QStringList devices = vaapiRenderDevices();
+        if (devices.isEmpty()) {
+            DetectedHardware unavailable;
+            unavailable.diagnostic = QStringLiteral(
+                "h264_vaapi está listado, mas nenhum /dev/dri/renderD* acessível; "
+                "verifique mesa-va-drivers e os grupos render/video.");
+            return unavailable;
+        }
+        for (const QString &device : devices) {
             if (encoderWorks(ffmpeg, QStringLiteral("h264_vaapi"), device)) {
-                return {QStringLiteral("h264_vaapi"), device, vaapiTypeForDevice(device)};
+                DetectedHardware usable;
+                usable.encoder = QStringLiteral("h264_vaapi");
+                usable.device = device;
+                usable.type = vaapiTypeForDevice(device);
+                return usable;
             }
         }
+        DetectedHardware unavailable;
+        unavailable.diagnostic = QStringLiteral(
+            "h264_vaapi está listado, mas o driver não conseguiu inicializar nenhum "
+            "dispositivo DRM acessível.");
+        return unavailable;
     }
     return {};
 }
@@ -181,8 +202,10 @@ void GPUDetector::detect()
     m_name = "CPU Multi-Thread (aceleração não disponível)";
     m_codec = "libx264";
     m_device.clear();
+    m_diagnostic.clear();
 
     std::string totalDump;
+    QString diagnostic;
 #ifdef _WIN32
     DISPLAY_DEVICEA displayDevice{};
     displayDevice.cb = sizeof(displayDevice);
@@ -195,6 +218,8 @@ void GPUDetector::detect()
 #elif defined(Q_OS_LINUX)
     const DetectedHardware detected = findUsableHardwareEncoder();
     totalDump = detected.encoder.toStdString();
+    diagnostic = detected.diagnostic;
+    m_diagnostic = diagnostic.toStdString();
     if (!detected.encoder.isEmpty()) {
         m_type = detected.type;
         m_codec = detected.encoder.toStdString();
@@ -231,6 +256,9 @@ void GPUDetector::detect()
 #endif
 
     std::cout << "[GPUDetector] Capacidades encontradas:\n  -> " << totalDump << "\n";
+    if (!diagnostic.isEmpty()) {
+        std::cout << "[GPUDetector] " << diagnostic.toStdString() << "\n";
+    }
 
     const std::string lower = lowerCase(totalDump);
     if (lower.find("h264_nvenc") != std::string::npos
@@ -268,6 +296,7 @@ GPUType GPUDetector::getGPUType() const { return m_type; }
 std::string GPUDetector::getGPUName() const { return m_name; }
 std::string GPUDetector::getRecommendedCodec() const { return m_codec; }
 std::string GPUDetector::getHardwareDevice() const { return m_device; }
+std::string GPUDetector::getDiagnostic() const { return m_diagnostic; }
 
 bool GPUDetector::hasHardwareAcceleration() const
 {

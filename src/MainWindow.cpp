@@ -240,6 +240,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
         logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
     } else {
+        const QString gpuDiagnostic = QString::fromStdString(gpu->getDiagnostic());
         if (m_gpuModelLabel) m_gpuModelLabel->setText("Nenhuma aceleração de hardware compatível foi localizada");
         if (m_gpuCodecLabel) m_gpuCodecLabel->setText("Codec Fallback CPU Padrão");
         if (m_gpuStatusLabel) {
@@ -251,6 +252,9 @@ MainWindow::MainWindow(QWidget *parent)
             m_convertEngineLabel->setStyleSheet("color: #f59e0b; font-weight: bold;");
         }
         logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
+        if (!gpuDiagnostic.isEmpty()) {
+            logMessage("[GPUDetector] " + gpuDiagnostic);
+        }
     }
 
     connect(m_downloadManager, &DownloadManager::jobProgress, this, &MainWindow::onDownloadProgress);
