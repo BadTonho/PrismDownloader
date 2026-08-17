@@ -1,5 +1,9 @@
 # 🧩 Referência de Módulos e Código Fonte — Prism Downloader
 
+<p align="center">
+  <a href="../MODULES.md">🇺🇸 Read the English version here.</a>
+</p>
+
 Este documento contém a especificação técnica detalhada de todas as classes, estruturas de dados, enums e serviços do **Prism Downloader**.
 
 ---

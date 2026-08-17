@@ -126,14 +126,14 @@ C:\Qt\6.7.2\msvc2019_64\bin\windeployqt.exe --release --no-translations .\build\
 
 ## 📚 Central de Documentação Técnica
 
-Para detalhes aprofundados sobre arquitetura, especificação de módulos, aceleração por GPU e testes unitários, consulte os guias na pasta [**`docs/`**](docs/README.md):
+Para detalhes aprofundados sobre arquitetura, especificação de módulos, aceleração por GPU e testes unitários, consulte a [**Central de Documentação**](docs/pt/README.md) (ou a [versão principal em Inglês](docs/README.md)):
 
-* 🏗️ [**Arquitetura do Sistema & Concorrência**](docs/ARQUITETURA.md) — Fluxo de dados, concorrência e isolamento de processos.
-* 🧩 [**Referência de Módulos & Código**](docs/MODULOS.md) — Classes, métodos públicos, sinais/slots e structs.
-* ⚡ [**Aceleração por Hardware & GPU**](docs/HARDWARE_GPU.md) — Matriz de hardware, sondagem e diagnóstico por CLI.
-* 🛡️ [**Sistema de Atualização Segura**](docs/AUTO_UPDATE.md) — Criptografia Ed25519, hashes SHA-256 e auto-update.
-* 🎨 [**Guia de Interface (UI/UX)**](docs/INTERFACE_UI.md) — Interface Dark Tech, playlists, biblioteca e telemetria de logs.
-* 📦 [**Guia de Compilação & Empacotamento**](docs/BUILD_PACKAGING.md) — Pré-requisitos, testes CTest e criação de pacotes.
+* 🏗️ [**Arquitetura do Sistema & Concorrência**](docs/pt/ARQUITETURA.md) — Fluxo de dados, concorrência e isolamento de processos.
+* 🧩 [**Referência de Módulos & Código**](docs/pt/MODULOS.md) — Classes, métodos públicos, sinais/slots e structs.
+* ⚡ [**Aceleração por Hardware & GPU**](docs/pt/HARDWARE_GPU.md) — Matriz de hardware, sondagem e diagnóstico por CLI.
+* 🛡️ [**Sistema de Atualização Segura**](docs/pt/AUTO_UPDATE.md) — Criptografia Ed25519, hashes SHA-256 e auto-update.
+* 🎨 [**Guia de Interface (UI/UX)**](docs/pt/INTERFACE_UI.md) — Interface Dark Tech, playlists, biblioteca e telemetria de logs.
+* 📦 [**Guia de Compilação & Empacotamento**](docs/pt/BUILD_PACKAGING.md) — Pré-requisitos, testes CTest e criação de pacotes.
 
 ---
 

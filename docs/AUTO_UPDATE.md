@@ -1,51 +1,55 @@
-# 🛡️ Sistema de Atualização Segura — Prism Downloader
+# 🛡️ Secure Auto-Update & Cryptography — Prism Downloader
 
-Este documento descreve em detalhes a arquitetura de atualização automática do **Prism Downloader** e do motor **yt-dlp**, com validação criptográfica de integridade e autenticidade baseada em **Ed25519** e **SHA-256**.
+<p align="center">
+  <a href="pt/AUTO_UPDATE.md">🇧🇷 Leia a versão em Português do Brasil (PT-BR) aqui.</a>
+</p>
+
+This document details the automatic update architecture of **Prism Downloader** and the **yt-dlp engine**, featuring cryptographic verification based on **Ed25519 digital signatures** and **streaming SHA-256 checksums**.
 
 ---
 
-## 🔒 1. Princípios de Segurança Criptográfica
+## 🔒 1. Cryptographic Security Model
 
-Para proteger os usuários contra ataques do tipo *Man-in-the-Middle* (MitM), adulteração de pacotes e publicações comprometidas, o Prism Downloader adota um modelo de **confiança zero (Zero-Trust)**:
+To protect users against Man-in-the-Middle (MitM) attacks, tampered release packages, or compromised distribution mirrors, Prism Downloader enforces a **Zero-Trust Security Model**:
 
 > [!IMPORTANT]
-> **Nenhuma atualização de aplicativo é instalada** a menos que o manifesto de release contenha uma assinatura digital destacada válida (**Ed25519**) e que o pacote baixado tenha seu hash **SHA-256** exatamente idêntico ao declarado no manifesto assinado.
+> **No update package is executed or installed** unless the release manifest carries a valid detached **Ed25519** signature verified against the embedded public key, and the downloaded package payload matches the **SHA-256** hash declared in the signed manifest.
 
 ```mermaid
 flowchart TD
-    subgraph Cloud ["Nuvem (GitHub Releases)"]
-        RelAsset["Pacotes de Release (.exe / .zip / .deb)"]
+    subgraph Cloud ["GitHub Releases Cloud"]
+        RelAsset["Release Asset (.exe / .zip / .deb)"]
         Manifest["prism-update-manifest.json"]
-        Sig["prism-update-manifest.sig (Assinatura Ed25519)"]
+        Sig["prism-update-manifest.sig (Ed25519 Detached Signature)"]
     end
 
-    subgraph Client ["Cliente Prism Downloader"]
-        Key["Chave Pública Ed25519 Embutida no Binário"]
+    subgraph Client ["Prism Downloader Client"]
+        Key["Embedded Ed25519 Public Key (Compile-Time)"]
         Verifier["Ed25519Verifier (OpenSSL EVP_DigestVerify)"]
-        StreamHash["Cálculo SHA-256 em Streaming"]
+        StreamHash["Streaming SHA-256 Hasher"]
     end
 
     Sig & Manifest --> Verifier
     Key --> Verifier
-    Verifier -- "Assinatura Válida" --> DownloadPkg["Autoriza Download do Pacote"]
-    Verifier -- "Assinatura Inválida" --> Reject["Rejeita Atualização Imediatamente"]
+    Verifier -- "Signature Valid" --> DownloadPkg["Authorize Package Download"]
+    Verifier -- "Signature Invalid" --> Reject["Reject Update Immediately"]
     
     DownloadPkg --> RelAsset
     RelAsset --> StreamHash
-    StreamHash --> CheckHash{"Hash SHA-256 coincide com o manifesto?"}
-    CheckHash -- Sim --> InstallUpdate["Aplica Atualização (Setup / Portable / DEB)"]
-    CheckHash -- Não --> Corrupt["Descarta Pacote Corrompido / Alvo de Adulteração"]
+    StreamHash --> CheckHash{"Calculated SHA-256 matches manifest?"}
+    CheckHash -- Yes --> InstallUpdate["Execute Platform Update Workflow"]
+    CheckHash -- No --> Corrupt["Discard Tampered / Corrupted Payload"]
 ```
 
 ---
 
-## 📄 2. Estrutura do Manifesto de Atualização
+## 📄 2. Update Manifest Specification
 
-Cada release oficial publica dois arquivos auxiliares:
-1. `prism-update-manifest.json`: JSON com a versão e os hashes SHA-256 de todas as 3 variantes de distribuição.
-2. `prism-update-manifest.sig`: Arquivo binário contendo a assinatura digital gerada com a chave privada Ed25519 do autor.
+Each official release publishes two companion metadata assets:
+1. `prism-update-manifest.json`: JSON file listing release version and SHA-256 hashes for all supported distribution packages.
+2. `prism-update-manifest.sig`: Binary signature file created with the author's private Ed25519 key.
 
-### Exemplo de `prism-update-manifest.json`:
+### Manifest Format Example (`prism-update-manifest.json`):
 ```json
 {
   "version": "2.1.0",
@@ -68,57 +72,57 @@ Cada release oficial publica dois arquivos auxiliares:
 
 ---
 
-## 🚀 3. Fluxo de Atualização por Tipo de Pacote
+## 🚀 3. Platform-Specific Update Workflows
 
-O Prism Downloader detecta automaticamente como foi instalado e seleciona a estratégia de atualização apropriada:
+Prism Downloader inspects its runtime environment and executes the appropriate installation strategy:
 
-### 3.1. Windows Instalado (Inno Setup)
-* O `AppUpdateService` baixa o instalador oficial `PrismDownloader_vX.Y.Z_Setup.exe`.
-* Após a validação criptográfica, executa o instalador para atualizar a pasta em `Program Files` e reiniciar a aplicação.
+### 3.1. Windows Installed Copy (Inno Setup)
+* `AppUpdateService` downloads and verifies `PrismDownloader_vX.Y.Z_Setup.exe`.
+* Launches the installer wizard or silent updater to replace application files and relaunch.
 
-### 3.2. Windows Portátil (Portable ZIP & `PortableUpdateHelper`)
-A atualização de um aplicativo portátil não pode sobrescrever arquivos enquanto o executável principal estiver aberto em memória. Para solucionar isso:
-1. O Prism baixa e valida o arquivo `PrismDownloader_vX.Y.Z_Portable.zip`.
-2. O Prism dispara o executável auxiliar em background:
+### 3.2. Windows Portable Copy (`PortableUpdateHelper`)
+Portable installations cannot overwrite files while the main executable is loaded into memory:
+1. Downloads and validates `PrismDownloader_vX.Y.Z_Portable.zip`.
+2. Spawns the detached helper process:
    ```cmd
-   portable-update-helper.exe --parent-pid <PID> --archive <ARQUIVO_ZIP> --target <PASTA_DO_APP>
+   portable-update-helper.exe --parent-pid <PID> --archive <ZIP_FILE> --target <APP_DIR>
    ```
-3. O Prism principal é fechado.
-4. O `portable-update-helper.exe` aguarda a liberação dos arquivos, descompacta a nova versão em uma pasta de staging (`.prism-update-staging-XXXXXX`), cria um backup atômico da pasta antiga e efetua a substituição.
-5. Se ocorrer qualquer falha durante a extração, o assistente reverte o backup automaticamente.
-6. O novo `PrismDownloader.exe` é iniciado e o helper limpa os temporários.
+3. The main application closes gracefully.
+4. `portable-update-helper.exe` waits for PID release, extracts the ZIP to a staging directory (`.prism-update-staging-XXXXXX`), takes an atomic backup of the previous directory (`.prism-update-backup-<PID>`), and swaps the directories.
+5. If any extraction error occurs, the helper rolls back from the backup immediately.
+6. Launches the updated `PrismDownloader.exe` via `QProcess::startDetached` and deletes temporary staging files.
 
-### 3.3. Linux (Pacote Debian `.deb`)
-* O aplicativo baixa e valida o pacote `prism-downloader_X.Y.Z_amd64.deb`.
-* O Prism notifica o usuário e aciona a instalação via `pkexec apt install ./prism-downloader_X.Y.Z_amd64.deb` ou ferramenta gráfica padrão (`gdebi` / Central de Aplicativos).
+### 3.3. Linux (`.deb` Package)
+* Downloads and validates `prism-downloader_X.Y.Z_amd64.deb`.
+* Prompts the user and triggers `pkexec apt install ./prism-downloader_X.Y.Z_amd64.deb` or opens the default desktop package manager.
 
 ---
 
-## 🎵 4. Atualização Autônoma do Motor `yt-dlp`
+## 🎵 4. Independent `yt-dlp` Engine Updates
 
-O ecossistema de vídeos na web altera seus protocolos com frequência. Para garantir que o Prism Downloader nunca pare de funcionar por desatualização de API externa, o motor `yt-dlp` possui um ciclo de vida de atualização independente:
+Online video platforms modify streaming protocols frequently. To prevent download disruptions between app releases, the `yt-dlp` engine updates independently:
 
-* **Canal Nightly Oficial:** O serviço `YtDlpUpdateService` consulta o repositório oficial do `yt-dlp` no GitHub.
-* **Validação de Checksum:** Baixa a tabela oficial de hashes `SHA2-256SUMS` e confere a integridade do executável binário (`yt-dlp.exe` no Windows ou `yt-dlp_linux` no Linux).
-* **Instalação Sem Privilégios de Administrador:** A versão atualizada é gravada no diretório de dados do usuário:
+* **Official Nightly Channel:** `YtDlpUpdateService` queries the official `yt-dlp` Nightly release channel on GitHub.
+* **Checksum Verification:** Downloads `SHA2-256SUMS` and validates the target binary (`yt-dlp.exe` on Windows or `yt-dlp_linux` on Linux).
+* **Zero-Privilege User Installation:** Installs into user local data storage:
   - Windows: `%LOCALAPPDATA%\PrismDownloader\yt-dlp.exe`
   - Linux: `~/.local/share/prism-downloader/yt-dlp`
-* O `MediaToolResolver` detecta a presença da nova versão e a utiliza imediatamente para todos os novos downloads.
+* `MediaToolResolver` dynamically discovers and routes all subsequent download tasks to the updated binary.
 
 ---
 
-## 🔑 5. Scripts de Manutenção e Geração de Chaves
+## 🔑 5. Maintainer Scripts & Key Management
 
-Os mantenedores do projeto contam com dois scripts utilitários na pasta `scripts/`:
+Two utility scripts in `scripts/` support the release signing pipeline:
 
 ### 5.1. `generate-update-signing-key.ps1`
-Gera um par de chaves assimétricas Ed25519 de forma segura em ambiente temporário e configura a chave privada diretamente nos GitHub Secrets do repositório (`PRISM_UPDATE_ED25519_PRIVATE_KEY`):
+Generates an Ed25519 private/public keypair in temporary memory and uploads the private key directly to GitHub Secrets (`PRISM_UPDATE_ED25519_PRIVATE_KEY`):
 ```powershell
 .\scripts\generate-update-signing-key.ps1 -Repository BadTonho/PrismDownloader
 ```
 
 ### 5.2. `create_update_manifest.py`
-Calcula os hashes SHA-256 de todos os artefatos de release e gera o arquivo `prism-update-manifest.json` para ser assinado no pipeline de CI/CD:
+Computes SHA-256 hashes of release artifacts and creates `prism-update-manifest.json` for signing during CI:
 ```bash
 python scripts/create_update_manifest.py --version 2.1.0 --dist-dir ./dist --output prism-update-manifest.json
 ```

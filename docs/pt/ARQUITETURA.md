@@ -1,5 +1,9 @@
 # 🏗️ Arquitetura do Sistema — Prism Downloader
 
+<p align="center">
+  <a href="../ARCHITECTURE.md">🇺🇸 Read the English version here.</a>
+</p>
+
 Este documento detalha a arquitetura de software, fluxo de dados e o modelo de concorrência do **Prism Downloader**, projetado em **C++17** com **Qt 6** para máxima velocidade de execução, responsividade de interface e estabilidade operacional.
 
 ---

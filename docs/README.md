@@ -1,52 +1,52 @@
-# 📚 Central de Documentação — Prism Downloader
+# 📚 Official Documentation — Prism Downloader
 
-Bem-vindo à documentação oficial do **Prism Downloader**, a suíte desktop desenvolvida em **C++17** e **Qt 6** focada em download de mídias em alta velocidade, extração de áudio, corte de trechos (*trimming*), conversão acelerada por GPU e atualizações automáticas com verificação criptográfica.
+<p align="center">
+  <a href="pt/README.md">🇧🇷 Leia a versão em Português do Brasil (PT-BR) aqui.</a>
+</p>
 
----
-
-## 🧭 Índice da Documentação
-
-A documentação está organizada de forma modular para facilitar a consulta por arquitetos de software, desenvolvedores e mantenedores do projeto:
-
-| Documento | Descrição |
-| :--- | :--- |
-| 🏗️ [**Arquitetura do Sistema**](ARQUITETURA.md) | Visão geral da arquitetura em C++17/Qt 6, fluxo de dados ponta a ponta, modelo de concorrência com threads/processos desacoplados e gerenciamento de filas. |
-| 🧩 [**Referência de Módulos & Código**](MODULOS.md) | Descrição técnica minuciosa de cada classe, estrutura de dados, enums, métodos públicos e sinais/slots do projeto. |
-| ⚡ [**Aceleração por Hardware & GPU**](HARDWARE_GPU.md) | Detecção de GPU multiplataforma (Windows DXGI e Linux DRM/VAAPI), seleção de encoders (NVENC, AMF, QSV, VAAPI), fallback para CPU e CLI `--diagnose-gpu`. |
-| 🛡️ [**Sistema de Atualização Segura**](AUTO_UPDATE.md) | Mecanismo de auto-atualização do Prism e do motor `yt-dlp`, validação de assinaturas digitais Ed25519, verificação de integridade SHA-256 e rotina de staging para versão portátil. |
-| 🎨 [**Guia de Interface (UI/UX)**](INTERFACE_UI.md) | Detalhes da interface gráfica em Dark Tech, fluxo de abas (Downloads, Biblioteca, Conversão, Logs, Atualizações), filtros de telemetria em tempo real e seletor de playlists. |
-| 📦 [**Compilação & Empacotamento**](BUILD_PACKAGING.md) | Guia passo a passo para configurar o ambiente e compilar no Windows (MSVC/Inno Setup) e Linux (GCC/Clang/CPack DEB), além da execução da suíte de testes CTest. |
+Welcome to the official documentation for **Prism Downloader**, the high-performance desktop media suite developed in **Pure C++17** and **Qt 6**, designed for high-speed downloads, lossless stream-copy muxing, audio extraction, time-slice trimming, GPU-accelerated conversions, and cryptographically verified automatic self-updates.
 
 ---
 
-## 🛠️ Stack Tecnológica & Dependências
+## 🧭 Documentation Index
 
-* **Linguagem:** C++17 (padrão ISO C++17 estrito).
-* **Framework Gráfico & Core:** Qt 6.7+ (`QtWidgets`, `QtNetwork`, `QtCore`, `QtGui`).
-* **Criptografia & Assinaturas:** OpenSSL 1.1.1 / 3.x (`libcrypto` para verificação Ed25519).
-* **Motores de Mídia Integrados:**
-  * `yt-dlp` (Canal Nightly oficial para extração de stream e metadados).
-  * `FFmpeg` (Muxing *Stream Copy*, transcodificação de vídeo e extração de áudio).
-* **Build System:** CMake 3.16+ e CTest para suíte de testes unitários.
-* **Empacotamento:**
-  * Windows: Inno Setup 6 (Instalador `.exe`) e empacotamento ZIP (Portátil).
-  * Linux: CPack / `dpkg-dev` (Pacote nativo `.deb` para Ubuntu 24.04 / Mint 22).
+The documentation is organized into focused, modular technical guides:
+
+| Guide | Description | Portuguese Version |
+| :--- | :--- | :--- |
+| 🏗️ [**System Architecture & Concurrency**](ARCHITECTURE.md) | Architectural blueprint, decoupled signal/slot reactive pipeline, process isolation model, and concurrent queue scheduling. | [ARQUITETURA.md](pt/ARQUITETURA.md) |
+| 🧩 [**Modules & Code Reference**](MODULES.md) | Deep technical breakdown of every class, data structure, enum, public method, and Qt signal/slot across the codebase. | [MODULOS.md](pt/MODULOS.md) |
+| ⚡ [**Hardware & GPU Acceleration**](HARDWARE_GPU.md) | Multi-vendor hardware detection (Windows DXGI & Linux DRM/VAAPI), encoder matrix (NVENC, AMF, QSV, VAAPI), safe CPU fallback, and CLI diagnostic mode. | [HARDWARE_GPU.md](pt/HARDWARE_GPU.md) |
+| 🛡️ [**Secure Auto-Update & Cryptography**](AUTO_UPDATE.md) | Zero-trust self-updating system, Ed25519 digital signatures, streaming SHA-256 hash checks, independent `yt-dlp` updater, and portable staging. | [AUTO_UPDATE.md](pt/AUTO_UPDATE.md) |
+| 🎨 [**User Interface & Features Guide**](INTERFACE_UI.md) | Visual guide to the Dark Tech Qt 6 UI, tab workflows (Downloads, Library, Converter, Logs, Updates), playlist modal, and real-time telemetry filters. | [INTERFACE_UI.md](pt/INTERFACE_UI.md) |
+| 📦 [**Build & Packaging Guide**](BUILD_PACKAGING.md) | Step-by-step developer compilation instructions for Windows (MSVC/Inno Setup) and Linux (GCC/Clang/CPack DEB), plus automated CTest execution. | [BUILD_PACKAGING.md](pt/BUILD_PACKAGING.md) |
+| 🔐 [**Release Signing Guide**](UPDATE_SIGNING.md) | Maintainer instructions for generating and signing release manifests with Ed25519. | — |
 
 ---
 
-## 📌 Requisitos de Sistema
+## 🛠️ Technology Stack & Dependencies
+
+* **Core Language:** ISO C++17 Standard.
+* **UI Framework & Core Engine:** Qt 6.7+ (`QtWidgets`, `QtNetwork`, `QtCore`, `QtGui`).
+* **Cryptography & Signatures:** OpenSSL 1.1.1 / 3.x (`libcrypto` for Ed25519 signature verification).
+* **Integrated Media Engines:**
+  * `yt-dlp` (Official Nightly release channel for media stream analysis and downloading).
+  * `FFmpeg` (Lossless stream-copy muxing, hardware-accelerated video transcode, and high-fidelity audio extraction).
+* **Build System & Testing:** CMake 3.16+ and CTest unit testing framework.
+* **Packaging Solutions:**
+  * Windows: Inno Setup 6 (Official Setup `.exe` wizard) and standalone portable archive (`.zip`).
+  * Linux: CPack / `dpkg-dev` (Native `.deb` package targeting Ubuntu 24.04 and Linux Mint 22).
+
+---
+
+## 📌 System Requirements
 
 ### Windows
-* **Sistema Operacional:** Windows 10 (64-bit) ou Windows 11.
-* **GPU Recomendada:** NVIDIA (GTX série 900+ / RTX), AMD Radeon (GCN/RDNA) ou Intel Core (6ª geração em diante / Intel Arc).
-* **CPU Fallback:** Suporte universal em qualquer processador x86_64 multi-core.
+* **Operating System:** Windows 10 (64-bit) or Windows 11.
+* **Recommended GPU:** NVIDIA GeForce (GTX 900+ / RTX), AMD Radeon (GCN/RDNA), or Intel Core / Arc Graphics.
+* **CPU Fallback:** Universal multi-threaded execution on any modern x86_64 processor.
 
 ### Linux
-* **Distribuição Alvo:** Linux Mint 22 (Wilma) / Ubuntu 24.04 LTS (Noble Numbat) amd64.
-* **Dependências de Sistema:** `ffmpeg`, `libssl3` / `libssl-dev`, `qt6-base-dev`.
-* **Acesso à GPU:** Dispositivo `/dev/dri/renderD128` acessível pelo usuário (grupo `render` ou `video`).
-
----
-
-> [!NOTE]
-> Para consultar os guias específicos, clique nos links da tabela acima ou navegue diretamente pelos arquivos na pasta `docs/`.
+* **Target Distributions:** Linux Mint 22 (Wilma) / Ubuntu 24.04 LTS (Noble Numbat) `amd64`.
+* **System Packages:** `ffmpeg`, `libssl3` / `libssl-dev`, `qt6-base-dev`.
+* **Hardware GPU Access:** User access to `/dev/dri/renderD128` (member of `render` or `video` groups).

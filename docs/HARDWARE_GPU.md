@@ -1,122 +1,126 @@
-# ⚡ Aceleração por Hardware & GPU — Prism Downloader
+# ⚡ Hardware & GPU Acceleration — Prism Downloader
 
-Este documento explica como o **Prism Downloader** detecta e utiliza placas de vídeo dedicadas e integradas para acelerar a conversão de mídias, preservando o desempenho do sistema e reduzindo drasticamente o consumo de CPU.
+<p align="center">
+  <a href="pt/HARDWARE_GPU.md">🇧🇷 Leia a versão em Português do Brasil (PT-BR) aqui.</a>
+</p>
 
----
-
-## 🎯 1. Filosofia de Desempenho: Stream Copy vs. Transcodificação
-
-O Prism Downloader prioriza sempre a menor sobrecarga de processamento possível:
-
-### 1.1. Muxing Sem Perda (*Stream Copy*) — Padrão de Download
-* Quando o usuário baixa um vídeo nos formatos originais disponibilizados pelas plataformas (ex: faixa de vídeo 1080p MP4 + faixa de áudio M4A), o Prism **não recodifica os frames**.
-* O `FFmpeg` realiza a união (*muxing*) direta dos fluxos com cópia de stream (`-c copy`), finalizando o arquivo em **1 a 2 segundos**, com **0% de uso de GPU/CPU** e **100% de fidelidade visual**.
-
-### 1.2. Transcodificação Acelerada por GPU — Quando Necessária
-* A aceleração de hardware entra em ação quando há necessidade real de reprocessar os dados:
-  - Conversão manual de formatos de vídeo na aba Conversor (ex: MKV para MP4, WebM para MP4).
-  - Extração e compressão personalizada.
-  - Recortes complexos com re-encode de vídeo.
+This guide details how **Prism Downloader** detects and leverages dedicated and integrated graphics processing units (GPUs) to maximize conversion speeds while preserving system responsiveness and minimizing CPU load.
 
 ---
 
-## 📊 2. Matriz de Codecs e Suporte por Fabricante
+## 🎯 1. Performance Philosophy: Stream Copy vs. Transcoding
 
-| Fabricante / Arquitetura | Plataforma | Codec H.264 | Codec HEVC (H.265) | Tecnologia de Aceleração |
+Prism Downloader minimizes system resource consumption by selecting the fastest possible execution path:
+
+### 1.1. Lossless Muxing (*Stream Copy*) — Default Download Flow
+* When downloading media streams provided directly by online platforms (e.g., 1080p MP4 video stream + M4A audio stream), Prism **does not re-encode video frames**.
+* `FFmpeg` merges the separate tracks via direct stream copying (`-c copy`), completing in **1 to 2 seconds** with **0% GPU/CPU overhead** and **100% original quality**.
+
+### 1.2. GPU-Accelerated Transcoding — When Necessary
+* Hardware acceleration activates whenever media data genuinely requires re-encoding:
+  - Custom file format conversions in the Converter tab (e.g., MKV to MP4, WebM to MP4).
+  - High-compression transcoding and custom bitrate adjustments.
+  - Complex trimming with frame-accurate video re-encoding.
+
+---
+
+## 📊 2. Codec & Vendor Compatibility Matrix
+
+| Vendor / Architecture | Platform | H.264 Codec | HEVC (H.265) Codec | Acceleration Technology |
 | :--- | :--- | :--- | :--- | :--- |
-| **NVIDIA GeForce / RTX / Quadro** | Windows / Linux | `h264_nvenc` | `hevc_nvenc` | **NVIDIA NVENC SDK** dedicado no chip da GPU. |
-| **AMD Radeon (RX / APU Ryzen)** | Windows | `h264_amf` | `hevc_amf` | **AMD Advanced Media Framework (AMF)**. |
-| **AMD Radeon (Linux)** | Linux | `h264_vaapi` | `hevc_vaapi` | **VAAPI** via dispositivo DRM (`/dev/dri/renderD128`). |
+| **NVIDIA GeForce / RTX / Quadro** | Windows / Linux | `h264_nvenc` | `hevc_nvenc` | **NVIDIA NVENC SDK** on dedicated silicon. |
+| **AMD Radeon (RX / Ryzen APU)** | Windows | `h264_amf` | `hevc_amf` | **AMD Advanced Media Framework (AMF)**. |
+| **AMD Radeon (Linux)** | Linux | `h264_vaapi` | `hevc_vaapi` | **VAAPI** via DRM render node (`/dev/dri/renderD128`). |
 | **Intel Arc / Iris Xe / HD Graphics** | Windows | `h264_qsv` | `hevc_qsv` | **Intel Quick Sync Video (QSV)**. |
-| **Intel Graphics (Linux)** | Linux | `h264_vaapi` | `hevc_vaapi` | **VAAPI** via driver Intel Media / iHD. |
-| **CPU Fallback (Universal)** | Qualquer | `libx264` | `libx265` | Processamento multithread otimizado em software. |
+| **Intel Graphics (Linux)** | Linux | `h264_vaapi` | `hevc_vaapi` | **VAAPI** via Intel Media Driver / iHD. |
+| **CPU Multi-Thread Fallback** | All | `libx264` | `libx265` | Multi-threaded software encoding. |
 
 ---
 
-## 🔍 3. Como Funciona a Sondagem de Hardware (`GPUDetector`)
+## 🔍 3. Hardware Probing Architecture (`GPUDetector`)
 
-A classe `GPUDetector` implementa algoritmos de sondagem nativos e não-bloqueantes adaptados para cada sistema operacional:
+The `GPUDetector` class provides native, non-blocking hardware inspection tailored to each host operating system:
 
 ```mermaid
 flowchart TD
-    Init["Início da Detecção de GPU"] --> OSCheck{"Qual o Sistema Operacional?"}
+    Init["Start Hardware Probing"] --> OSCheck{"Identify Operating System"}
     
     subgraph WinFlow ["Windows (DirectX / DXGI)"]
-        OSCheck -- Windows --> DXGIEnum["Enumera Adaptadores via DXGI"]
-        DXGIEnum --> VendorCheck{"Identifica Vendor ID"}
-        VendorCheck -- "0x10DE" --> NV["NVIDIA detectada -> h264_nvenc"]
-        VendorCheck -- "0x1002" --> AMD["AMD detectada -> h264_amf"]
-        VendorCheck -- "0x8086" --> Intel["Intel detectada -> h264_qsv"]
-        VendorCheck -- Outro --> CPU_Win["Fallback -> libx264 (CPU)"]
+        OSCheck -- Windows --> DXGIEnum["Enumerate Adapters via DXGI Factory"]
+        DXGIEnum --> VendorCheck{"Match Vendor ID"}
+        VendorCheck -- "0x10DE" --> NV["NVIDIA Detected -> h264_nvenc"]
+        VendorCheck -- "0x1002" --> AMD["AMD Detected -> h264_amf"]
+        VendorCheck -- "0x8086" --> Intel["Intel Detected -> h264_qsv"]
+        VendorCheck -- Other --> CPU_Win["Fallback -> libx264 (CPU)"]
     end
 
     subgraph LinFlow ["Linux (DRM & FFmpeg Probe)"]
-        OSCheck -- Linux --> DRMCheck{"/dev/dri/renderD128 existe e acessível?"}
-        DRMCheck -- Sim --> ProbeEnc["Testa inicialização real dos encoders via FFmpeg"]
-        DRMCheck -- Não --> CPU_Lin["Fallback -> libx264 (CPU)"]
-        ProbeEnc --> EncEval{"Encoder respondeu OK?"}
-        EncEval -- "h264_nvenc" --> NV_Lin["NVIDIA NVENC Ativa"]
-        EncEval -- "h264_vaapi" --> VA_Lin["VAAPI Acelerada Ativa"]
-        EncEval -- Falha --> CPU_Lin
+        OSCheck -- Linux --> DRMCheck{"Is /dev/dri/renderD128 available?"}
+        DRMCheck -- Yes --> ProbeEnc["Probe FFmpeg encoder initialization"]
+        DRMCheck -- No --> CPU_Lin["Fallback -> libx264 (CPU)"]
+        ProbeEnc --> EncEval{"Encoder initialized successfully?"}
+        EncEval -- "h264_nvenc" --> NV_Lin["NVIDIA NVENC Active"]
+        EncEval -- "h264_vaapi" --> VA_Lin["VAAPI Acceleration Active"]
+        EncEval -- Failed --> CPU_Lin
     end
 
-    NV & AMD & Intel & NV_Lin & VA_Lin --> HW_Ready["Hardware Acelerado Pronto"]
-    CPU_Win & CPU_Lin --> Fallback_Ready["Modo CPU Multi-Thread Ativo"]
+    NV & AMD & Intel & NV_Lin & VA_Lin --> HW_Ready["Hardware Acceleration Active"]
+    CPU_Win & CPU_Lin --> Fallback_Ready["Multi-Threaded CPU Fallback Active"]
 ```
 
-### 3.1. Sondagem no Windows
-* Utiliza a API nativa **DXGI (`IDXGIFactory` / `IDXGIAdapter`)** para inspecionar os adaptadores gráficos instalados sem necessitar de bibliotecas de terceiros pesadas.
-* Extrai a descrição oficial do dispositivo (ex: `"NVIDIA GeForce GTX 1660 SUPER"`) e a quantidade de memória de vídeo dedicada (VRAM).
-* Mapeia automaticamente o Vendor ID correspondente e configura o codec ótimo no FFmpeg.
+### 3.1. Windows Probing
+* Leverages the native **DXGI (`IDXGIFactory` / `IDXGIAdapter`)** subsystem without third-party wrapper dependencies.
+* Inspects adapter description (e.g., `"NVIDIA GeForce GTX 1660 SUPER"`) and dedicated video memory (VRAM).
+* Maps Vendor IDs to optimal FFmpeg encoder arguments.
 
-### 3.2. Sondagem no Linux
-* Verifica a existência e permissões de leitura/escrita no nó de renderização do Direct Rendering Manager (`/dev/dri/renderD128` ou `/dev/dri/card0`).
-* Executa uma micro-sondagem com o binário `ffmpeg` para testar se os módulos de kernel e drivers de usuário (ex: `nvidia-driver`, `mesa-va-drivers`, `intel-media-va-driver`) realmente conseguem instanciar um contexto de codificação de hardware.
-* Se os drivers não responderem ou faltar permissão de usuário no grupo `render`, a aplicação não trava: ativa silenciosamente o fallback em CPU multithreaded (`libx264`).
+### 3.2. Linux Probing
+* Checks device existence and read/write permissions on the Direct Rendering Manager device node (`/dev/dri/renderD128`).
+* Performs a dry-run encoder test with `ffmpeg` to verify that kernel drivers and user-space libraries (`mesa-va-drivers`, `intel-media-va-driver`, `nvidia-driver`) instantiate encoding contexts properly.
+* Automatically falls back to multi-threaded CPU encoding if driver permissions or packages are missing.
 
 ---
 
-## 💻 4. Diagnóstico de Hardware via Linha de Comando (`--diagnose-gpu`)
+## 💻 4. Command-Line Hardware Diagnostics (`--diagnose-gpu`)
 
-Para verificar a compatibilidade de hardware em servidores, máquinas sem interface gráfica imediata ou para depuração rápida, o executável do Prism disponibiliza o sinalizador `--diagnose-gpu`:
+To inspect hardware acceleration status from terminal sessions or headless systems:
 
-### No Windows:
+### On Windows:
 ```cmd
 PrismDownloader.exe --diagnose-gpu
 ```
 
-### No Linux:
+### On Linux:
 ```bash
 prism-downloader --diagnose-gpu
 ```
 
-### Exemplo de Saída do Diagnóstico:
+### Sample Output:
 ```text
 [PRISM HARDWARE TELEMETRY]
 --------------------------------------------------
-Placa de Vídeo Detectada : NVIDIA GeForce GTX 1660 SUPER
-Aceleração por Hardware  : ATIVADA (NVIDIA NVENC)
-Codec de Vídeo Primário  : h264_nvenc
-Codec HEVC / 4K Primário : hevc_nvenc
-Dispositivo DRM / Render : Direct3D11 / NVENC Hardware Engine
-Diagnóstico              : Aceleração nativa por chip dedicado pronta para uso.
+Detected Graphics Card   : NVIDIA GeForce GTX 1660 SUPER
+Hardware Acceleration    : ENABLED (NVIDIA NVENC)
+Primary Video Codec      : h264_nvenc
+Primary HEVC / 4K Codec  : hevc_nvenc
+DRM / Render Device Node : Direct3D11 / NVENC Hardware Engine
+Diagnostic Status        : Dedicated silicon acceleration validated and ready.
 --------------------------------------------------
 ```
 
 ---
 
-## 💡 5. Dicas de Otimização e Permissões no Linux
+## 💡 5. Linux Permissions & Driver Optimization
 
-Se a sua GPU AMD ou Intel no Linux for detectada como `CPU Multi-Thread Fallback`, verifique se o seu usuário possui permissão para acessar os dispositivos DRM:
+If an AMD or Intel GPU on Linux is flagged as `CPU Multi-Thread Fallback`, verify DRM device permissions:
 
 ```bash
-# Adicionar o usuário atual aos grupos de renderização e vídeo
+# Add current user to render and video groups
 sudo usermod -aG render,video $USER
 
-# Instalar drivers VAAPI recomendados (Ubuntu/Mint)
+# Install recommended VAAPI packages (Ubuntu/Mint)
 sudo apt install mesa-va-drivers intel-media-va-driver vainfo
 
-# Validar suporte VAAPI no terminal
+# Verify VAAPI driver functionality
 vainfo
 ```
-Reinicie a sessão do usuário após adicionar aos grupos para que as permissões entrem em vigor.
+Log out and back in after updating group memberships for permissions to apply.
