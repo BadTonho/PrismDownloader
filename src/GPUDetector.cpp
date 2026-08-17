@@ -35,11 +35,12 @@ struct DetectedHardware {
 };
 
 bool runProbe(QProcess &probe, const QString &program, const QStringList &arguments,
-              QByteArray *output = nullptr)
+              QByteArray *output = nullptr, QString *failure = nullptr)
 {
     probe.setProcessChannelMode(QProcess::MergedChannels);
     probe.start(program, arguments);
     if (!probe.waitForStarted(1000)) {
+        if (failure) *failure = probe.errorString();
         if (probe.state() != QProcess::NotRunning) {
             probe.kill();
             probe.waitForFinished(1000);
@@ -47,29 +48,69 @@ bool runProbe(QProcess &probe, const QString &program, const QStringList &argume
         return false;
     }
     if (!probe.waitForFinished(4000)) {
+        if (failure) *failure = QStringLiteral("tempo limite de 4 segundos excedido");
         probe.kill();
         probe.waitForFinished(1000);
+        if (output) *output = probe.readAllStandardOutput();
         return false;
     }
     if (output) {
         *output = probe.readAllStandardOutput();
     }
-    return probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0;
+    const bool success = probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0;
+    if (!success && failure) {
+        *failure = QStringLiteral("saída %1, código %2")
+            .arg(probe.exitStatus() == QProcess::NormalExit ? "normal" : "anormal")
+            .arg(probe.exitCode());
+    }
+    return success;
 }
 
-bool ffmpegListsEncoder(const QString &ffmpeg, const QString &encoder)
+bool ffmpegListsEncoder(const QString &ffmpeg, const QString &encoder, bool verbose)
 {
     QProcess probe;
     QByteArray output;
-    if (!runProbe(probe, ffmpeg,
-                  QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")},
-                  &output)) {
-        return false;
+    QString failure;
+    if (runProbe(probe, ffmpeg,
+                 QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")},
+                 &output, &failure)) {
+        const bool listed = output.contains(encoder.toLatin1());
+        if (verbose) {
+            std::cout << "[GPUDetector] -encoders: " << encoder.toStdString()
+                      << (listed ? " listado" : " não listado") << "\n";
+        }
+        return listed;
     }
-    return output.contains(encoder.toLatin1());
+    if (verbose) {
+        std::cout << "[GPUDetector] Falha ao consultar -encoders: "
+                  << failure.toStdString() << "\n";
+        if (!output.isEmpty()) {
+            std::cout << output.toStdString() << "\n";
+        }
+    }
+    return false;
 }
 
-bool encoderWorks(const QString &ffmpeg, const QString &encoder, const QString &device = {})
+void printProbeResult(const QString &encoder, const QString &device,
+                      const QStringList &arguments, bool success,
+                      const QString &failure, const QByteArray &output)
+{
+    std::cout << "[GPUDetector] Teste " << encoder.toStdString();
+    if (!device.isEmpty()) {
+        std::cout << " em " << device.toStdString();
+    }
+    std::cout << ": " << (success ? "OK" : "FALHOU") << "\n";
+    std::cout << "[GPUDetector] Comando: " << arguments.join(QLatin1Char(' ')).toStdString() << "\n";
+    if (!failure.isEmpty()) {
+        std::cout << "[GPUDetector] Motivo: " << failure.toStdString() << "\n";
+    }
+    if (!output.isEmpty()) {
+        std::cout << "[GPUDetector] Saída do FFmpeg:\n" << output.toStdString() << "\n";
+    }
+}
+
+bool encoderWorks(const QString &ffmpeg, const QString &encoder, const QString &device,
+                  bool verbose)
 {
     QStringList arguments{
         QStringLiteral("-hide_banner"),
@@ -99,7 +140,13 @@ bool encoderWorks(const QString &ffmpeg, const QString &encoder, const QString &
         << QStringLiteral("-c:v") << encoder
         << QStringLiteral("-f") << QStringLiteral("null") << QStringLiteral("-");
     QProcess probe;
-    return runProbe(probe, ffmpeg, arguments);
+    QByteArray output;
+    QString failure;
+    const bool success = runProbe(probe, ffmpeg, arguments, &output, &failure);
+    if (verbose) {
+        printProbeResult(encoder, device, arguments, success, failure, output);
+    }
+    return success;
 }
 
 QStringList vaapiRenderDevices()
@@ -145,11 +192,26 @@ GPUType typeForEncoder(const QString &encoder)
     return GPUType::VAAPI;
 }
 
-DetectedHardware findUsableHardwareEncoder()
+const char *gpuTypeName(GPUType type)
+{
+    switch (type) {
+    case GPUType::NVIDIA: return "NVIDIA";
+    case GPUType::AMD: return "AMD";
+    case GPUType::INTEL: return "Intel";
+    case GPUType::VAAPI: return "VAAPI";
+    case GPUType::CPU_ONLY: return "CPU";
+    }
+    return "desconhecida";
+}
+
+DetectedHardware findUsableHardwareEncoder(bool verbose)
 {
     const QString ffmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
     if (ffmpeg.isEmpty()) {
         return {};
+    }
+    if (verbose) {
+        std::cout << "[GPUDetector] FFmpeg selecionado: " << ffmpeg.toStdString() << "\n";
     }
 
     // A lista de encoders não basta: distribuições costumam compilar NVENC,
@@ -161,7 +223,8 @@ DetectedHardware findUsableHardwareEncoder()
         QStringLiteral("h264_qsv")
     };
     for (const QString &candidate : candidates) {
-        if (ffmpegListsEncoder(ffmpeg, candidate) && encoderWorks(ffmpeg, candidate)) {
+        if (ffmpegListsEncoder(ffmpeg, candidate, verbose)
+            && encoderWorks(ffmpeg, candidate, {}, verbose)) {
             DetectedHardware usable;
             usable.encoder = candidate;
             usable.type = typeForEncoder(candidate);
@@ -169,8 +232,16 @@ DetectedHardware findUsableHardwareEncoder()
         }
     }
 
-    if (ffmpegListsEncoder(ffmpeg, QStringLiteral("h264_vaapi"))) {
+    if (ffmpegListsEncoder(ffmpeg, QStringLiteral("h264_vaapi"), verbose)) {
         const QStringList devices = vaapiRenderDevices();
+        if (verbose) {
+            std::cout << "[GPUDetector] Dispositivos VAAPI encontrados: "
+                      << devices.size() << "\n";
+            for (const QString &device : devices) {
+                std::cout << "  -> " << device.toStdString() << " (vendor "
+                          << gpuTypeName(vaapiTypeForDevice(device)) << ")\n";
+            }
+        }
         if (devices.isEmpty()) {
             DetectedHardware unavailable;
             unavailable.diagnostic = QStringLiteral(
@@ -179,7 +250,7 @@ DetectedHardware findUsableHardwareEncoder()
             return unavailable;
         }
         for (const QString &device : devices) {
-            if (encoderWorks(ffmpeg, QStringLiteral("h264_vaapi"), device)) {
+            if (encoderWorks(ffmpeg, QStringLiteral("h264_vaapi"), device, verbose)) {
                 DetectedHardware usable;
                 usable.encoder = QStringLiteral("h264_vaapi");
                 usable.device = device;
@@ -199,7 +270,7 @@ DetectedHardware findUsableHardwareEncoder()
 
 }
 
-void GPUDetector::detect()
+void GPUDetector::detect(bool verbose)
 {
     std::cout << "[GPUDetector] Sondando aceleradores de vídeo disponíveis...\n";
 
@@ -221,7 +292,7 @@ void GPUDetector::detect()
         ++deviceNumber;
     }
 #elif defined(Q_OS_LINUX)
-    const DetectedHardware detected = findUsableHardwareEncoder();
+    const DetectedHardware detected = findUsableHardwareEncoder(verbose);
     totalDump = detected.encoder.toStdString();
     diagnostic = detected.diagnostic;
     m_diagnostic = diagnostic.toStdString();

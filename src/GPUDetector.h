@@ -15,8 +15,9 @@ class GPUDetector {
 public:
     GPUDetector() = default;
 
-    // Sondagem nativa de hardware em C++ puro
-    void detect();
+    // Sondagem nativa de hardware em C++ puro. O modo detalhado é usado pelo
+    // diagnóstico de terminal e não altera a resolução normal do aplicativo.
+    void detect(bool verbose = false);
     
     GPUType getGPUType() const;
     std::string getGPUName() const;

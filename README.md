@@ -43,6 +43,7 @@ Developed by **Tonho Studios**, **Prism Downloader** brings a clean desktop work
 ### ⚡ 2. Low-Level Graphics Acceleration (NVENC, VAAPI, AMF & QSV)
 * **Hardware Acceleration with Safe Fallback:** Windows uses native device detection; Linux tests the encoders exposed by FFmpeg and the DRM device (`/dev/dri`). NVIDIA NVENC, AMD/Intel VAAPI, AMD AMF, and Intel QSV are used only when they actually initialize; CPU conversion remains the reliable fallback.
 * The selected codec is shown on the conversion screen. On AMD Linux systems the backend is normally `h264_vaapi`/`hevc_vaapi`, while FFmpeg falls back to CPU if the driver or device permissions are unavailable.
+* To diagnose a Linux installation without opening the UI, run `prism-downloader --diagnose-gpu`. It tests each encoder and DRM device and prints the complete FFmpeg output.
 
 ### 📡 3. Real-Time Log Terminal with Telemetry Filters
 * Track every step of the download, conversion, and audio extraction through an integrated terminal in the application's dedicated tab.
