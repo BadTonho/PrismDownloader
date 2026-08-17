@@ -100,7 +100,7 @@ The package targets Mint 22 and Ubuntu 24.04 on `amd64`. It installs the officia
 
 To build the native application on your Windows machine:
 
-### System Requirements
+#### System Requirements
 * **Windows 10 or 11 (64-bit)**
 * **Visual Studio 2019 / 2022** (with MSVC C++ x64 compiler toolset)
 * **Qt 6.7+** (specifically `Widgets` and `Network` modules)
@@ -108,7 +108,7 @@ To build the native application on your Windows machine:
 * **CMake 3.16+**
 * **Inno Setup 6+** (optional, to generate the `.exe` setup file)
 
-### Quick Build via CMake (PowerShell)
+#### Quick Build via CMake (PowerShell)
 ```powershell
 # 1. Clone the repository
 git clone https://github.com/BadTonho/PrismDownloader.git
@@ -126,6 +126,19 @@ C:\Qt\6.7.2\msvc2019_64\bin\windeployqt.exe --release --no-translations .\build\
 ```
 
 For signed release builds, see [update-signing setup](docs/UPDATE_SIGNING.md). The CI workflow injects the public verification key from the GitHub secret; local development builds can omit it, but will intentionally refuse self-update checks.
+
+---
+
+## 📚 Documentation & Technical Guides
+
+For complete architecture, module specifications, hardware acceleration matrix, and build instructions, explore our [**Official Documentation Hub**](docs/README.md):
+
+* 🏗️ [**System Architecture & Concurrency**](docs/ARQUITETURA.md) — System architecture, concurrency, and data flow.
+* 🧩 [**Modules & Code Reference**](docs/MODULOS.md) — Complete API, classes, methods, and signals reference.
+* ⚡ [**Hardware & GPU Acceleration**](docs/HARDWARE_GPU.md) — GPU acceleration matrix, probing, and CLI diagnostic.
+* 🛡️ [**Secure Auto-Update & Cryptography**](docs/AUTO_UPDATE.md) — Ed25519 signing, SHA-256 checks, and updater architecture.
+* 🎨 [**User Interface & Features Guide**](docs/INTERFACE_UI.md) — Dark Tech UI guide, playlists, media library, and telemetry logs.
+* 📦 [**Build & Packaging Guide**](docs/BUILD_PACKAGING.md) — Build prerequisites, CTest unit tests, and package generation.
 
 ---
 
