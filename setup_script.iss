@@ -33,7 +33,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Falhar no empacotamento caso os motores obrigatórios não estejam presentes.
 Source: "build\Release\yt-dlp.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "build\Release\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "build\Release\*"; DestDir: "{app}"; Excludes: "yt-dlp.exe,ffmpeg.exe,PrismDownloaderTests.exe,PrismMediaToolResolverTests.exe,PrismYtDlpUpdateServiceTests.exe,PrismFakeMediaTool.exe,PrismQueueManagerTests.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "build\Release\*"; DestDir: "{app}"; Excludes: "yt-dlp.exe,ffmpeg.exe,PrismDownloaderTests.exe,PrismMediaToolResolverTests.exe,PrismYtDlpUpdateServiceTests.exe,PrismAppUpdateServiceTests.exe,PrismPortableUpdateCommonTests.exe,PrismFakeMediaTool.exe,PrismQueueManagerTests.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppName}"
@@ -41,4 +41,4 @@ Name: "{group}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppName}"; Description: "Executar o {#MyAppName} agora"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppName}"; Description: "Executar o {#MyAppName} agora"; Flags: nowait postinstall

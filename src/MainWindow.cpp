@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "AppUpdateService.h"
 #include "MediaToolResolver.h"
 #include "PrismVersion.h"
 #include "YtDlpUpdateService.h"
@@ -26,14 +27,16 @@
 #include <QPixmap>
 #include <QTableWidgetItem>
 #include <QProcess>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QCloseEvent>
 #include <QRegularExpression>
 #include <QUrlQuery>
 #include <QVersionNumber>
+#include <QUuid>
 
 #include <utility>
 
@@ -42,17 +45,6 @@ static const QString NEOV_VERSION_NUMBER = QStringLiteral(PRISM_VERSION_NUMBER);
 
 namespace {
 constexpr int kMaximumLogEntries = 5000;
-
-QString platformLabel()
-{
-#ifdef Q_OS_WIN
-    return QStringLiteral("Windows");
-#elif defined(Q_OS_LINUX)
-    return QStringLiteral("Linux");
-#else
-    return QStringLiteral("Desktop");
-#endif
-}
 
 qint64 toSeconds(const QRegularExpressionMatch &match, int hourIndex, int minuteIndex, int secondIndex)
 {
@@ -118,7 +110,6 @@ QString ytdlpCurrentDescription()
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
-      m_networkManager(new QNetworkAccessManager(this)),
       m_downloadManager(new DownloadManager(this)),
       m_conversionManager(new ConversionManager(this))
 {
@@ -127,6 +118,106 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUI();
     setupStyles();
+
+    m_appUpdateService = new AppUpdateService(
+        AppUpdateService::packageForCurrentPlatform(isInstalledWindowsCopy()), this);
+    connect(m_appUpdateService, &AppUpdateService::releaseChecked, this,
+            [this](const AppUpdateReleaseInfo &release) {
+        if (m_checkUpdateBtn) {
+            m_checkUpdateBtn->setEnabled(true);
+            m_checkUpdateBtn->setText("VERIFICAR NO GITHUB AGORA");
+        }
+        const QVersionNumber local = QVersionNumber::fromString(NEOV_VERSION_NUMBER);
+        const QVersionNumber remote = QVersionNumber::fromString(release.version);
+        const int comparison = QVersionNumber::compare(remote, local);
+        if (comparison <= 0) {
+            if (m_updateStatusLabel) {
+                m_updateStatusLabel->setText(comparison == 0
+                    ? QString("Versão %1 está atualizada e validada por assinatura.").arg(NEOV_VERSION_TAG)
+                    : QString("Release %1 é mais antiga e foi ignorada.").arg(release.version));
+            }
+            if (m_sidebarUpdateNotification) {
+                m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
+                m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+            }
+            if (!m_appUpdateCheckSilent) {
+                QMessageBox::information(this, "Atualizações", m_updateStatusLabel->text());
+            }
+            return;
+        }
+
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText(QString("🚀 Nova versão v%1 disponível e autenticada.").arg(release.version));
+            m_updateStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 14px;");
+        }
+        if (m_sidebarUpdateNotification) {
+            m_sidebarUpdateNotification->setText(QString("🔔 Nova Versão v%1!").arg(release.version));
+            m_sidebarUpdateNotification->setStyleSheet("color: #f59e0b; background-color: #2a1f0c; border: 1px solid #f59e0b; border-radius: 4px; padding: 4px; font-size: 12px; font-weight: bold; margin: 0 10px 2px 10px;");
+        }
+        if (m_updateAppBtn) {
+            m_updateAppBtn->setVisible(true);
+            m_updateAppBtn->setEnabled(true);
+            m_updateAppBtn->setText(QString("BAIXAR E ATUALIZAR PARA v%1").arg(release.version));
+        }
+        logMessage(QString("[Updater] Release v%1 autenticada; pacote %2 selecionado.")
+                       .arg(release.version, release.assetName));
+        if (m_autoDownloadUpdatesChk && m_autoDownloadUpdatesChk->isChecked()) {
+            m_appUpdatePending = true;
+            tryStartPendingAppUpdate();
+        }
+    });
+    connect(m_appUpdateService, &AppUpdateService::checkFailed, this,
+            [this](const QString &message) {
+        if (m_checkUpdateBtn) {
+            m_checkUpdateBtn->setEnabled(true);
+            m_checkUpdateBtn->setText("VERIFICAR NO GITHUB AGORA");
+        }
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText("Atualização do aplicativo indisponível: " + message);
+        }
+        if (m_sidebarUpdateNotification) {
+            m_sidebarUpdateNotification->setText("🛡️ " + NEOV_VERSION_TAG + " (Não validado)");
+            m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+        }
+        logMessage("[Updater] " + message);
+        if (!m_appUpdateCheckSilent) {
+            QMessageBox::warning(this, "Atualizações", message);
+        }
+    });
+    connect(m_appUpdateService, &AppUpdateService::downloadProgress, this,
+            [this](qint64 received, qint64 total) {
+        if (!m_updateProgressBar) return;
+        m_updateProgressBar->setVisible(true);
+        if (total > 0) {
+            m_updateProgressBar->setRange(0, 100);
+            m_updateProgressBar->setValue(static_cast<int>((received * 100) / total));
+        } else {
+            m_updateProgressBar->setRange(0, 0);
+        }
+    });
+    connect(m_appUpdateService, &AppUpdateService::packageVerified, this,
+            [this](const QString &version, const QString &path) {
+        if (m_updateProgressBar) {
+            m_updateProgressBar->setVisible(false);
+            m_updateProgressBar->setRange(0, 100);
+        }
+        installVerifiedAppPackage(version, path);
+    });
+    connect(m_appUpdateService, &AppUpdateService::updateFailed, this,
+            [this](const QString &message) {
+        if (m_updateProgressBar) {
+            m_updateProgressBar->setVisible(false);
+            m_updateProgressBar->setRange(0, 100);
+        }
+        if (m_updateAppBtn) {
+            m_updateAppBtn->setEnabled(true);
+        }
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText("Falha ao validar a atualização: " + message);
+        }
+        logMessage("[Updater] " + message);
+        QMessageBox::warning(this, "Atualização preservada", message);
+    });
 
     m_ytdlpUpdateService = new YtDlpUpdateService(this);
     if (m_ytdlpStatusLabel) {
@@ -262,6 +353,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_downloadManager, &DownloadManager::jobCompleted, this, &MainWindow::onDownloadCompleted);
     connect(m_downloadManager, &DownloadManager::queueStateChanged, this, &MainWindow::onDownloadQueueStateChanged);
     connect(m_downloadManager, &DownloadManager::queueIdle, this, &MainWindow::maybeShowQueueSummary);
+    connect(m_downloadManager, &DownloadManager::queueIdle, this, &MainWindow::tryStartPendingAppUpdate);
     connect(m_downloadManager, &DownloadManager::jobLog, this, [this](DownloadId id, const QString &message) {
         logMessage(QString("[Download #%1] %2").arg(id).arg(message));
     });
@@ -271,6 +363,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_conversionManager, &ConversionManager::conversionFailed, this, &MainWindow::onConversionFailed);
     connect(m_conversionManager, &ConversionManager::conversionCancelled, this, &MainWindow::onConversionCancelled);
     connect(m_conversionManager, &ConversionManager::queueIdle, this, &MainWindow::maybeShowQueueSummary);
+    connect(m_conversionManager, &ConversionManager::queueIdle, this, &MainWindow::tryStartPendingAppUpdate);
     connect(m_conversionManager, &ConversionManager::queueStateChanged, this, [this](bool, int) {
         onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
     });
@@ -290,8 +383,15 @@ MainWindow::MainWindow(QWidget *parent)
     m_downloadManager->setConcurrencyLimit(concurrency);
     if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
     if (m_autoDownloadUpdatesChk) {
-        m_autoDownloadUpdatesChk->setChecked(false);
-        m_autoDownloadUpdatesChk->setEnabled(false);
+        m_autoDownloadUpdatesChk->setChecked(settings.value("autoDownloadUpdates", false).toBool());
+        connect(m_autoDownloadUpdatesChk, &QCheckBox::toggled, this, [this](bool enabled) {
+            logMessage(enabled
+                ? "[Updater] Download e instalação automáticos foram ativados pelo usuário."
+                : "[Updater] Download e instalação automáticos foram desativados pelo usuário.");
+            if (enabled) {
+                tryStartPendingAppUpdate();
+            }
+        });
     }
 
     if (checkOnStart) {
@@ -314,7 +414,7 @@ MainWindow::~MainWindow()
     settings.setValue("defaultTimeRange", m_timeRangeInput->text().trimmed());
     if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
     if (m_concurrencySpin) settings.setValue("maxConcurrentDownloads", m_concurrencySpin->value());
-    settings.setValue("autoDownloadUpdates", false);
+    if (m_autoDownloadUpdatesChk) settings.setValue("autoDownloadUpdates", m_autoDownloadUpdatesChk->isChecked());
 }
 
 void MainWindow::setupUI()
@@ -909,7 +1009,7 @@ void MainWindow::setupUI()
     m_checkUpdatesOnStartChk = new QCheckBox("Verificar novas atualizações automaticamente ao iniciar o aplicativo", updateGroup);
     m_checkUpdatesOnStartChk->setCursor(Qt::PointingHandCursor);
     
-    m_autoDownloadUpdatesChk = new QCheckBox("Atualização automática do aplicativo desativada; o yt-dlp exige confirmação e SHA-256", updateGroup);
+    m_autoDownloadUpdatesChk = new QCheckBox("Baixar, validar por assinatura e instalar automaticamente atualizações do aplicativo", updateGroup);
     m_autoDownloadUpdatesChk->setCursor(Qt::PointingHandCursor);
     m_autoDownloadUpdatesChk->setStyleSheet("color: #f59e0b; font-weight: bold;");
 
@@ -920,6 +1020,13 @@ void MainWindow::setupUI()
     upLayout->addLayout(chkVertLayout);
 
     QHBoxLayout *upBtnsLayout = new QHBoxLayout();
+    m_updateAppBtn = new QPushButton("BAIXAR E ATUALIZAR AGORA", updateGroup);
+    m_updateAppBtn->setObjectName("startBtn");
+    m_updateAppBtn->setCursor(Qt::PointingHandCursor);
+    m_updateAppBtn->setMinimumHeight(40);
+    m_updateAppBtn->setVisible(false);
+    connect(m_updateAppBtn, &QPushButton::clicked, this, &MainWindow::requestAppUpdate);
+
     m_checkUpdateBtn = new QPushButton("VERIFICAR NO GITHUB AGORA", updateGroup);
     m_checkUpdateBtn->setObjectName("startBtn");
     m_checkUpdateBtn->setCursor(Qt::PointingHandCursor);
@@ -935,7 +1042,8 @@ void MainWindow::setupUI()
     m_updateYtdlpBtn->setMinimumHeight(40);
     connect(m_updateYtdlpBtn, &QPushButton::clicked, this, &MainWindow::updateYtdlpEngine);
 
-    upBtnsLayout->addWidget(m_checkUpdateBtn, 3);
+    upBtnsLayout->addWidget(m_updateAppBtn, 3);
+    upBtnsLayout->addWidget(m_checkUpdateBtn, 2);
     upBtnsLayout->addWidget(m_updateYtdlpBtn, 2);
     upLayout->addLayout(upBtnsLayout);
 
@@ -2137,6 +2245,7 @@ void MainWindow::onConversionCancelled(ConversionId id, DownloadId ownerDownload
 
 void MainWindow::maybeShowQueueSummary()
 {
+    tryStartPendingAppUpdate();
     if (m_closing || m_currentBatchJobs.isEmpty() || m_downloadManager->hasWork()
         || m_conversionManager->hasAutomaticWork()) {
         return;
@@ -2162,6 +2271,12 @@ void MainWindow::maybeShowQueueSummary()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    if (m_installingAppUpdate) {
+        QMessageBox::information(this, "Atualização em andamento",
+                                 "A atualização autenticada está sendo instalada. Aguarde a conclusão.");
+        event->ignore();
+        return;
+    }
     if (!m_downloadManager->hasWork() && !m_conversionManager->hasWork()) {
         event->accept();
         return;
@@ -2493,25 +2608,189 @@ void MainWindow::setupStyles()
 
 void MainWindow::checkForUpdates(bool silent)
 {
-    if (!m_networkManager) return;
-    
-    m_updateStatusLabel->setText("Sondando servidores do GitHub (BadTonho/PrismDownloader)...");
+    if (!m_appUpdateService || m_appUpdateService->isBusy()) {
+        return;
+    }
+    m_appUpdateCheckSilent = silent;
+    if (m_updateStatusLabel) {
+        m_updateStatusLabel->setText("Consultando a release assinada no GitHub...");
+    }
     if (m_sidebarUpdateNotification) {
         m_sidebarUpdateNotification->setText("🔄 Checando...");
         m_sidebarUpdateNotification->setStyleSheet("color: #38bdf8; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
     }
-    logMessage("[Updater] Consultando API pública do GitHub para release mais recente...");
+    if (m_checkUpdateBtn) {
+        m_checkUpdateBtn->setEnabled(false);
+        m_checkUpdateBtn->setText("VERIFICANDO RELEASE...");
+    }
+    logMessage("[Updater] Consultando release e manifesto assinado no GitHub.");
+    m_appUpdateService->checkLatestRelease();
+}
 
-    QUrl url("https://api.github.com/repos/BadTonho/PrismDownloader/releases/latest");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader,
-                      "PrismDownloader-Updater/" + NEOV_VERSION_NUMBER
-                          + " (" + platformLabel() + "; Qt)");
-    
-    QNetworkReply *reply = m_networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, silent]() {
-        onUpdateReplyFinished(reply, silent);
+void MainWindow::requestAppUpdate()
+{
+    if (!m_appUpdateService || !m_appUpdateService->hasLatestRelease() || m_installingAppUpdate) {
+        return;
+    }
+    m_appUpdatePending = true;
+    if (m_updateAppBtn) {
+        m_updateAppBtn->setEnabled(false);
+        m_updateAppBtn->setText("ATUALIZAÇÃO AGENDADA...");
+    }
+    tryStartPendingAppUpdate();
+}
+
+bool MainWindow::canInstallAppUpdate() const
+{
+    return !m_closing && !m_installingAppUpdate && !m_downloadManager->hasWork()
+        && !m_conversionManager->hasWork() && !m_playlistPreviewProcess;
+}
+
+void MainWindow::tryStartPendingAppUpdate()
+{
+    if (!m_appUpdatePending || !m_appUpdateService || !m_appUpdateService->hasLatestRelease()
+        || m_appUpdateService->isBusy() || m_installingAppUpdate) {
+        return;
+    }
+    if (!canInstallAppUpdate()) {
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText("Atualização autenticada aguardando downloads, conversões ou prévia terminarem.");
+        }
+        return;
+    }
+
+    m_appUpdatePending = false;
+    if (m_updateStatusLabel) {
+        m_updateStatusLabel->setText("Baixando pacote autenticado; validando SHA-256...");
+    }
+    if (m_updateAppBtn) {
+        m_updateAppBtn->setEnabled(false);
+        m_updateAppBtn->setText("BAIXANDO ATUALIZAÇÃO...");
+    }
+    logMessage("[Updater] A fila está ociosa; iniciando download do pacote autenticado.");
+    m_appUpdateService->downloadLatestRelease();
+}
+
+bool MainWindow::isInstalledWindowsCopy() const
+{
+#ifdef Q_OS_WIN
+    return QFileInfo(QDir(QCoreApplication::applicationDirPath()).filePath("unins000.exe")).isFile();
+#else
+    return false;
+#endif
+}
+
+void MainWindow::installVerifiedAppPackage(const QString &version, const QString &packagePath)
+{
+    if (!canInstallAppUpdate()) {
+        m_appUpdatePending = true;
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText("Pacote v" + version + " validado; instalação aguardando a fila ficar ociosa.");
+        }
+        return;
+    }
+
+#ifdef Q_OS_WIN
+    m_installingAppUpdate = true;
+    if (isInstalledWindowsCopy()) {
+        const bool started = QProcess::startDetached(packagePath, {
+            QStringLiteral("/VERYSILENT"), QStringLiteral("/SUPPRESSMSGBOXES"),
+            QStringLiteral("/NORESTART"), QStringLiteral("/CLOSEAPPLICATIONS")});
+        if (!started) {
+            m_installingAppUpdate = false;
+            QFile::remove(packagePath);
+            if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+            QMessageBox::warning(this, "Atualização preservada",
+                                 "Não foi possível iniciar o instalador validado.");
+            return;
+        }
+        logMessage("[Updater] Instalador Windows validado iniciado; encerrando a versão atual.");
+        m_closing = true;
+        QCoreApplication::quit();
+        return;
+    }
+
+    const QString helperSource = QDir(QCoreApplication::applicationDirPath())
+        .filePath(QStringLiteral("PrismPortableUpdateHelper.exe"));
+    const QString helperDirectory = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+        .filePath(QStringLiteral("PrismDownloader/update-helper/%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+    const QString helperCopy = QDir(helperDirectory).filePath(QStringLiteral("PrismPortableUpdateHelper.exe"));
+    if (!QFileInfo(helperSource).isFile() || !QDir().mkpath(helperDirectory)
+        || !QFile::copy(helperSource, helperCopy)) {
+        m_installingAppUpdate = false;
+        QFile::remove(packagePath);
+        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+        QMessageBox::warning(this, "Atualização preservada",
+                             "O helper obrigatório para atualizar a cópia Portable não está disponível.");
+        return;
+    }
+    const bool started = QProcess::startDetached(helperCopy, {
+        QStringLiteral("--parent-pid"), QString::number(QCoreApplication::applicationPid()),
+        QStringLiteral("--archive"), packagePath,
+        QStringLiteral("--target"), QCoreApplication::applicationDirPath()});
+    if (!started) {
+        m_installingAppUpdate = false;
+        QFile::remove(packagePath);
+        QFile::remove(helperCopy);
+        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+        QMessageBox::warning(this, "Atualização preservada",
+                             "Não foi possível iniciar o helper da atualização Portable.");
+        return;
+    }
+    logMessage("[Updater] Helper Portable iniciado com pacote validado; encerrando a versão atual.");
+    m_closing = true;
+    QCoreApplication::quit();
+#else
+    m_installingAppUpdate = true;
+    auto *process = new QProcess(this);
+    m_appUpdateInstallProcess = process;
+    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+            [this, process, version, packagePath](int exitCode, QProcess::ExitStatus status) {
+        if (m_appUpdateInstallProcess != process) {
+            process->deleteLater();
+            return;
+        }
+        m_appUpdateInstallProcess = nullptr;
+        m_installingAppUpdate = false;
+        process->deleteLater();
+        if (status != QProcess::NormalExit || exitCode != 0) {
+            QFile::remove(packagePath);
+            if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+            QMessageBox::warning(this, "Atualização preservada",
+                                 "O APT não instalou o pacote validado. A versão atual continua em execução.");
+            return;
+        }
+        QFile::remove(packagePath);
+        if (!QProcess::startDetached(QCoreApplication::applicationFilePath())) {
+            if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+            QMessageBox::warning(this, "Atualização instalada",
+                                 "O pacote foi instalado, mas reinicie o Prism Downloader manualmente.");
+            return;
+        }
+        logMessage("[Updater] Pacote Linux v" + version + " instalado; reiniciando o aplicativo.");
+        m_closing = true;
+        QCoreApplication::quit();
     });
+    connect(process, &QProcess::errorOccurred, this,
+            [this, process, packagePath](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart || m_appUpdateInstallProcess != process) {
+            return;
+        }
+        m_appUpdateInstallProcess = nullptr;
+        m_installingAppUpdate = false;
+        process->deleteLater();
+        QFile::remove(packagePath);
+        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+        QMessageBox::warning(this, "Atualização preservada",
+                             "Não foi possível iniciar o pkexec para instalar o pacote validado.");
+    });
+    process->start(QStringLiteral("/usr/bin/pkexec"), {
+        QStringLiteral("/usr/bin/apt-get"), QStringLiteral("install"),
+        QStringLiteral("--yes"), packagePath});
+    if (m_updateStatusLabel) {
+        m_updateStatusLabel->setText("Aguardando autorização para instalar a atualização v" + version + ".");
+    }
+#endif
 }
 
 void MainWindow::checkYtDlpUpdates(bool silent)
@@ -2530,112 +2809,6 @@ void MainWindow::checkYtDlpUpdates(bool silent)
     }
     logMessage("[Motor Extrator] Consultando a release Nightly oficial do yt-dlp...");
     m_ytdlpUpdateService->checkLatestRelease();
-}
-
-void MainWindow::onUpdateReplyFinished(QNetworkReply *reply, bool silent)
-{
-    reply->deleteLater();
-    if (reply->error() != QNetworkReply::NoError) {
-        int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        if (httpCode == 404) {
-            m_updateStatusLabel->setText("Nenhuma release pública postada ainda (Versão " + NEOV_VERSION_TAG + " em uso).");
-            if (m_sidebarUpdateNotification) {
-                m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
-                m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-            }
-            logMessage("[Updater] Resposta 404: Repositório sem releases públicas criadas no GitHub. O software local está atualizado.");
-            if (!silent) {
-                QMessageBox::information(this, "Atualizações", "Você já está rodando a versão mais moderna do Prism Downloader (" + NEOV_VERSION_TAG + ")!\n\nNenhuma release pública mais nova foi publicada no repositório GitHub ainda.");
-            }
-        } else {
-            m_updateStatusLabel->setText("Falha de conexão ou offline. (Versão " + NEOV_VERSION_TAG + " em uso).");
-            if (m_sidebarUpdateNotification) {
-                m_sidebarUpdateNotification->setText("🛡️ " + NEOV_VERSION_TAG + " (Offline/Local)");
-                m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-            }
-            logMessage("[Updater] Erro ao conectar com o GitHub: " + reply->errorString());
-            if (!silent) {
-                QMessageBox::warning(this, "Atenção", "Não foi possível contactar o servidor do GitHub para checar atualizações:\n" + reply->errorString());
-            }
-        }
-        return;
-    }
-
-    QByteArray responseData = reply->readAll();
-    QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(responseData, &parseError);
-    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-        m_updateStatusLabel->setText("Não foi possível validar a resposta do servidor de atualizações.");
-        logMessage("[Updater] Resposta de atualização inválida: " + parseError.errorString());
-        return;
-    }
-    QJsonObject obj = doc.object();
-
-    QString tagName = obj.value("tag_name").toString().trimmed();
-    if (tagName.isEmpty()) {
-        m_updateStatusLabel->setText("Versão " + NEOV_VERSION_TAG + " operacional (Nenhuma tag encontrada).");
-        if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
-            m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-        }
-        return;
-    }
-
-    logMessage("[Updater] Última release no GitHub identificada: " + tagName);
-
-    const QUrl releaseUrl(obj.value("html_url").toString());
-    const QString localVersionText = NEOV_VERSION_NUMBER;
-    QString normalizedRemote = tagName;
-    if (normalizedRemote.startsWith('v', Qt::CaseInsensitive)) {
-        normalizedRemote.remove(0, 1);
-    }
-    const QVersionNumber localVersionNumber = QVersionNumber::fromString(localVersionText);
-    const QVersionNumber remoteVersionNumber = QVersionNumber::fromString(normalizedRemote);
-    if (remoteVersionNumber.isNull() || releaseUrl.scheme() != "https" || releaseUrl.host() != "github.com") {
-        m_updateStatusLabel->setText("A resposta de atualização não contém uma release válida e segura.");
-        logMessage("[Updater] Tag ou URL de release inválida; nenhuma atualização será oferecida.");
-        return;
-    }
-
-    const int versionComparison = QVersionNumber::compare(remoteVersionNumber, localVersionNumber);
-    if (versionComparison <= 0) {
-        const bool isSameVersion = versionComparison == 0;
-        m_updateStatusLabel->setText(isSameVersion
-            ? "Você está utilizando a versão mais recente (" + tagName + ")."
-            : "A release " + tagName + " é mais antiga que a versão instalada e foi ignorada.");
-        if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
-            m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-        }
-        logMessage(isSameVersion
-            ? "[Updater] A versão instalada já é a mais recente disponível."
-            : "[Updater] Release remota mais antiga ignorada.");
-        if (!silent) {
-            QMessageBox::information(this, "Atualizações", m_updateStatusLabel->text());
-        }
-        return;
-    }
-
-    m_updateStatusLabel->setText("🚀 Nova versão " + tagName + " disponível no GitHub.");
-    m_updateStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 14px;");
-    if (m_sidebarUpdateNotification) {
-        m_sidebarUpdateNotification->setText("🔔 Nova Versão " + tagName + "!");
-        m_sidebarUpdateNotification->setStyleSheet("color: #f59e0b; background-color: #2a1f0c; border: 1px solid #f59e0b; border-radius: 4px; padding: 4px; font-size: 12px; font-weight: bold; margin: 0 10px 2px 10px;");
-    }
-    logMessage("[Updater] Nova versão identificada; o instalador será obtido apenas pela página oficial.");
-
-    if (!silent) {
-        const QMessageBox::StandardButton response = QMessageBox::question(
-            this,
-            "Nova Versão Disponível",
-            QString("A versão %1 está disponível. Por segurança, o aplicativo não baixa nem executa instaladores automaticamente.\n\nDeseja abrir a página oficial da release no GitHub?").arg(tagName),
-            QMessageBox::Open | QMessageBox::Cancel,
-            QMessageBox::Open);
-        if (response == QMessageBox::Open) {
-            QDesktopServices::openUrl(releaseUrl);
-            logMessage("[Updater] Página oficial da release aberta no navegador.");
-        }
-    }
 }
 
 void MainWindow::updateYtdlpEngine()

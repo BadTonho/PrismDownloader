@@ -16,8 +16,6 @@
 #include <QHeaderView>
 #include <QFileInfoList>
 #include <QDialog>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QTimer>
 #include <QHash>
 #include <QSet>
@@ -30,6 +28,7 @@
 class QCloseEvent;
 class QProcess;
 class QProgressDialog;
+class AppUpdateService;
 class YtDlpUpdateService;
 
 struct PlaylistItem {
@@ -81,7 +80,7 @@ private slots:
 
     // Slots do Sistema de Atualização via GitHub e yt-dlp
     void checkForUpdates(bool silent = false);
-    void onUpdateReplyFinished(QNetworkReply *reply, bool silent);
+    void requestAppUpdate();
     void checkYtDlpUpdates(bool silent = false);
     void updateYtdlpEngine();
 
@@ -105,6 +104,10 @@ private:
     bool showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
                                      QList<PlaylistItem> &selectedItems);
     void showPlaylistItemDetailsDialog(const PlaylistItem &item);
+    bool canInstallAppUpdate() const;
+    void tryStartPendingAppUpdate();
+    void installVerifiedAppPackage(const QString &version, const QString &packagePath);
+    bool isInstalledWindowsCopy() const;
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -186,16 +189,21 @@ private:
     QLabel *m_gpuStatusLabel;
 
     // Módulo de Rede e Central de Atualizações (GitHub Core)
-    QNetworkAccessManager *m_networkManager;
     QCheckBox *m_checkUpdatesOnStartChk;
     QCheckBox *m_autoDownloadUpdatesChk;
     QLabel *m_updateStatusLabel;
     QLabel *m_ytdlpStatusLabel{nullptr};
     QProgressBar *m_updateProgressBar{nullptr};
     QPushButton *m_checkUpdateBtn;
+    QPushButton *m_updateAppBtn{nullptr};
     QPushButton *m_updateYtdlpBtn;
+    AppUpdateService *m_appUpdateService{nullptr};
     YtDlpUpdateService *m_ytdlpUpdateService{nullptr};
+    QProcess *m_appUpdateInstallProcess{nullptr};
     bool m_ytdlpCheckSilent{true};
+    bool m_appUpdateCheckSilent{true};
+    bool m_appUpdatePending{false};
+    bool m_installingAppUpdate{false};
 
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;

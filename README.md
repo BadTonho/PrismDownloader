@@ -60,6 +60,7 @@ Developed by **Tonho Studios**, **Prism Downloader** brings a clean desktop work
 
 ### ☁️ 5. Tonho Studios Update Center
 * **GitHub Cloud Synchronization:** Asynchronous update checking on startup with support for silent backgrounds.
+* **Secure self-update for Windows and Linux:** Each release ships a signed Ed25519 manifest containing the SHA-256 of the Setup, Portable, and DEB packages. Prism rejects unsigned, incomplete, or altered releases before installation. Automatic download and installation are opt-in; otherwise the update center presents a **Download and update now** action.
 * **Bundled, updatable yt-dlp engine:** Packages include an official `yt-dlp` Nightly. The update center shows the selected version and source, then downloads an update only after confirmation and SHA-256 validation.
 * **Newest-version preference:** A newer manually installed copy on `PATH` is also detected. Prism never changes that installation; its own updates stay in the user's data directory.
 
@@ -85,7 +86,7 @@ Install the development requirements and build:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools libssl-dev ffmpeg dpkg-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
@@ -103,6 +104,7 @@ To build the native application on your Windows machine:
 * **Windows 10 or 11 (64-bit)**
 * **Visual Studio 2019 / 2022** (with MSVC C++ x64 compiler toolset)
 * **Qt 6.7+** (specifically `Widgets` and `Network` modules)
+* **OpenSSL 1.1.1+ development files** (used to verify Ed25519 update manifests)
 * **CMake 3.16+**
 * **Inno Setup 6+** (optional, to generate the `.exe` setup file)
 
@@ -122,6 +124,8 @@ cmake --build build --config Release
 C:\Qt\6.7.2\msvc2019_64\bin\windeployqt.exe --release --no-translations .\build\Release\PrismDownloader.exe
 .\build\Release\PrismDownloader.exe
 ```
+
+For signed release builds, see [update-signing setup](docs/UPDATE_SIGNING.md). The CI workflow injects the public verification key from the GitHub secret; local development builds can omit it, but will intentionally refuse self-update checks.
 
 ---
 

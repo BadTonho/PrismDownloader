@@ -1,6 +1,7 @@
 #include "MediaToolResolver.h"
 
 #include <QCoreApplication>
+#include <QDir>
 
 #include <iostream>
 
@@ -22,9 +23,11 @@ int main(int argc, char *argv[])
 
     const QString customYtDlp = QStringLiteral("/tmp/prism-test-yt-dlp");
     const QString customFfmpeg = QStringLiteral("/tmp/prism-test-ffmpeg");
-    bool success = check(MediaToolResolver::resolve(MediaTool::YtDlp, customYtDlp) == customYtDlp,
+    bool success = check(MediaToolResolver::resolve(MediaTool::YtDlp, customYtDlp)
+                             == QDir::toNativeSeparators(customYtDlp),
                          "custom yt-dlp path is preserved")
-        && check(MediaToolResolver::resolve(MediaTool::Ffmpeg, customFfmpeg) == customFfmpeg,
+        && check(MediaToolResolver::resolve(MediaTool::Ffmpeg, customFfmpeg)
+                     == QDir::toNativeSeparators(customFfmpeg),
                  "custom FFmpeg path is preserved")
         && check(MediaToolResolver::isVersionNewer(QStringLiteral("2026.08.17.073947"),
                                                    QStringLiteral("2026.08.16.235959")),
