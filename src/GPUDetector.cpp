@@ -79,7 +79,12 @@ bool encoderWorks(const QString &ffmpeg, const QString &encoder, const QString &
         if (device.isEmpty()) {
             return false;
         }
-        arguments << QStringLiteral("-vaapi_device") << device;
+        // Explicitly bind hwupload to the same DRM device. On FFmpeg 6.x,
+        // merely passing -vaapi_device may leave the filter without a device.
+        arguments << QStringLiteral("-init_hw_device")
+                  << QStringLiteral("vaapi=prism_vaapi:%1").arg(device)
+                  << QStringLiteral("-filter_hw_device")
+                  << QStringLiteral("prism_vaapi");
     }
     arguments << QStringLiteral("-f") << QStringLiteral("lavfi")
         << QStringLiteral("-i");

@@ -336,8 +336,12 @@ void ConversionManager::prepareArguments(Job *job)
         job->usesHardware = !encoder.isEmpty()
             && (!usesVaapi || !job->request.gpuDevice.isEmpty());
         if (job->usesHardware && usesVaapi) {
-            hardwareArgs.insert(1, job->request.gpuDevice);
-            hardwareArgs.insert(1, QStringLiteral("-vaapi_device"));
+            hardwareArgs = QStringList{
+                QStringLiteral("-init_hw_device"),
+                QStringLiteral("vaapi=prism_vaapi:%1").arg(job->request.gpuDevice),
+                QStringLiteral("-filter_hw_device"),
+                QStringLiteral("prism_vaapi")
+            } + hardwareArgs;
         }
         if (job->usesHardware) {
             hardwareArgs << "-c:v" << encoder;
@@ -361,8 +365,12 @@ void ConversionManager::prepareArguments(Job *job)
         job->usesHardware = !encoder.isEmpty()
             && (!usesVaapi || !job->request.gpuDevice.isEmpty());
         if (job->usesHardware && usesVaapi) {
-            hardwareArgs.insert(1, job->request.gpuDevice);
-            hardwareArgs.insert(1, QStringLiteral("-vaapi_device"));
+            hardwareArgs = QStringList{
+                QStringLiteral("-init_hw_device"),
+                QStringLiteral("vaapi=prism_vaapi:%1").arg(job->request.gpuDevice),
+                QStringLiteral("-filter_hw_device"),
+                QStringLiteral("prism_vaapi")
+            } + hardwareArgs;
         }
         if (job->usesHardware) {
             hardwareArgs << "-c:v" << encoder;
