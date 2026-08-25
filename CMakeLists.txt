@@ -51,6 +51,8 @@ set(PRISM_SOURCES
     src/main.cpp
     src/AppSettings.h
     src/AppSettings.cpp
+    src/AppUpdateInstaller.h
+    src/AppUpdateInstaller.cpp
     src/MainWindow.h
     src/MainWindow.cpp
     src/MediaItem.h

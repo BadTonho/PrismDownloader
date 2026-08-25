@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "AppUpdateService.h"
+#include "AppUpdateInstaller.h"
 #include "DownloadQueueWorkflow.h"
 #include "FormatSelectionDialog.h"
 #include "LibraryView.h"
@@ -234,6 +235,32 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(m_playlistPreviewService, &PlaylistPreviewService::previewReady, this,
             &MainWindow::handlePlaylistPreviewReady);
+
+    m_appUpdateInstaller = new AppUpdateInstaller(this);
+    connect(m_appUpdateInstaller, &AppUpdateInstaller::statusMessage, this,
+            [this](const QString &message) {
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText(message);
+        }
+    });
+    connect(m_appUpdateInstaller, &AppUpdateInstaller::logMessage,
+            this, &MainWindow::logMessage);
+    connect(m_appUpdateInstaller, &AppUpdateInstaller::failed, this,
+            [this](const QString &message) {
+        if (m_updateAppBtn) {
+            m_updateAppBtn->setEnabled(true);
+        }
+        if (m_updateStatusLabel) {
+            m_updateStatusLabel->setText("Falha ao instalar a atualização: " + message);
+        }
+        logMessage("[Updater] " + message);
+        QMessageBox::warning(this, "Atualização preservada", message);
+    });
+    connect(m_appUpdateInstaller, &AppUpdateInstaller::restartRequested, this,
+            [this]() {
+        m_closing = true;
+        QCoreApplication::quit();
+    });
 
     m_appUpdateService = new AppUpdateService(
         AppUpdateService::packageForCurrentPlatform(isInstalledWindowsCopy()), this);
@@ -1305,7 +1332,7 @@ void MainWindow::maybeShowQueueSummary()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (m_installingAppUpdate) {
+    if (m_appUpdateInstaller && m_appUpdateInstaller->isInstalling()) {
         QMessageBox::information(this, "Atualização em andamento",
                                  "A atualização autenticada está sendo instalada. Aguarde a conclusão.");
         event->ignore();
@@ -1532,7 +1559,8 @@ void MainWindow::checkForUpdates(bool silent)
 
 void MainWindow::requestAppUpdate()
 {
-    if (!m_appUpdateService || !m_appUpdateService->hasLatestRelease() || m_installingAppUpdate) {
+    if (!m_appUpdateService || !m_appUpdateService->hasLatestRelease()
+        || (m_appUpdateInstaller && m_appUpdateInstaller->isInstalling())) {
         return;
     }
     m_appUpdatePending = true;
@@ -1545,7 +1573,9 @@ void MainWindow::requestAppUpdate()
 
 bool MainWindow::canInstallAppUpdate() const
 {
-    return !m_closing && !m_installingAppUpdate && !m_downloadManager->hasWork()
+    return !m_closing
+        && (!m_appUpdateInstaller || !m_appUpdateInstaller->isInstalling())
+        && !m_downloadManager->hasWork()
         && !m_conversionManager->hasWork()
         && (!m_playlistPreviewService || !m_playlistPreviewService->isBusy());
 }
@@ -1553,7 +1583,8 @@ bool MainWindow::canInstallAppUpdate() const
 void MainWindow::tryStartPendingAppUpdate()
 {
     if (!m_appUpdatePending || !m_appUpdateService || !m_appUpdateService->hasLatestRelease()
-        || m_appUpdateService->isBusy() || m_installingAppUpdate) {
+        || m_appUpdateService->isBusy()
+        || (m_appUpdateInstaller && m_appUpdateInstaller->isInstalling())) {
         return;
     }
     if (!canInstallAppUpdate()) {
@@ -1589,122 +1620,19 @@ void MainWindow::installVerifiedAppPackage(const QString &version, const QString
     if (!canInstallAppUpdate()) {
         m_appUpdatePending = true;
         if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText("Pacote v" + version + " validado; instalação aguardando a fila ficar ociosa.");
+            m_updateStatusLabel->setText("Pacote v" + version
+                                        + " validado; instalação aguardando a fila ficar ociosa.");
         }
+        return;
+    }
+    if (!m_appUpdateInstaller) {
+        QMessageBox::critical(this, "Atualização indisponível",
+                              "O instalador de atualizações não está disponível.");
+        QFile::remove(packagePath);
         return;
     }
 
-#ifdef Q_OS_WIN
-    m_installingAppUpdate = true;
-    if (isInstalledWindowsCopy()) {
-        const bool started = QProcess::startDetached(packagePath, {
-            QStringLiteral("/VERYSILENT"), QStringLiteral("/SUPPRESSMSGBOXES"),
-            QStringLiteral("/NORESTART"), QStringLiteral("/CLOSEAPPLICATIONS")});
-        if (!started) {
-            m_installingAppUpdate = false;
-            QFile::remove(packagePath);
-            if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-            QMessageBox::warning(this, "Atualização preservada",
-                                 "Não foi possível iniciar o instalador validado.");
-            return;
-        }
-        logMessage("[Updater] Instalador Windows validado iniciado; encerrando a versão atual.");
-        m_closing = true;
-        QCoreApplication::quit();
-        return;
-    }
-
-    const QString helperSource = QDir(QCoreApplication::applicationDirPath())
-        .filePath(QStringLiteral("PrismPortableUpdateHelper.exe"));
-    const QString helperDirectory = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
-        .filePath(QStringLiteral("PrismDownloader/update-helper/%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
-    const QString helperCopy = QDir(helperDirectory).filePath(QStringLiteral("PrismPortableUpdateHelper.exe"));
-    if (!QFileInfo(helperSource).isFile() || !QDir().mkpath(helperDirectory)
-        || !QFile::copy(helperSource, helperCopy)) {
-        m_installingAppUpdate = false;
-        QFile::remove(packagePath);
-        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-        QMessageBox::warning(this, "Atualização preservada",
-                             "O helper obrigatório para atualizar a cópia Portable não está disponível.");
-        return;
-    }
-    const bool started = QProcess::startDetached(helperCopy, {
-        QStringLiteral("--parent-pid"), QString::number(QCoreApplication::applicationPid()),
-        QStringLiteral("--archive"), packagePath,
-        QStringLiteral("--target"), QCoreApplication::applicationDirPath()});
-    if (!started) {
-        m_installingAppUpdate = false;
-        QFile::remove(packagePath);
-        QFile::remove(helperCopy);
-        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-        QMessageBox::warning(this, "Atualização preservada",
-                             "Não foi possível iniciar o helper da atualização Portable.");
-        return;
-    }
-    logMessage("[Updater] Helper Portable iniciado com pacote validado; encerrando a versão atual.");
-    m_closing = true;
-    QCoreApplication::quit();
-#else
-    const QString pkexec = QStandardPaths::findExecutable(QStringLiteral("pkexec"));
-    const QString aptGet = QStandardPaths::findExecutable(QStringLiteral("apt-get"));
-    if (pkexec.isEmpty() || aptGet.isEmpty()) {
-        m_installingAppUpdate = false;
-        QFile::remove(packagePath);
-        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-        QMessageBox::warning(this, "AtualizaÃ§Ã£o indisponÃ­vel",
-                             "pkexec e apt-get sÃ£o necessÃ¡rios para instalar atualizaÃ§Ãµes no Linux.");
-        return;
-    }
-    m_installingAppUpdate = true;
-    auto *process = new QProcess(this);
-    m_appUpdateInstallProcess = process;
-    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
-            [this, process, version, packagePath](int exitCode, QProcess::ExitStatus status) {
-        if (m_appUpdateInstallProcess != process) {
-            process->deleteLater();
-            return;
-        }
-        m_appUpdateInstallProcess = nullptr;
-        m_installingAppUpdate = false;
-        process->deleteLater();
-        if (status != QProcess::NormalExit || exitCode != 0) {
-            QFile::remove(packagePath);
-            if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-            QMessageBox::warning(this, "Atualização preservada",
-                                 "O APT não instalou o pacote validado. A versão atual continua em execução.");
-            return;
-        }
-        QFile::remove(packagePath);
-        if (!QProcess::startDetached(QCoreApplication::applicationFilePath())) {
-            if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-            QMessageBox::warning(this, "Atualização instalada",
-                                 "O pacote foi instalado, mas reinicie o Prism Downloader manualmente.");
-            return;
-        }
-        logMessage("[Updater] Pacote Linux v" + version + " instalado; reiniciando o aplicativo.");
-        m_closing = true;
-        QCoreApplication::quit();
-    });
-    connect(process, &QProcess::errorOccurred, this,
-            [this, process, packagePath](QProcess::ProcessError error) {
-        if (error != QProcess::FailedToStart || m_appUpdateInstallProcess != process) {
-            return;
-        }
-        m_appUpdateInstallProcess = nullptr;
-        m_installingAppUpdate = false;
-        process->deleteLater();
-        QFile::remove(packagePath);
-        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
-        QMessageBox::warning(this, "Atualização preservada",
-                             "Não foi possível iniciar o pkexec para instalar o pacote validado.");
-    });
-    process->start(pkexec, {
-        aptGet, QStringLiteral("install"),
-        QStringLiteral("--yes"), packagePath});
-    if (m_updateStatusLabel) {
-        m_updateStatusLabel->setText("Aguardando autorização para instalar a atualização v" + version + ".");
-    }
-#endif
+    m_appUpdateInstaller->install(version, packagePath, isInstalledWindowsCopy());
 }
 
 void MainWindow::checkYtDlpUpdates(bool silent)

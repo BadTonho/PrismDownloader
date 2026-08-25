@@ -41,6 +41,7 @@ class QThread;
 class QProgressDialog;
 class QNetworkAccessManager;
 class AppUpdateService;
+class AppUpdateInstaller;
 class LibraryView;
 class MainWindowUiBuilder;
 class DownloadQueueWorkflow;
@@ -230,12 +231,11 @@ private:
     QPushButton *m_updateAppBtn{nullptr};
     QPushButton *m_updateYtdlpBtn;
     AppUpdateService *m_appUpdateService{nullptr};
+    AppUpdateInstaller *m_appUpdateInstaller{nullptr};
     YtDlpUpdateService *m_ytdlpUpdateService{nullptr};
-    QProcess *m_appUpdateInstallProcess{nullptr};
     bool m_ytdlpCheckSilent{true};
     bool m_appUpdateCheckSilent{true};
     bool m_appUpdatePending{false};
-    bool m_installingAppUpdate{false};
 
     void flushLogBuffer();
     void startGpuProbe();
