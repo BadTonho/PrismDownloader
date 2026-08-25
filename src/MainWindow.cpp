@@ -2865,6 +2865,9 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     headers << "Título / Qualidade" << "Formato e Codec" << "Resolução / Modo";
     headers << "Estimativa";
     table->setHorizontalHeaderLabels(headers);
+    table->horizontalHeaderItem(0)->setText(QStringLiteral("Perfil / Qualidade real"));
+    table->horizontalHeaderItem(1)->setText(QStringLiteral("Formato da fonte / Codec"));
+    table->horizontalHeaderItem(2)->setText(QStringLiteral("Resolu\u00e7\u00e3o real / Modo"));
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
@@ -2895,10 +2898,21 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     for (int i = 0; i < 4; ++i) {
         const MediaFormatOption option = metadata.options.value(i);
         if (option.available) {
+            const QString requestedProfile = table->item(i, 0)->text();
+            const QString outputFormat = i == 3 ? QStringLiteral("MP3") : QStringLiteral("MP4");
+            table->item(i, 0)->setText(QStringLiteral("%1 -> %2")
+                                           .arg(requestedProfile, option.resolutionMode));
+            table->item(i, 0)->setToolTip(QStringLiteral(
+                "Perfil solicitado: %1\nFormato real encontrado: %2\nSa\u00edda final: %3")
+                .arg(requestedProfile, option.formatCodec, outputFormat));
             table->item(i, 1)->setText(option.formatCodec);
             table->item(i, 2)->setText(option.resolutionMode);
             table->item(i, 3)->setText(readableBytes(option.estimatedBytes));
         } else if (!metadata.options.isEmpty()) {
+            const QString requestedProfile = table->item(i, 0)->text();
+            table->item(i, 0)->setText(requestedProfile + QStringLiteral(" (indispon\u00edvel)"));
+            table->item(i, 0)->setToolTip(QStringLiteral(
+                "Este v\u00eddeo n\u00e3o possui uma fonte correspondente a este perfil."));
             table->item(i, 1)->setText(option.formatCodec.isEmpty()
                                            ? QStringLiteral("Não disponível neste vídeo")
                                            : option.formatCodec);
