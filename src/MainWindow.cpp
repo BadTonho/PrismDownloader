@@ -1,18 +1,15 @@
 #include "MainWindow.h"
-#include "AppUpdateService.h"
-#include "AppUpdateInstaller.h"
 #include "DownloadQueueWorkflow.h"
 #include "FormatSelectionDialog.h"
 #include "LibraryView.h"
 #include "LogHighlighter.h"
-#include "MediaToolResolver.h"
 #include "MainWindowUiBuilder.h"
+#include "MainWindowUpdateCoordinator.h"
 #include "PlaylistItemDetailsDialog.h"
 #include "PlaylistSelectionDialog.h"
 #include "PrismStyleSheet.h"
 #include "PrismVersion.h"
 #include "YtDlpMetadataService.h"
-#include "YtDlpUpdateService.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QColor>
@@ -36,14 +33,12 @@
 #include <QPixmap>
 #include <QTableWidgetItem>
 #include <QThread>
-#include <QProcess>
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QApplication>
 #include <QClipboard>
-#include <QCoreApplication>
 #include <QDateTime>
 #include <QCloseEvent>
 #include <QEvent>
@@ -53,7 +48,6 @@
 #include <QSyntaxHighlighter>
 #include <QTextCharFormat>
 #include <QUrlQuery>
-#include <QVersionNumber>
 #include <QUuid>
 
 #include <memory>
@@ -147,16 +141,6 @@ bool isValidTimeRange(const QString &timeRange)
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
 }
 
-QString ytdlpCurrentDescription()
-{
-    const MediaToolInfo info = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
-    if (!info.isAvailable()) {
-        return QStringLiteral("yt-dlp: nenhuma cópia funcional foi localizada.");
-    }
-    return QStringLiteral("yt-dlp em uso: %1 (%2)")
-        .arg(info.version, MediaToolResolver::sourceLabel(info.source));
-}
-
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -236,232 +220,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_playlistPreviewService, &PlaylistPreviewService::previewReady, this,
             &MainWindow::handlePlaylistPreviewReady);
 
-    m_appUpdateInstaller = new AppUpdateInstaller(this);
-    connect(m_appUpdateInstaller, &AppUpdateInstaller::statusMessage, this,
-            [this](const QString &message) {
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText(message);
-        }
-    });
-    connect(m_appUpdateInstaller, &AppUpdateInstaller::logMessage,
-            this, &MainWindow::logMessage);
-    connect(m_appUpdateInstaller, &AppUpdateInstaller::failed, this,
-            [this](const QString &message) {
-        if (m_updateAppBtn) {
-            m_updateAppBtn->setEnabled(true);
-        }
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText("Falha ao instalar a atualização: " + message);
-        }
-        logMessage("[Updater] " + message);
-        QMessageBox::warning(this, "Atualização preservada", message);
-    });
-    connect(m_appUpdateInstaller, &AppUpdateInstaller::restartRequested, this,
-            [this]() {
-        m_closing = true;
-        QCoreApplication::quit();
-    });
-
-    m_appUpdateService = new AppUpdateService(
-        AppUpdateService::packageForCurrentPlatform(isInstalledWindowsCopy()), this);
-    connect(m_appUpdateService, &AppUpdateService::releaseChecked, this,
-            [this](const AppUpdateReleaseInfo &release) {
-        if (m_checkUpdateBtn) {
-            m_checkUpdateBtn->setEnabled(true);
-            m_checkUpdateBtn->setText("VERIFICAR NO GITHUB AGORA");
-        }
-        const QVersionNumber local = QVersionNumber::fromString(NEOV_VERSION_NUMBER);
-        const QVersionNumber remote = QVersionNumber::fromString(release.version);
-        const int comparison = QVersionNumber::compare(remote, local);
-        if (comparison <= 0) {
-            if (m_updateAppBtn) {
-                m_updateAppBtn->setVisible(false);
-                m_updateAppBtn->setEnabled(false);
-            }
-            if (m_updateStatusLabel) {
-                m_updateStatusLabel->setText(comparison == 0
-                    ? QString("Versão %1 está atualizada e validada por assinatura.").arg(NEOV_VERSION_TAG)
-                    : QString("Release %1 é mais antiga e foi ignorada.").arg(release.version));
-            }
-            if (m_sidebarUpdateNotification) {
-                m_sidebarUpdateNotification->setText("✅ " + NEOV_VERSION_TAG + " (Em Dia)");
-                m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-            }
-            if (!m_appUpdateCheckSilent) {
-                QMessageBox::information(this, "Atualizações", m_updateStatusLabel->text());
-            }
-            return;
-        }
-
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText(QString("🚀 Nova versão v%1 disponível e autenticada.").arg(release.version));
-            m_updateStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 14px;");
-        }
-        if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText(QString("🔔 Nova Versão v%1!").arg(release.version));
-            m_sidebarUpdateNotification->setStyleSheet("color: #f59e0b; background-color: #2a1f0c; border: 1px solid #f59e0b; border-radius: 4px; padding: 4px; font-size: 12px; font-weight: bold; margin: 0 10px 2px 10px;");
-        }
-        if (m_updateAppBtn) {
-            m_updateAppBtn->setVisible(true);
-            m_updateAppBtn->setEnabled(true);
-            m_updateAppBtn->setText(QString("BAIXAR E ATUALIZAR PARA v%1").arg(release.version));
-        }
-        logMessage(QString("[Updater] Release v%1 autenticada; pacote %2 selecionado.")
-                       .arg(release.version, release.assetName));
-        if (m_autoDownloadUpdatesChk && m_autoDownloadUpdatesChk->isChecked()) {
-            m_appUpdatePending = true;
-            tryStartPendingAppUpdate();
-        }
-    });
-    connect(m_appUpdateService, &AppUpdateService::checkFailed, this,
-            [this](const QString &message) {
-        if (m_checkUpdateBtn) {
-            m_checkUpdateBtn->setEnabled(true);
-            m_checkUpdateBtn->setText("VERIFICAR NO GITHUB AGORA");
-        }
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText("Atualização do aplicativo indisponível: " + message);
-        }
-        if (m_sidebarUpdateNotification) {
-            m_sidebarUpdateNotification->setText("🛡️ " + NEOV_VERSION_TAG + " (Não validado)");
-            m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-        }
-        if (m_updateAppBtn) {
-            m_updateAppBtn->setVisible(false);
-            m_updateAppBtn->setEnabled(false);
-        }
-        logMessage("[Updater] " + message);
-        if (!m_appUpdateCheckSilent) {
-            QMessageBox::warning(this, "Atualizações", message);
-        }
-    });
-    connect(m_appUpdateService, &AppUpdateService::downloadProgress, this,
-            [this](qint64 received, qint64 total) {
-        if (!m_updateProgressBar) return;
-        m_updateProgressBar->setVisible(true);
-        if (total > 0) {
-            m_updateProgressBar->setRange(0, 100);
-            m_updateProgressBar->setValue(static_cast<int>((received * 100) / total));
-        } else {
-            m_updateProgressBar->setRange(0, 0);
-        }
-    });
-    connect(m_appUpdateService, &AppUpdateService::packageVerified, this,
-            [this](const QString &version, const QString &path) {
-        if (m_updateProgressBar) {
-            m_updateProgressBar->setVisible(false);
-            m_updateProgressBar->setRange(0, 100);
-        }
-        installVerifiedAppPackage(version, path);
-    });
-    connect(m_appUpdateService, &AppUpdateService::updateFailed, this,
-            [this](const QString &message) {
-        if (m_updateProgressBar) {
-            m_updateProgressBar->setVisible(false);
-            m_updateProgressBar->setRange(0, 100);
-        }
-        if (m_updateAppBtn) {
-            m_updateAppBtn->setEnabled(true);
-        }
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText("Falha ao validar a atualização: " + message);
-        }
-        logMessage("[Updater] " + message);
-        QMessageBox::warning(this, "Atualização preservada", message);
-    });
-
-    m_ytdlpUpdateService = new YtDlpUpdateService(this);
-    if (m_ytdlpStatusLabel) {
-        m_ytdlpStatusLabel->setText(ytdlpCurrentDescription());
-    }
-    connect(m_ytdlpUpdateService, &YtDlpUpdateService::releaseChecked, this,
-            [this](const YtDlpReleaseInfo &release) {
-        const MediaToolInfo current = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
-        const bool updateAvailable = !current.isAvailable()
-            || MediaToolResolver::isVersionNewer(release.version, current.version);
-        if (m_ytdlpStatusLabel) {
-            m_ytdlpStatusLabel->setText(updateAvailable
-                ? QString("%1 — Nightly %2 disponível.")
-                      .arg(ytdlpCurrentDescription(), release.version)
-                : QString("%1 — Nightly %2 já está em uso.")
-                      .arg(ytdlpCurrentDescription(), release.version));
-        }
-        if (m_updateYtdlpBtn) {
-            m_updateYtdlpBtn->setEnabled(true);
-            m_updateYtdlpBtn->setText(updateAvailable
-                ? QStringLiteral("ATUALIZAR YT-DLP NIGHTLY AGORA")
-                : QStringLiteral("VERIFICAR YT-DLP NIGHTLY"));
-        }
-        logMessage(updateAvailable
-            ? QString("[Motor Extrator] Nightly %1 disponível; atualização aguarda confirmação.")
-                  .arg(release.version)
-            : QString("[Motor Extrator] yt-dlp já está atualizado na Nightly %1.")
-                  .arg(release.version));
-        if (!m_ytdlpCheckSilent && !updateAvailable) {
-            QMessageBox::information(this, "yt-dlp", m_ytdlpStatusLabel->text());
-        }
-    });
-    connect(m_ytdlpUpdateService, &YtDlpUpdateService::checkFailed, this,
-            [this](const QString &message) {
-        if (m_ytdlpStatusLabel) {
-            m_ytdlpStatusLabel->setText(ytdlpCurrentDescription() + " — " + message);
-        }
-        if (m_updateYtdlpBtn) {
-            m_updateYtdlpBtn->setEnabled(true);
-            m_updateYtdlpBtn->setText("VERIFICAR YT-DLP NIGHTLY");
-        }
-        logMessage("[Motor Extrator] " + message);
-        if (!m_ytdlpCheckSilent) {
-            QMessageBox::warning(this, "yt-dlp", message);
-        }
-    });
-    connect(m_ytdlpUpdateService, &YtDlpUpdateService::updateProgress, this,
-            [this](qint64 received, qint64 total) {
-        if (!m_updateProgressBar) return;
-        m_updateProgressBar->setVisible(true);
-        if (total > 0) {
-            m_updateProgressBar->setRange(0, 100);
-            m_updateProgressBar->setValue(static_cast<int>((received * 100) / total));
-        } else {
-            m_updateProgressBar->setRange(0, 0);
-        }
-    });
-    connect(m_ytdlpUpdateService, &YtDlpUpdateService::updateCompleted, this,
-            [this](const QString &version, const QString &path) {
-        if (m_updateProgressBar) {
-            m_updateProgressBar->setVisible(false);
-            m_updateProgressBar->setRange(0, 100);
-        }
-        if (m_ytdlpStatusLabel) {
-            m_ytdlpStatusLabel->setText(ytdlpCurrentDescription()
-                                        + QString(" — Nightly %1 instalada.").arg(version));
-        }
-        if (m_updateYtdlpBtn) {
-            m_updateYtdlpBtn->setEnabled(true);
-            m_updateYtdlpBtn->setText("VERIFICAR YT-DLP NIGHTLY");
-        }
-        logMessage(QString("[Motor Extrator] yt-dlp Nightly %1 atualizado em %2.")
-                       .arg(version, QDir::toNativeSeparators(path)));
-        QMessageBox::information(this, "yt-dlp atualizado",
-                                 "O yt-dlp Nightly foi atualizado e será usado nas próximas tarefas.");
-    });
-    connect(m_ytdlpUpdateService, &YtDlpUpdateService::updateFailed, this,
-            [this](const QString &message) {
-        if (m_updateProgressBar) {
-            m_updateProgressBar->setVisible(false);
-            m_updateProgressBar->setRange(0, 100);
-        }
-        if (m_ytdlpStatusLabel) {
-            m_ytdlpStatusLabel->setText(ytdlpCurrentDescription() + " — " + message);
-        }
-        if (m_updateYtdlpBtn) {
-            m_updateYtdlpBtn->setEnabled(true);
-            m_updateYtdlpBtn->setText("VERIFICAR YT-DLP NIGHTLY");
-        }
-        logMessage("[Motor Extrator] " + message);
-        QMessageBox::warning(this, "Falha ao atualizar yt-dlp", message);
-    });
-
+    m_updateCoordinator = std::make_unique<MainWindowUpdateCoordinator>(
+        this, NEOV_VERSION_TAG, NEOV_VERSION_NUMBER);
     startGpuProbe();
 
     connect(m_downloadManager, &DownloadManager::jobProgress, this, &MainWindow::onDownloadProgress);
@@ -469,7 +229,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_downloadManager, &DownloadManager::jobCompleted, this, &MainWindow::onDownloadCompleted);
     connect(m_downloadManager, &DownloadManager::queueStateChanged, this, &MainWindow::onDownloadQueueStateChanged);
     connect(m_downloadManager, &DownloadManager::queueIdle, this, &MainWindow::maybeShowQueueSummary);
-    connect(m_downloadManager, &DownloadManager::queueIdle, this, &MainWindow::tryStartPendingAppUpdate);
+    connect(m_downloadManager, &DownloadManager::queueIdle, this, [this]() {
+        if (m_updateCoordinator) {
+            m_updateCoordinator->tryStartPendingAppUpdate();
+        }
+    });
     connect(m_downloadManager, &DownloadManager::jobLog, this, [this](DownloadId id, const QString &message) {
         logMessage(QString("[Download #%1] %2").arg(id).arg(message));
     });
@@ -480,7 +244,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_conversionManager, &ConversionManager::conversionFailed, this, &MainWindow::onConversionFailed);
     connect(m_conversionManager, &ConversionManager::conversionCancelled, this, &MainWindow::onConversionCancelled);
     connect(m_conversionManager, &ConversionManager::queueIdle, this, &MainWindow::maybeShowQueueSummary);
-    connect(m_conversionManager, &ConversionManager::queueIdle, this, &MainWindow::tryStartPendingAppUpdate);
+    connect(m_conversionManager, &ConversionManager::queueIdle, this, [this]() {
+        if (m_updateCoordinator) {
+            m_updateCoordinator->tryStartPendingAppUpdate();
+        }
+    });
     connect(m_conversionManager, &ConversionManager::queueStateChanged, this, [this](bool, int) {
         onDownloadQueueStateChanged(m_downloadManager->activeCount(), m_downloadManager->pendingCount());
     });
@@ -505,7 +273,9 @@ MainWindow::MainWindow(QWidget *parent)
                 ? "[Updater] Download e instalação automáticos foram ativados pelo usuário."
                 : "[Updater] Download e instalação automáticos foram desativados pelo usuário.");
             if (enabled) {
-                tryStartPendingAppUpdate();
+                if (m_updateCoordinator) {
+                    m_updateCoordinator->tryStartPendingAppUpdate();
+                }
             }
         });
     }
@@ -1306,7 +1076,9 @@ void MainWindow::onConversionCancelled(ConversionId id, DownloadId ownerDownload
 
 void MainWindow::maybeShowQueueSummary()
 {
-    tryStartPendingAppUpdate();
+    if (m_updateCoordinator) {
+        m_updateCoordinator->tryStartPendingAppUpdate();
+    }
     if (m_closing || m_currentBatchJobs.isEmpty() || m_downloadManager->hasWork()
         || m_conversionManager->hasAutomaticWork()) {
         return;
@@ -1332,7 +1104,7 @@ void MainWindow::maybeShowQueueSummary()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (m_appUpdateInstaller && m_appUpdateInstaller->isInstalling()) {
+    if (m_updateCoordinator && m_updateCoordinator->isInstallingAppUpdate()) {
         QMessageBox::information(this, "Atualização em andamento",
                                  "A atualização autenticada está sendo instalada. Aguarde a conclusão.");
         event->ignore();
@@ -1533,169 +1305,28 @@ void MainWindow::setupStyles()
 
 void MainWindow::checkForUpdates(bool silent)
 {
-    if (!m_appUpdateService || m_appUpdateService->isBusy()) {
-        return;
+    if (m_updateCoordinator) {
+        m_updateCoordinator->checkForUpdates(silent);
     }
-    m_appUpdateCheckSilent = silent;
-    m_appUpdatePending = false;
-    if (m_updateAppBtn) {
-        m_updateAppBtn->setVisible(false);
-        m_updateAppBtn->setEnabled(false);
-    }
-    if (m_updateStatusLabel) {
-        m_updateStatusLabel->setText("Consultando a release assinada no GitHub...");
-    }
-    if (m_sidebarUpdateNotification) {
-        m_sidebarUpdateNotification->setText("🔄 Checando...");
-        m_sidebarUpdateNotification->setStyleSheet("color: #38bdf8; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
-    }
-    if (m_checkUpdateBtn) {
-        m_checkUpdateBtn->setEnabled(false);
-        m_checkUpdateBtn->setText("VERIFICANDO RELEASE...");
-    }
-    logMessage("[Updater] Consultando release e manifesto assinado no GitHub.");
-    m_appUpdateService->checkLatestRelease();
 }
 
 void MainWindow::requestAppUpdate()
 {
-    if (!m_appUpdateService || !m_appUpdateService->hasLatestRelease()
-        || (m_appUpdateInstaller && m_appUpdateInstaller->isInstalling())) {
-        return;
+    if (m_updateCoordinator) {
+        m_updateCoordinator->requestAppUpdate();
     }
-    m_appUpdatePending = true;
-    if (m_updateAppBtn) {
-        m_updateAppBtn->setEnabled(false);
-        m_updateAppBtn->setText("ATUALIZAÇÃO AGENDADA...");
-    }
-    tryStartPendingAppUpdate();
-}
-
-bool MainWindow::canInstallAppUpdate() const
-{
-    return !m_closing
-        && (!m_appUpdateInstaller || !m_appUpdateInstaller->isInstalling())
-        && !m_downloadManager->hasWork()
-        && !m_conversionManager->hasWork()
-        && (!m_playlistPreviewService || !m_playlistPreviewService->isBusy());
-}
-
-void MainWindow::tryStartPendingAppUpdate()
-{
-    if (!m_appUpdatePending || !m_appUpdateService || !m_appUpdateService->hasLatestRelease()
-        || m_appUpdateService->isBusy()
-        || (m_appUpdateInstaller && m_appUpdateInstaller->isInstalling())) {
-        return;
-    }
-    if (!canInstallAppUpdate()) {
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText("Atualização autenticada aguardando downloads, conversões ou prévia terminarem.");
-        }
-        return;
-    }
-
-    m_appUpdatePending = false;
-    if (m_updateStatusLabel) {
-        m_updateStatusLabel->setText("Baixando pacote autenticado; validando SHA-256...");
-    }
-    if (m_updateAppBtn) {
-        m_updateAppBtn->setEnabled(false);
-        m_updateAppBtn->setText("BAIXANDO ATUALIZAÇÃO...");
-    }
-    logMessage("[Updater] A fila está ociosa; iniciando download do pacote autenticado.");
-    m_appUpdateService->downloadLatestRelease();
-}
-
-bool MainWindow::isInstalledWindowsCopy() const
-{
-#ifdef Q_OS_WIN
-    return QFileInfo(QDir(QCoreApplication::applicationDirPath()).filePath("unins000.exe")).isFile();
-#else
-    return false;
-#endif
-}
-
-void MainWindow::installVerifiedAppPackage(const QString &version, const QString &packagePath)
-{
-    if (!canInstallAppUpdate()) {
-        m_appUpdatePending = true;
-        if (m_updateStatusLabel) {
-            m_updateStatusLabel->setText("Pacote v" + version
-                                        + " validado; instalação aguardando a fila ficar ociosa.");
-        }
-        return;
-    }
-    if (!m_appUpdateInstaller) {
-        QMessageBox::critical(this, "Atualização indisponível",
-                              "O instalador de atualizações não está disponível.");
-        QFile::remove(packagePath);
-        return;
-    }
-
-    m_appUpdateInstaller->install(version, packagePath, isInstalledWindowsCopy());
 }
 
 void MainWindow::checkYtDlpUpdates(bool silent)
 {
-    if (!m_ytdlpUpdateService || m_ytdlpUpdateService->isBusy()) {
-        return;
+    if (m_updateCoordinator) {
+        m_updateCoordinator->checkYtDlpUpdates(silent);
     }
-    m_ytdlpCheckSilent = silent;
-    if (m_ytdlpStatusLabel) {
-        m_ytdlpStatusLabel->setText(ytdlpCurrentDescription()
-                                    + " — consultando a Nightly oficial...");
-    }
-    if (m_updateYtdlpBtn) {
-        m_updateYtdlpBtn->setEnabled(false);
-        m_updateYtdlpBtn->setText("VERIFICANDO YT-DLP...");
-    }
-    logMessage("[Motor Extrator] Consultando a release Nightly oficial do yt-dlp...");
-    m_ytdlpUpdateService->checkLatestRelease();
 }
 
 void MainWindow::updateYtdlpEngine()
 {
-    if (!m_ytdlpUpdateService || m_ytdlpUpdateService->isBusy()) {
-        return;
+    if (m_updateCoordinator) {
+        m_updateCoordinator->updateYtdlpEngine();
     }
-    if (!m_ytdlpUpdateService->hasLatestRelease()) {
-        checkYtDlpUpdates(false);
-        return;
-    }
-
-    const MediaToolInfo current = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
-    if (current.isAvailable()
-        && !MediaToolResolver::isVersionNewer(m_ytdlpUpdateService->latestVersion(), current.version)) {
-        QMessageBox::information(this, "yt-dlp", ytdlpCurrentDescription()
-                                 + " já é igual ou mais recente que a Nightly publicada.");
-        return;
-    }
-    if (m_downloadManager->hasWork() || m_conversionManager->hasWork()
-        || (m_playlistPreviewService && m_playlistPreviewService->isBusy())) {
-        QMessageBox::warning(this, "Atualização adiada",
-                             "Conclua ou cancele downloads, conversões e prévias antes de atualizar o yt-dlp.");
-        return;
-    }
-
-    const QMessageBox::StandardButton response = QMessageBox::question(
-        this,
-        "Atualizar yt-dlp Nightly",
-        QString("A versão Nightly %1 será baixada da release oficial, validada por SHA-256 e salva apenas na pasta de dados do seu usuário.\n\nDeseja continuar?")
-            .arg(m_ytdlpUpdateService->latestVersion()),
-        QMessageBox::Yes | QMessageBox::Cancel,
-        QMessageBox::Yes);
-    if (response != QMessageBox::Yes) {
-        return;
-    }
-
-    if (m_updateYtdlpBtn) {
-        m_updateYtdlpBtn->setEnabled(false);
-        m_updateYtdlpBtn->setText("ATUALIZANDO YT-DLP...");
-    }
-    if (m_updateProgressBar) {
-        m_updateProgressBar->setVisible(true);
-        m_updateProgressBar->setRange(0, 0);
-    }
-    logMessage("[Motor Extrator] Atualização Nightly confirmada pelo usuário; baixando checksum e binário.");
-    m_ytdlpUpdateService->installLatestRelease();
 }

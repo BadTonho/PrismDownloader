@@ -40,18 +40,17 @@ class QProcess;
 class QThread;
 class QProgressDialog;
 class QNetworkAccessManager;
-class AppUpdateService;
-class AppUpdateInstaller;
 class LibraryView;
 class MainWindowUiBuilder;
+class MainWindowUpdateCoordinator;
 class DownloadQueueWorkflow;
 class YtDlpMetadataService;
-class YtDlpUpdateService;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
     friend class MainWindowUiBuilder;
+    friend class MainWindowUpdateCoordinator;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -128,10 +127,6 @@ private:
                                      QList<PlaylistItem> &selectedItems);
     void showPlaylistItemDetailsDialog(const PlaylistItem &item);
     void openLibraryFile(const QString &filePath);
-    bool canInstallAppUpdate() const;
-    void tryStartPendingAppUpdate();
-    void installVerifiedAppPackage(const QString &version, const QString &packagePath);
-    bool isInstalledWindowsCopy() const;
 
     // Estrutura de Navegação Lateral (Sidebar + StackedWidget)
     QStackedWidget *m_stackedWidget;
@@ -230,12 +225,7 @@ private:
     QPushButton *m_checkUpdateBtn;
     QPushButton *m_updateAppBtn{nullptr};
     QPushButton *m_updateYtdlpBtn;
-    AppUpdateService *m_appUpdateService{nullptr};
-    AppUpdateInstaller *m_appUpdateInstaller{nullptr};
-    YtDlpUpdateService *m_ytdlpUpdateService{nullptr};
-    bool m_ytdlpCheckSilent{true};
-    bool m_appUpdateCheckSilent{true};
-    bool m_appUpdatePending{false};
+    std::unique_ptr<MainWindowUpdateCoordinator> m_updateCoordinator;
 
     void flushLogBuffer();
     void startGpuProbe();

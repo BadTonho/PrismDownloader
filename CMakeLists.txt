@@ -53,6 +53,10 @@ set(PRISM_SOURCES
     src/AppSettings.cpp
     src/AppUpdateInstaller.h
     src/AppUpdateInstaller.cpp
+    src/YtDlpStatus.h
+    src/YtDlpStatus.cpp
+    src/MainWindowUpdateCoordinator.h
+    src/MainWindowUpdateCoordinator.cpp
     src/MainWindow.h
     src/MainWindow.cpp
     src/MediaItem.h
