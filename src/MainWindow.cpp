@@ -28,6 +28,11 @@
 #include <QTableWidgetItem>
 #include <QThread>
 #include <QProcess>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
 #include <QNetworkReply>
@@ -58,6 +63,7 @@ constexpr int kMaximumLogEntries = 5000;
 constexpr int kMaximumPlaylistItems = 500;
 constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
 constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
+constexpr qsizetype kMaximumMetadataOutputBytes = 8 * 1024 * 1024;
 constexpr qsizetype kMaximumLibraryThumbnailBytes = 3 * 1024 * 1024;
 constexpr int kMaximumConcurrentLibraryThumbnails = 3;
 
@@ -162,6 +168,285 @@ bool isValidTimeRange(const QString &timeRange)
         "^(\\d{1,3}):([0-5]\\d):([0-5]\\d)-(\\d{1,3}):([0-5]\\d):([0-5]\\d)$");
     const QRegularExpressionMatch match = pattern.match(timeRange);
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
+}
+
+struct ParsedMediaFormat {
+    QString ext;
+    QString videoCodec;
+    QString audioCodec;
+    int width{0};
+    int height{0};
+    double fps{0.0};
+    double tbr{0.0};
+    double vbr{0.0};
+    double abr{0.0};
+    qint64 size{0};
+};
+
+bool hasVideo(const ParsedMediaFormat &format)
+{
+    return !format.videoCodec.isEmpty() && format.videoCodec != QStringLiteral("none")
+        && format.height > 0;
+}
+
+bool hasAudio(const ParsedMediaFormat &format)
+{
+    return !format.audioCodec.isEmpty() && format.audioCodec != QStringLiteral("none");
+}
+
+QString codecLabel(const QString &codec, bool audio)
+{
+    const QString normalized = codec.toLower();
+    if (normalized.startsWith(QStringLiteral("avc1")) || normalized.contains(QStringLiteral("h264"))) {
+        return QStringLiteral("H.264");
+    }
+    if (normalized.startsWith(QStringLiteral("hev1")) || normalized.startsWith(QStringLiteral("hvc1"))
+        || normalized.contains(QStringLiteral("hevc"))) {
+        return QStringLiteral("HEVC");
+    }
+    if (normalized.startsWith(QStringLiteral("av01")) || normalized.contains(QStringLiteral("av1"))) {
+        return QStringLiteral("AV1");
+    }
+    if (normalized.startsWith(QStringLiteral("vp09")) || normalized.startsWith(QStringLiteral("vp9"))) {
+        return QStringLiteral("VP9");
+    }
+    if (normalized.startsWith(QStringLiteral("vp08")) || normalized.startsWith(QStringLiteral("vp8"))) {
+        return QStringLiteral("VP8");
+    }
+    if (audio && normalized.startsWith(QStringLiteral("mp4a"))) {
+        return QStringLiteral("AAC");
+    }
+    if (audio && normalized.contains(QStringLiteral("opus"))) {
+        return QStringLiteral("Opus");
+    }
+    if (audio && normalized.contains(QStringLiteral("vorbis"))) {
+        return QStringLiteral("Vorbis");
+    }
+    const int separator = codec.indexOf(QLatin1Char('.'));
+    return separator > 0 ? codec.left(separator).toUpper() : codec.toUpper();
+}
+
+qint64 formatSizeFromJson(const QJsonObject &object)
+{
+    const qint64 exact = static_cast<qint64>(object.value(QStringLiteral("filesize")).toDouble(-1.0));
+    if (exact > 0) {
+        return exact;
+    }
+    return static_cast<qint64>(object.value(QStringLiteral("filesize_approx")).toDouble(-1.0));
+}
+
+double formatBitrateKbps(const ParsedMediaFormat &format)
+{
+    if (format.tbr > 0.0) {
+        return format.tbr;
+    }
+    return format.vbr + format.abr;
+}
+
+double formatBytesPerSecond(const ParsedMediaFormat &format, double durationSeconds)
+{
+    if (format.size > 0 && durationSeconds > 0.0) {
+        return static_cast<double>(format.size) / durationSeconds;
+    }
+    const double bitrateKbps = formatBitrateKbps(format);
+    return bitrateKbps > 0.0 ? bitrateKbps * 1000.0 / 8.0 : 0.0;
+}
+
+int bestVideoFormat(const QList<ParsedMediaFormat> &formats, int maximumHeight)
+{
+    int best = -1;
+    for (int index = 0; index < formats.size(); ++index) {
+        const ParsedMediaFormat &candidate = formats.at(index);
+        if (!hasVideo(candidate) || candidate.height > maximumHeight) {
+            continue;
+        }
+        if (best < 0) {
+            best = index;
+            continue;
+        }
+        const ParsedMediaFormat &current = formats.at(best);
+        if (candidate.height > current.height
+            || (candidate.height == current.height && candidate.fps > current.fps)
+            || (candidate.height == current.height && candidate.fps == current.fps
+                && formatBitrateKbps(candidate) > formatBitrateKbps(current))) {
+            best = index;
+        }
+    }
+    return best;
+}
+
+int bestAudioFormat(const QList<ParsedMediaFormat> &formats)
+{
+    int best = -1;
+    for (int index = 0; index < formats.size(); ++index) {
+        const ParsedMediaFormat &candidate = formats.at(index);
+        if (!hasAudio(candidate)) {
+            continue;
+        }
+        if (best < 0) {
+            best = index;
+            continue;
+        }
+        const ParsedMediaFormat &current = formats.at(best);
+        const bool candidateAudioOnly = !hasVideo(candidate);
+        const bool currentAudioOnly = !hasVideo(current);
+        if ((candidateAudioOnly && !currentAudioOnly)
+            || (candidateAudioOnly == currentAudioOnly
+                && formatBitrateKbps(candidate) > formatBitrateKbps(current))) {
+            best = index;
+        }
+    }
+    return best;
+}
+
+MediaFormatOption makeVideoFormatOption(const QList<ParsedMediaFormat> &formats,
+                                        int maximumHeight, double durationSeconds)
+{
+    MediaFormatOption option;
+    const int videoIndex = bestVideoFormat(formats, maximumHeight);
+    if (videoIndex < 0) {
+        option.formatCodec = QStringLiteral("Não disponível neste vídeo");
+        option.resolutionMode = QStringLiteral("Nenhum formato até %1p").arg(maximumHeight);
+        return option;
+    }
+
+    const ParsedMediaFormat &video = formats.at(videoIndex);
+    const int audioIndex = hasAudio(video) ? videoIndex : bestAudioFormat(formats);
+    const ParsedMediaFormat *audio = audioIndex >= 0 ? &formats.at(audioIndex) : nullptr;
+    option.available = true;
+    option.formatCodec = QStringLiteral("%1/%2")
+        .arg(video.ext.toUpper(), codecLabel(video.videoCodec, false));
+    double bytesPerSecond = formatBytesPerSecond(video, durationSeconds);
+    if (audio && audioIndex != videoIndex) {
+        option.formatCodec += QStringLiteral(" + %1/%2")
+            .arg(audio->ext.toUpper(), codecLabel(audio->audioCodec, true));
+        bytesPerSecond += formatBytesPerSecond(*audio, durationSeconds);
+    } else if (audio && hasAudio(video)) {
+        option.formatCodec += QStringLiteral(" + %1")
+            .arg(codecLabel(video.audioCodec, true));
+    }
+    option.estimatedBytesPerSecond = bytesPerSecond;
+    option.estimatedBytes = durationSeconds > 0.0
+        ? qRound64(bytesPerSecond * durationSeconds)
+        : video.size + (audio && audioIndex != videoIndex ? audio->size : 0);
+    option.resolutionMode = QStringLiteral("%1x%2 • %3 fps")
+        .arg(video.width).arg(video.height)
+        .arg(video.fps > 0.0 ? QString::number(video.fps, 'f', 0) : QStringLiteral("?") );
+    return option;
+}
+
+MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats, double durationSeconds)
+{
+    MediaFormatOption option;
+    const int audioIndex = bestAudioFormat(formats);
+    if (audioIndex < 0) {
+        option.formatCodec = QStringLiteral("Áudio não disponível neste vídeo");
+        option.resolutionMode = QStringLiteral("Somente vídeo");
+        return option;
+    }
+
+    const ParsedMediaFormat &audio = formats.at(audioIndex);
+    option.available = true;
+    option.formatCodec = QStringLiteral("MP3 • origem %1/%2")
+        .arg(audio.ext.toUpper(), codecLabel(audio.audioCodec, true));
+    option.estimatedBytesPerSecond = formatBytesPerSecond(audio, durationSeconds);
+    option.estimatedBytes = durationSeconds > 0.0
+        ? qRound64(option.estimatedBytesPerSecond * durationSeconds)
+        : audio.size;
+    const double bitrate = formatBitrateKbps(audio);
+    option.resolutionMode = bitrate > 0.0
+        ? QStringLiteral("Áudio • %1 kbps").arg(qRound(bitrate))
+        : QStringLiteral("Áudio");
+    return option;
+}
+
+QString readableBytes(qint64 bytes)
+{
+    if (bytes <= 0) {
+        return QStringLiteral("—");
+    }
+    static const QStringList units{QStringLiteral("B"), QStringLiteral("KB"),
+                                   QStringLiteral("MB"), QStringLiteral("GB")};
+    double value = static_cast<double>(bytes);
+    int unit = 0;
+    while (value >= 1024.0 && unit < units.size() - 1) {
+        value /= 1024.0;
+        ++unit;
+    }
+    return QStringLiteral("≈ %1 %2").arg(value, 0, 'f', unit == 0 ? 0 : 1).arg(units.at(unit));
+}
+
+double selectedDurationSeconds(const QString &timeRange, double fullDuration)
+{
+    if (timeRange.isEmpty() || !isValidTimeRange(timeRange)) {
+        return fullDuration;
+    }
+    static const QRegularExpression pattern(
+        QStringLiteral("^(\\d{1,3}):([0-5]\\d):([0-5]\\d)-(\\d{1,3}):([0-5]\\d):([0-5]\\d)$"));
+    const QRegularExpressionMatch match = pattern.match(timeRange);
+    return match.hasMatch() ? static_cast<double>(toSeconds(match, 4, 5, 6) - toSeconds(match, 1, 2, 3))
+                            : fullDuration;
+}
+
+MediaMetadata parseMediaMetadata(const QByteArray &output)
+{
+    MediaMetadata metadata;
+    QByteArray json = output.trimmed();
+    const qsizetype objectStart = json.indexOf('{');
+    const qsizetype objectEnd = json.lastIndexOf('}');
+    if (objectStart >= 0 && objectEnd > objectStart) {
+        json = json.mid(objectStart, objectEnd - objectStart + 1);
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(json, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        metadata.error = QStringLiteral("yt-dlp não retornou metadados JSON válidos.");
+        return metadata;
+    }
+
+    const QJsonObject root = document.object();
+    metadata.title = root.value(QStringLiteral("title")).toString();
+    metadata.durationSeconds = root.value(QStringLiteral("duration")).toDouble(0.0);
+    metadata.durationText = root.value(QStringLiteral("duration_string")).toString();
+    if (metadata.durationText.isEmpty() && metadata.durationSeconds > 0.0) {
+        const qint64 totalSeconds = qRound64(metadata.durationSeconds);
+        metadata.durationText = QStringLiteral("%1:%2:%3")
+            .arg(totalSeconds / 3600, 2, 10, QLatin1Char('0'))
+            .arg((totalSeconds / 60) % 60, 2, 10, QLatin1Char('0'))
+            .arg(totalSeconds % 60, 2, 10, QLatin1Char('0'));
+    }
+
+    QList<ParsedMediaFormat> formats;
+    const QJsonArray formatArray = root.value(QStringLiteral("formats")).toArray();
+    for (const QJsonValue &value : formatArray) {
+        const QJsonObject object = value.toObject();
+        ParsedMediaFormat format;
+        format.ext = object.value(QStringLiteral("ext")).toString();
+        format.videoCodec = object.value(QStringLiteral("vcodec")).toString();
+        format.audioCodec = object.value(QStringLiteral("acodec")).toString();
+        format.width = object.value(QStringLiteral("width")).toInt();
+        format.height = object.value(QStringLiteral("height")).toInt();
+        format.fps = object.value(QStringLiteral("fps")).toDouble();
+        format.tbr = object.value(QStringLiteral("tbr")).toDouble();
+        format.vbr = object.value(QStringLiteral("vbr")).toDouble();
+        format.abr = object.value(QStringLiteral("abr")).toDouble();
+        format.size = formatSizeFromJson(object);
+        if (hasVideo(format) || hasAudio(format)) {
+            formats.append(format);
+        }
+    }
+
+    if (formats.isEmpty()) {
+        metadata.error = QStringLiteral("A mídia não possui formatos compatíveis para análise.");
+        return metadata;
+    }
+
+    metadata.options.append(makeVideoFormatOption(formats, 2160, metadata.durationSeconds));
+    metadata.options.append(makeVideoFormatOption(formats, 1080, metadata.durationSeconds));
+    metadata.options.append(makeVideoFormatOption(formats, 720, metadata.durationSeconds));
+    metadata.options.append(makeAudioFormatOption(formats, metadata.durationSeconds));
+    return metadata;
 }
 
 QList<PlaylistItem> parsePlaylistPreview(const QByteArray &output)
@@ -580,6 +865,12 @@ MainWindow::~MainWindow()
     if (m_logFile.isOpen()) {
         m_logFile.flush();
         m_logFile.close();
+    }
+    if (m_metadataProcess) {
+        disconnect(m_metadataProcess, nullptr, this, nullptr);
+        m_metadataProcess->kill();
+        m_metadataProcess->waitForFinished(1000);
+        m_metadataProcess = nullptr;
     }
     stopLibraryThumbnailProcesses();
     if (m_gpuProbeThread) {
@@ -1362,6 +1653,164 @@ void MainWindow::closePlaylistPreviewDialog()
     m_playlistPreviewDialog = nullptr;
 }
 
+void MainWindow::startMetadataLookup(const QList<PlaylistItem> &items)
+{
+    if (items.isEmpty() || m_metadataProcess) {
+        return;
+    }
+
+    const QString program = MediaToolResolver::resolve(MediaTool::YtDlp);
+    if (program.isEmpty() || !QFile::exists(program)) {
+        MediaMetadata metadata;
+        metadata.error = MediaToolResolver::missingMessage(MediaTool::YtDlp);
+        logMessage("[Metadados] " + metadata.error);
+        continueDownloadWithMetadata(items, metadata);
+        return;
+    }
+
+    const PlaylistItem &item = items.first();
+    if (!item.url.isValid()) {
+        MediaMetadata metadata;
+        metadata.error = QStringLiteral("A URL da mídia não é válida para consultar os metadados.");
+        continueDownloadWithMetadata(items, metadata);
+        return;
+    }
+
+    auto *process = new QProcess(this);
+    m_metadataProcess = process;
+    m_pendingMetadataItems = items;
+    m_metadataOutput.clear();
+    m_metadataErrorOutput.clear();
+    process->setProcessChannelMode(QProcess::SeparateChannels);
+
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
+        const QByteArray chunk = process->readAllStandardOutput();
+        const qsizetype remaining = kMaximumMetadataOutputBytes - m_metadataOutput.size();
+        if (remaining > 0) {
+            m_metadataOutput.append(chunk.constData(),
+                                    static_cast<int>(qMin<qsizetype>(remaining, chunk.size())));
+        }
+    });
+    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
+        const QByteArray chunk = process->readAllStandardError();
+        const qsizetype remaining = kMaximumPlaylistErrorBytes - m_metadataErrorOutput.size();
+        if (remaining > 0) {
+            m_metadataErrorOutput.append(chunk.constData(),
+                                         static_cast<int>(qMin<qsizetype>(remaining, chunk.size())));
+        }
+    });
+
+    const auto completeLookup = [this, process](MediaMetadata metadata) {
+        if (m_metadataProcess != process) {
+            process->deleteLater();
+            return;
+        }
+
+        const QList<PlaylistItem> pendingItems = m_pendingMetadataItems;
+        const QString errorOutput = QString::fromUtf8(m_metadataErrorOutput).trimmed();
+        m_metadataProcess = nullptr;
+        m_pendingMetadataItems.clear();
+        m_metadataOutput.clear();
+        m_metadataErrorOutput.clear();
+        process->deleteLater();
+        if (m_metadataDialog) {
+            m_metadataDialog->hide();
+            m_metadataDialog->deleteLater();
+            m_metadataDialog = nullptr;
+        }
+        if (m_startBtn) {
+            m_startBtn->setEnabled(true);
+        }
+
+        if (!metadata.error.isEmpty()) {
+            if (!errorOutput.isEmpty()) {
+                metadata.error += QStringLiteral(" Detalhe: %1").arg(errorOutput.left(400));
+            }
+            logMessage("[Metadados] Análise indisponível: " + metadata.error);
+        } else {
+            logMessage(QString("[Metadados] Fonte analisada: %1 | duração: %2 | %3 opção(ões) identificada(s).")
+                           .arg(metadata.title.isEmpty() ? QStringLiteral("sem título") : metadata.title,
+                                metadata.durationText.isEmpty() ? QStringLiteral("desconhecida")
+                                                                : metadata.durationText)
+                           .arg(metadata.options.size()));
+        }
+        continueDownloadWithMetadata(pendingItems, metadata);
+    };
+
+    connect(process, &QProcess::finished, this,
+            [this, process, completeLookup](int, QProcess::ExitStatus) {
+        if (m_metadataProcess != process) {
+            process->deleteLater();
+            return;
+        }
+        const QByteArray remainingOutput = process->readAllStandardOutput();
+        if (!remainingOutput.isEmpty()) {
+            const qsizetype remaining = kMaximumMetadataOutputBytes - m_metadataOutput.size();
+            if (remaining > 0) {
+                m_metadataOutput.append(remainingOutput.constData(),
+                                        static_cast<int>(qMin<qsizetype>(remaining, remainingOutput.size())));
+            }
+        }
+        const QByteArray remainingError = process->readAllStandardError();
+        if (!remainingError.isEmpty()) {
+            const qsizetype remaining = kMaximumPlaylistErrorBytes - m_metadataErrorOutput.size();
+            if (remaining > 0) {
+                m_metadataErrorOutput.append(remainingError.constData(),
+                                             static_cast<int>(qMin<qsizetype>(remaining, remainingError.size())));
+            }
+        }
+        completeLookup(parseMediaMetadata(m_metadataOutput));
+    });
+    connect(process, &QProcess::errorOccurred, this,
+            [this, process, completeLookup](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart || m_metadataProcess != process) {
+            return;
+        }
+        MediaMetadata metadata;
+        metadata.error = QStringLiteral("Não foi possível iniciar o yt-dlp para consultar os metadados.");
+        completeLookup(metadata);
+    });
+
+    if (m_startBtn) {
+        m_startBtn->setEnabled(false);
+    }
+    m_metadataDialog = new QProgressDialog(
+        "Consultando formato, resolução e tamanho estimado...", "Cancelar", 0, 0, this);
+    m_metadataDialog->setWindowTitle("Consultando metadados");
+    m_metadataDialog->setWindowModality(Qt::WindowModal);
+    m_metadataDialog->setMinimumDuration(0);
+    m_metadataDialog->setAutoClose(false);
+    m_metadataDialog->setAutoReset(false);
+    m_metadataDialog->show();
+    connect(m_metadataDialog, &QProgressDialog::canceled, this, [this, process]() {
+        if (m_metadataProcess != process) {
+            return;
+        }
+        m_metadataProcess = nullptr;
+        m_pendingMetadataItems.clear();
+        m_metadataOutput.clear();
+        m_metadataErrorOutput.clear();
+        process->kill();
+        process->deleteLater();
+        if (m_metadataDialog) {
+            m_metadataDialog->hide();
+            m_metadataDialog->deleteLater();
+            m_metadataDialog = nullptr;
+        }
+        if (m_startBtn) {
+            m_startBtn->setEnabled(true);
+        }
+        logMessage("[Metadados] Consulta cancelada pelo usuário.");
+    });
+
+    logMessage(QString("[Metadados] Consultando yt-dlp para %1 item(ns)...").arg(items.size()));
+    process->start(program, {
+        QStringLiteral("--dump-single-json"), QStringLiteral("--no-warnings"),
+        QStringLiteral("--no-playlist"), QStringLiteral("--skip-download"),
+        QStringLiteral("--quiet"), QStringLiteral("--no-color"), QStringLiteral("--"),
+        item.url.toString(QUrl::FullyEncoded)});
+}
+
 void MainWindow::startPlaylistPreview(const QUrl &url)
 {
     if (m_playlistPreviewProcess) {
@@ -1854,9 +2303,20 @@ void MainWindow::continueDownload(const QList<PlaylistItem> &items)
         return;
     }
 
+    startMetadataLookup(items);
+}
+
+void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
+                                              const MediaMetadata &metadata)
+{
+    if (items.isEmpty()) {
+        return;
+    }
+
     QString selectedQuality, timeRange, convertFormat, customOutputDir;
     bool doConvert = false;
-    if (!showFormatSelectionDialog(selectedQuality, timeRange, doConvert, convertFormat, customOutputDir)) {
+    if (!showFormatSelectionDialog(metadata, items.size(), selectedQuality, timeRange,
+                                   doConvert, convertFormat, customOutputDir)) {
         logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
         return;
     }
@@ -2361,11 +2821,14 @@ void MainWindow::onDownloadQueueDoubleClicked(int row, int /*column*/)
 // ==========================================
 // DIÁLOGO MODAL DE SELEÇÃO DE FORMATO
 // ==========================================
-bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir)
+bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int itemCount,
+                                           QString &outQuality, QString &outTimeRange,
+                                           bool &outDoConvert, QString &outConvertFormat,
+                                           QString &outCustomOutputDir)
 {
     QDialog dlg(this);
     dlg.setWindowTitle("Selecione o formato da fonte - Prism Studio Suite");
-    dlg.resize(780, 580);
+    dlg.resize(980, 650);
     dlg.setStyleSheet(this->styleSheet() + "QDialog { background-color: #1a1a1a; }");
 
     QVBoxLayout *dlgLayout = new QVBoxLayout(&dlg);
@@ -2376,20 +2839,43 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     lblTitle->setStyleSheet("font-weight: bold; font-size: 18px; color: #ffffff;");
     dlgLayout->addWidget(lblTitle);
 
-    QTableWidget *table = new QTableWidget(4, 3, &dlg);
+    QLabel *lblMetadata = new QLabel(&dlg);
+    const QString sourceTitle = metadata.title.isEmpty()
+        ? QStringLiteral("Título não identificado") : metadata.title;
+    const QString sourceDuration = metadata.durationText.isEmpty()
+        ? QStringLiteral("duração não informada") : metadata.durationText;
+    QString metadataText = QStringLiteral("Fonte: %1  •  Duração: %2")
+        .arg(sourceTitle, sourceDuration);
+    if (itemCount > 1) {
+        metadataText += QStringLiteral("  •  Estimativas baseadas no primeiro de %1 itens")
+            .arg(itemCount);
+    }
+    if (!metadata.error.isEmpty()) {
+        metadataText += QStringLiteral("\nAviso: %1").arg(metadata.error);
+    }
+    lblMetadata->setText(metadataText);
+    lblMetadata->setWordWrap(true);
+    lblMetadata->setStyleSheet(metadata.error.isEmpty()
+                                    ? "color: #a7f3d0; font-size: 12px;"
+                                    : "color: #fcd34d; font-size: 12px;");
+    dlgLayout->addWidget(lblMetadata);
+
+    QTableWidget *table = new QTableWidget(4, 4, &dlg);
     QStringList headers;
     headers << "Título / Qualidade" << "Formato e Codec" << "Resolução / Modo";
+    headers << "Estimativa";
     table->setHorizontalHeaderLabels(headers);
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     table->verticalHeader()->setVisible(false);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setSelectionMode(QAbstractItemView::SingleSelection);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setAlternatingRowColors(true);
     table->setObjectName("libraryTable");
-    table->setMinimumHeight(180);
+    table->setMinimumHeight(210);
 
     struct Prof { QString q; QString f; QString r; };
     Prof profs[4] = {
@@ -2403,6 +2889,26 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
         table->setItem(i, 0, new QTableWidgetItem(profs[i].q));
         table->setItem(i, 1, new QTableWidgetItem(profs[i].f));
         table->setItem(i, 2, new QTableWidgetItem(profs[i].r));
+        table->setItem(i, 3, new QTableWidgetItem(QStringLiteral("—")));
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        const MediaFormatOption option = metadata.options.value(i);
+        if (option.available) {
+            table->item(i, 1)->setText(option.formatCodec);
+            table->item(i, 2)->setText(option.resolutionMode);
+            table->item(i, 3)->setText(readableBytes(option.estimatedBytes));
+        } else if (!metadata.options.isEmpty()) {
+            table->item(i, 1)->setText(option.formatCodec.isEmpty()
+                                           ? QStringLiteral("Não disponível neste vídeo")
+                                           : option.formatCodec);
+            table->item(i, 2)->setText(option.resolutionMode.isEmpty()
+                                           ? QStringLiteral("Não informado")
+                                           : option.resolutionMode);
+        } else if (!metadata.error.isEmpty()) {
+            table->item(i, 1)->setText(QStringLiteral("Metadados indisponíveis"));
+            table->item(i, 2)->setText(QStringLiteral("Não informado"));
+        }
     }
 
     int defaultIdx = m_qualityCombo->currentIndex();
@@ -2423,6 +2929,23 @@ bool MainWindow::showFormatSelectionDialog(QString &outQuality, QString &outTime
     QLineEdit *editTime = new QLineEdit(&dlg);
     editTime->setText(m_timeRangeInput->text());
     editTime->setPlaceholderText("Ex: 00:01:15-00:03:00 (Vazio = baixar completo)");
+    const auto updateEstimate = [table, metadata](const QString &timeRange) {
+        const double duration = selectedDurationSeconds(timeRange, metadata.durationSeconds);
+        for (int index = 0; index < metadata.options.size() && index < table->rowCount(); ++index) {
+            const MediaFormatOption &option = metadata.options.at(index);
+            if (!option.available) {
+                continue;
+            }
+            const qint64 estimate = option.estimatedBytesPerSecond > 0.0 && duration > 0.0
+                ? qRound64(option.estimatedBytesPerSecond * duration)
+                : option.estimatedBytes;
+            table->item(index, 3)->setText(readableBytes(estimate));
+            table->item(index, 3)->setToolTip(QStringLiteral(
+                "Estimativa baseada no tamanho/bitrate informado pelo servidor; o resultado pode variar."));
+        }
+    };
+    updateEstimate(editTime->text());
+    connect(editTime, &QLineEdit::textChanged, &dlg, updateEstimate);
 
     QCheckBox *chkConv = new QCheckBox("Converter para outro formato após concluir o download", &dlg);
     chkConv->setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;");

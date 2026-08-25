@@ -45,6 +45,22 @@ struct PlaylistItem {
     QUrl thumbnailUrl;
 };
 
+struct MediaFormatOption {
+    QString formatCodec;
+    QString resolutionMode;
+    qint64 estimatedBytes{0};
+    double estimatedBytesPerSecond{0.0};
+    bool available{false};
+};
+
+struct MediaMetadata {
+    QString title;
+    QString durationText;
+    double durationSeconds{0.0};
+    QList<MediaFormatOption> options;
+    QString error;
+};
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -103,7 +119,10 @@ private:
     void initializeLogFile();
     void updateLogSummary();
     bool shouldShowLogLine(const QString &line) const;
-    bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir);
+    bool showFormatSelectionDialog(const MediaMetadata &metadata, int itemCount,
+                                   QString &outQuality, QString &outTimeRange,
+                                   bool &outDoConvert, QString &outConvertFormat,
+                                   QString &outCustomOutputDir);
     int findDownloadRow(DownloadId id) const;
     DownloadId selectedDownloadId() const;
     void updateJobRow(DownloadId id);
@@ -113,6 +132,9 @@ private:
     void startPlaylistPreview(const QUrl &url);
     void closePlaylistPreviewDialog();
     void continueDownload(const QList<PlaylistItem> &items);
+    void startMetadataLookup(const QList<PlaylistItem> &items);
+    void continueDownloadWithMetadata(const QList<PlaylistItem> &items,
+                                      const MediaMetadata &metadata);
     bool showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
                                      QList<PlaylistItem> &selectedItems);
     void showPlaylistItemDetailsDialog(const PlaylistItem &item);
@@ -252,6 +274,11 @@ private:
     QByteArray m_playlistPreviewOutput;
     QByteArray m_playlistPreviewErrorOutput;
     bool m_playlistPreviewTruncated{false};
+    QProcess *m_metadataProcess{nullptr};
+    QProgressDialog *m_metadataDialog{nullptr};
+    QByteArray m_metadataOutput;
+    QByteArray m_metadataErrorOutput;
+    QList<PlaylistItem> m_pendingMetadataItems;
     QNetworkAccessManager *m_thumbnailNetwork{nullptr};
     QThread *m_gpuProbeThread{nullptr};
     GPUDetector *m_gpuProbeResult{nullptr};
