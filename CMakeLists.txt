@@ -67,6 +67,10 @@ set(PRISM_SOURCES
     src/PlaylistPreviewService.cpp
     src/PrismStyleSheet.h
     src/PrismStyleSheet.cpp
+    src/LogHighlighter.h
+    src/LogHighlighter.cpp
+    src/MainWindowUiBuilder.h
+    src/MainWindowUiBuilder.cpp
     src/DownloadQueueWorkflow.h
     src/DownloadQueueWorkflow.cpp
     src/YtDlpMetadataService.h

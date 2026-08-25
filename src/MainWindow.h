@@ -41,12 +41,15 @@ class QProgressDialog;
 class QNetworkAccessManager;
 class AppUpdateService;
 class LibraryView;
+class MainWindowUiBuilder;
 class DownloadQueueWorkflow;
 class YtDlpMetadataService;
 class YtDlpUpdateService;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
+
+    friend class MainWindowUiBuilder;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
