@@ -58,6 +58,11 @@ set(PRISM_SOURCES
     src/FormatSelectionDialog.cpp
     src/LibraryView.h
     src/LibraryView.cpp
+    src/PlaylistItem.h
+    src/DownloadQueueWorkflow.h
+    src/DownloadQueueWorkflow.cpp
+    src/YtDlpMetadataService.h
+    src/YtDlpMetadataService.cpp
     src/DownloadProfile.h
     src/MediaToolResolver.h
     src/MediaToolResolver.cpp

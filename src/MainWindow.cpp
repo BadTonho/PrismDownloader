@@ -1,9 +1,11 @@
 #include "MainWindow.h"
 #include "AppUpdateService.h"
+#include "DownloadQueueWorkflow.h"
 #include "FormatSelectionDialog.h"
 #include "LibraryView.h"
 #include "MediaToolResolver.h"
 #include "PrismVersion.h"
+#include "YtDlpMetadataService.h"
 #include "YtDlpUpdateService.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -60,7 +62,6 @@ constexpr int kMaximumLogEntries = 5000;
 constexpr int kMaximumPlaylistItems = 500;
 constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
 constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
-constexpr qsizetype kMaximumMetadataOutputBytes = 8 * 1024 * 1024;
 
 enum class LogLevel {
     Info,
@@ -221,6 +222,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUI();
     setupStyles();
+    m_downloadQueueWorkflow = std::make_unique<DownloadQueueWorkflow>(m_downloadManager);
 
     m_logFlushTimer = new QTimer(this);
     m_logFlushTimer->setInterval(75);
@@ -243,6 +245,31 @@ MainWindow::MainWindow(QWidget *parent)
             m_thumbnailNetwork->setCache(thumbnailCache);
         }
     }
+
+    m_metadataService = new YtDlpMetadataService(this);
+    connect(m_metadataService, &YtDlpMetadataService::busyChanged, this,
+            [this](bool busy) {
+        if (m_startBtn) {
+            m_startBtn->setEnabled(!busy);
+        }
+    });
+    connect(m_metadataService, &YtDlpMetadataService::logMessage,
+            this, &MainWindow::logMessage);
+    connect(m_metadataService, &YtDlpMetadataService::metadataReady, this,
+            [this](const QList<PlaylistItem> &items, const MediaMetadata &metadata) {
+        if (!metadata.error.isEmpty()) {
+            logMessage(QStringLiteral("[Metadados] Análise indisponível: %1")
+                           .arg(metadata.error));
+        } else {
+            logMessage(QStringLiteral(
+                "[Metadados] Fonte analisada: %1 | duração: %2 | %3 opção(ões) identificada(s).")
+                           .arg(metadata.title.isEmpty() ? QStringLiteral("sem título") : metadata.title,
+                                metadata.durationText.isEmpty() ? QStringLiteral("desconhecida")
+                                                                : metadata.durationText)
+                           .arg(metadata.options.size()));
+        }
+        continueDownloadWithMetadata(items, metadata);
+    });
 
     m_appUpdateService = new AppUpdateService(
         AppUpdateService::packageForCurrentPlatform(isInstalledWindowsCopy()), this);
@@ -581,12 +608,6 @@ MainWindow::~MainWindow()
     if (m_logFile.isOpen()) {
         m_logFile.flush();
         m_logFile.close();
-    }
-    if (m_metadataProcess) {
-        disconnect(m_metadataProcess, nullptr, this, nullptr);
-        m_metadataProcess->kill();
-        m_metadataProcess->waitForFinished(1000);
-        m_metadataProcess = nullptr;
     }
     if (m_gpuProbeThread) {
         m_gpuProbeThread->wait();
@@ -1268,160 +1289,10 @@ void MainWindow::closePlaylistPreviewDialog()
 
 void MainWindow::startMetadataLookup(const QList<PlaylistItem> &items)
 {
-    if (items.isEmpty() || m_metadataProcess) {
+    if (!m_metadataService) {
         return;
     }
-
-    const QString program = MediaToolResolver::resolve(MediaTool::YtDlp);
-    if (program.isEmpty() || !QFile::exists(program)) {
-        MediaMetadata metadata;
-        metadata.error = MediaToolResolver::missingMessage(MediaTool::YtDlp);
-        logMessage("[Metadados] " + metadata.error);
-        continueDownloadWithMetadata(items, metadata);
-        return;
-    }
-
-    const PlaylistItem &item = items.first();
-    if (!item.url.isValid()) {
-        MediaMetadata metadata;
-        metadata.error = QStringLiteral("A URL da mídia não é válida para consultar os metadados.");
-        continueDownloadWithMetadata(items, metadata);
-        return;
-    }
-
-    auto *process = new QProcess(this);
-    m_metadataProcess = process;
-    m_pendingMetadataItems = items;
-    m_metadataOutput.clear();
-    m_metadataErrorOutput.clear();
-    process->setProcessChannelMode(QProcess::SeparateChannels);
-
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        const QByteArray chunk = process->readAllStandardOutput();
-        const qsizetype remaining = kMaximumMetadataOutputBytes - m_metadataOutput.size();
-        if (remaining > 0) {
-            m_metadataOutput.append(chunk.constData(),
-                                    static_cast<int>(qMin<qsizetype>(remaining, chunk.size())));
-        }
-    });
-    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        const QByteArray chunk = process->readAllStandardError();
-        const qsizetype remaining = kMaximumPlaylistErrorBytes - m_metadataErrorOutput.size();
-        if (remaining > 0) {
-            m_metadataErrorOutput.append(chunk.constData(),
-                                         static_cast<int>(qMin<qsizetype>(remaining, chunk.size())));
-        }
-    });
-
-    const auto completeLookup = [this, process](MediaMetadata metadata) {
-        if (m_metadataProcess != process) {
-            process->deleteLater();
-            return;
-        }
-
-        const QList<PlaylistItem> pendingItems = m_pendingMetadataItems;
-        const QString errorOutput = QString::fromUtf8(m_metadataErrorOutput).trimmed();
-        m_metadataProcess = nullptr;
-        m_pendingMetadataItems.clear();
-        m_metadataOutput.clear();
-        m_metadataErrorOutput.clear();
-        process->deleteLater();
-        if (m_metadataDialog) {
-            m_metadataDialog->hide();
-            m_metadataDialog->deleteLater();
-            m_metadataDialog = nullptr;
-        }
-        if (m_startBtn) {
-            m_startBtn->setEnabled(true);
-        }
-
-        if (!metadata.error.isEmpty()) {
-            if (!errorOutput.isEmpty()) {
-                metadata.error += QStringLiteral(" Detalhe: %1").arg(errorOutput.left(400));
-            }
-            logMessage("[Metadados] Análise indisponível: " + metadata.error);
-        } else {
-            logMessage(QString("[Metadados] Fonte analisada: %1 | duração: %2 | %3 opção(ões) identificada(s).")
-                           .arg(metadata.title.isEmpty() ? QStringLiteral("sem título") : metadata.title,
-                                metadata.durationText.isEmpty() ? QStringLiteral("desconhecida")
-                                                                : metadata.durationText)
-                           .arg(metadata.options.size()));
-        }
-        continueDownloadWithMetadata(pendingItems, metadata);
-    };
-
-    connect(process, &QProcess::finished, this,
-            [this, process, completeLookup](int, QProcess::ExitStatus) {
-        if (m_metadataProcess != process) {
-            process->deleteLater();
-            return;
-        }
-        const QByteArray remainingOutput = process->readAllStandardOutput();
-        if (!remainingOutput.isEmpty()) {
-            const qsizetype remaining = kMaximumMetadataOutputBytes - m_metadataOutput.size();
-            if (remaining > 0) {
-                m_metadataOutput.append(remainingOutput.constData(),
-                                        static_cast<int>(qMin<qsizetype>(remaining, remainingOutput.size())));
-            }
-        }
-        const QByteArray remainingError = process->readAllStandardError();
-        if (!remainingError.isEmpty()) {
-            const qsizetype remaining = kMaximumPlaylistErrorBytes - m_metadataErrorOutput.size();
-            if (remaining > 0) {
-                m_metadataErrorOutput.append(remainingError.constData(),
-                                             static_cast<int>(qMin<qsizetype>(remaining, remainingError.size())));
-            }
-        }
-        completeLookup(MediaMetadataParser::parse(m_metadataOutput));
-    });
-    connect(process, &QProcess::errorOccurred, this,
-            [this, process, completeLookup](QProcess::ProcessError error) {
-        if (error != QProcess::FailedToStart || m_metadataProcess != process) {
-            return;
-        }
-        MediaMetadata metadata;
-        metadata.error = QStringLiteral("Não foi possível iniciar o yt-dlp para consultar os metadados.");
-        completeLookup(metadata);
-    });
-
-    if (m_startBtn) {
-        m_startBtn->setEnabled(false);
-    }
-    m_metadataDialog = new QProgressDialog(
-        "Consultando formato, resolução e tamanho estimado...", "Cancelar", 0, 0, this);
-    m_metadataDialog->setWindowTitle("Consultando metadados");
-    m_metadataDialog->setWindowModality(Qt::WindowModal);
-    m_metadataDialog->setMinimumDuration(0);
-    m_metadataDialog->setAutoClose(false);
-    m_metadataDialog->setAutoReset(false);
-    m_metadataDialog->show();
-    connect(m_metadataDialog, &QProgressDialog::canceled, this, [this, process]() {
-        if (m_metadataProcess != process) {
-            return;
-        }
-        m_metadataProcess = nullptr;
-        m_pendingMetadataItems.clear();
-        m_metadataOutput.clear();
-        m_metadataErrorOutput.clear();
-        process->kill();
-        process->deleteLater();
-        if (m_metadataDialog) {
-            m_metadataDialog->hide();
-            m_metadataDialog->deleteLater();
-            m_metadataDialog = nullptr;
-        }
-        if (m_startBtn) {
-            m_startBtn->setEnabled(true);
-        }
-        logMessage("[Metadados] Consulta cancelada pelo usuário.");
-    });
-
-    logMessage(QString("[Metadados] Consultando yt-dlp para %1 item(ns)...").arg(items.size()));
-    process->start(program, {
-        QStringLiteral("--dump-single-json"), QStringLiteral("--no-warnings"),
-        QStringLiteral("--no-playlist"), QStringLiteral("--skip-download"),
-        QStringLiteral("--quiet"), QStringLiteral("--no-color"), QStringLiteral("--"),
-        item.url.toString(QUrl::FullyEncoded)});
+    m_metadataService->start(items, this);
 }
 
 void MainWindow::startPlaylistPreview(const QUrl &url)
@@ -1953,28 +1824,25 @@ void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
     settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
     settings.setValue("defaultTimeRange", timeRange);
 
-    int addedCount = 0;
-    QStringList rejectedItems;
-    for (const auto &item : items) {
-        DownloadRequest request;
-        request.url = item.url;
-        request.quality = selectedQuality;
-        request.timeRange = timeRange;
-        request.outputDirectory = customOutputDir;
+    if (!m_downloadQueueWorkflow) {
+        QMessageBox::critical(this, "Fila indisponível",
+                              "O gerenciador de downloads não está disponível.");
+        return;
+    }
 
-        const EnqueueResult result = m_downloadManager->enqueueDownload(request);
-        if (!result.accepted) {
-            rejectedItems.append(item.title + ": " + result.error);
-            logMessage("[Fila] Item recusado: " + result.error);
-            continue;
-        }
+    const DownloadBatchOptions batchOptions{selectedQuality, timeRange, customOutputDir};
+    const DownloadBatchResult batch = m_downloadQueueWorkflow->enqueue(items, batchOptions);
+    for (const QString &rejected : batch.rejected) {
+        logMessage("[Fila] Item recusado: " + rejected);
+    }
 
+    for (const EnqueuedDownload &accepted : batch.accepted) {
         UiDownloadJob uiJob;
-        uiJob.request = request;
+        uiJob.request = accepted.request;
         uiJob.autoConvert = doConvert;
         uiJob.conversionFormat = convertFormat;
-        m_downloadJobs.insert(result.id, uiJob);
-        m_currentBatchJobs.insert(result.id);
+        m_downloadJobs.insert(accepted.id, uiJob);
+        m_currentBatchJobs.insert(accepted.id);
 
         if (m_downloadsQueueTable) {
             m_downloadsQueueTable->insertRow(0);
@@ -1985,25 +1853,26 @@ void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
                 m_downloadsQueueTable->setItem(0, column, cell);
             }
             m_downloadsQueueTable->item(0, 0)->setData(
-                Qt::UserRole, QVariant::fromValue<qulonglong>(result.id));
-            m_downloadRowItems.insert(result.id, m_downloadsQueueTable->item(0, 0));
-            updateJobRow(result.id);
+                Qt::UserRole, QVariant::fromValue<qulonglong>(accepted.id));
+            m_downloadRowItems.insert(accepted.id, m_downloadsQueueTable->item(0, 0));
+            updateJobRow(accepted.id);
             m_downloadsQueueTable->selectRow(0);
         }
 
-        ++addedCount;
-        const QString itemLabel = item.title.isEmpty() ? item.url.toString() : item.title;
         logMessage(QString("[Fila] Download #%1 adicionado: %2")
-                       .arg(result.id).arg(itemLabel));
+                       .arg(accepted.id).arg(accepted.itemLabel));
         if (!timeRange.isEmpty()) {
             logMessage(QString("[Download #%1] Recorte programado: %2")
-                           .arg(result.id).arg(timeRange));
+                           .arg(accepted.id).arg(timeRange));
         }
         if (doConvert) {
             logMessage(QString("[Download #%1] Conversão automática programada: %2")
-                           .arg(result.id).arg(convertFormat));
+                           .arg(accepted.id).arg(convertFormat));
         }
     }
+
+    const int addedCount = batch.accepted.size();
+    const QStringList rejectedItems = batch.rejected;
 
     if (addedCount == 0) {
         QMessageBox::warning(this, "Nenhum item adicionado",

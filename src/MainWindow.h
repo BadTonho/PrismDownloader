@@ -26,10 +26,12 @@
 #include <QList>
 #include <QStringList>
 #include <QSpinBox>
+#include <memory>
 #include "DownloadManager.h"
 #include "ConversionManager.h"
 #include "GPUDetector.h"
 #include "MediaMetadata.h"
+#include "PlaylistItem.h"
 
 class QCloseEvent;
 class QProcess;
@@ -38,14 +40,9 @@ class QProgressDialog;
 class QNetworkAccessManager;
 class AppUpdateService;
 class LibraryView;
+class DownloadQueueWorkflow;
+class YtDlpMetadataService;
 class YtDlpUpdateService;
-
-struct PlaylistItem {
-    QString title;
-    QUrl url;
-    QString duration;
-    QUrl thumbnailUrl;
-};
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -237,16 +234,13 @@ private:
 
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;
+    std::unique_ptr<DownloadQueueWorkflow> m_downloadQueueWorkflow;
     QProcess *m_playlistPreviewProcess{nullptr};
     QProgressDialog *m_playlistPreviewDialog{nullptr};
     QByteArray m_playlistPreviewOutput;
     QByteArray m_playlistPreviewErrorOutput;
     bool m_playlistPreviewTruncated{false};
-    QProcess *m_metadataProcess{nullptr};
-    QProgressDialog *m_metadataDialog{nullptr};
-    QByteArray m_metadataOutput;
-    QByteArray m_metadataErrorOutput;
-    QList<PlaylistItem> m_pendingMetadataItems;
+    YtDlpMetadataService *m_metadataService{nullptr};
     QNetworkAccessManager *m_thumbnailNetwork{nullptr};
     QThread *m_gpuProbeThread{nullptr};
     GPUDetector *m_gpuProbeResult{nullptr};
