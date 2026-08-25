@@ -29,6 +29,7 @@
 #include "DownloadManager.h"
 #include "ConversionManager.h"
 #include "GPUDetector.h"
+#include "MediaMetadata.h"
 
 class QCloseEvent;
 class QProcess;
@@ -36,6 +37,7 @@ class QThread;
 class QProgressDialog;
 class QNetworkAccessManager;
 class AppUpdateService;
+class LibraryView;
 class YtDlpUpdateService;
 
 struct PlaylistItem {
@@ -43,23 +45,6 @@ struct PlaylistItem {
     QUrl url;
     QString duration;
     QUrl thumbnailUrl;
-};
-
-struct MediaFormatOption {
-    QString formatCodec;
-    QString resolutionMode;
-    int actualHeight{0};
-    qint64 estimatedBytes{0};
-    double estimatedBytesPerSecond{0.0};
-    bool available{false};
-};
-
-struct MediaMetadata {
-    QString title;
-    QString durationText;
-    double durationSeconds{0.0};
-    QList<MediaFormatOption> options;
-    QString error;
 };
 
 class MainWindow : public QMainWindow {
@@ -71,7 +56,6 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void onStartClicked();
@@ -85,9 +69,6 @@ private slots:
     
     // Slots da Biblioteca de Mídia
     void refreshLibrary();
-    void onPlaySelectedMedia();
-    void onLibraryDoubleClicked(int row, int column);
-    void onLibraryBlockDoubleClicked(QListWidgetItem *item);
     void onDownloadQueueDoubleClicked(int row, int column);
 
     // Slots do Conversor de Mídia
@@ -139,13 +120,6 @@ private:
     bool showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
                                      QList<PlaylistItem> &selectedItems);
     void showPlaylistItemDetailsDialog(const PlaylistItem &item);
-    void setLibraryViewMode(bool blocks);
-    void refreshLibraryBlocks(const QFileInfoList &fileList);
-    void updateLibraryBlockLayout();
-    void scheduleLibraryThumbnailLoading();
-    void loadVisibleLibraryThumbnails();
-    void loadLibraryThumbnail(const QFileInfo &fileInfo, QLabel *thumbnailLabel);
-    void stopLibraryThumbnailProcesses();
     void openLibraryFile(const QString &filePath);
     bool canInstallAppUpdate() const;
     void tryStartPendingAppUpdate();
@@ -205,14 +179,7 @@ private:
     QString m_currentDownloadDir;
 
     // Tela de Biblioteca de Mídias (Página 1)
-    QTableWidget *m_libraryTable;
-    QStackedWidget *m_libraryViewStack{nullptr};
-    QListWidget *m_libraryBlocks{nullptr};
-    QPushButton *m_libraryListViewBtn{nullptr};
-    QPushButton *m_libraryBlocksViewBtn{nullptr};
-    QTimer *m_libraryThumbnailTimer{nullptr};
-    QHash<QString, QPixmap> m_libraryThumbnailCache;
-    QSet<QProcess *> m_libraryThumbnailProcesses;
+    LibraryView *m_libraryView{nullptr};
 
     // Tela de Conversão de Vídeo (Página 2)
     QLineEdit *m_convertInput;

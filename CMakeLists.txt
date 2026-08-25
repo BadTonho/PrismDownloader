@@ -52,6 +52,12 @@ set(PRISM_SOURCES
     src/MainWindow.h
     src/MainWindow.cpp
     src/MediaItem.h
+    src/MediaMetadata.h
+    src/MediaMetadata.cpp
+    src/FormatSelectionDialog.h
+    src/FormatSelectionDialog.cpp
+    src/LibraryView.h
+    src/LibraryView.cpp
     src/DownloadProfile.h
     src/MediaToolResolver.h
     src/MediaToolResolver.cpp
@@ -175,6 +181,15 @@ if(BUILD_TESTING)
     target_include_directories(PrismDownloaderTests PRIVATE src)
     target_compile_features(PrismDownloaderTests PRIVATE cxx_std_17)
 
+    add_executable(PrismMediaMetadataTests
+        tests/MediaMetadataTests.cpp
+        src/MediaMetadata.h
+        src/MediaMetadata.cpp
+    )
+    target_include_directories(PrismMediaMetadataTests PRIVATE src)
+    target_link_libraries(PrismMediaMetadataTests PRIVATE Qt6::Core)
+    target_compile_features(PrismMediaMetadataTests PRIVATE cxx_std_17)
+
     add_executable(PrismMediaToolResolverTests
         tests/MediaToolResolverTests.cpp
         src/MediaToolResolver.h
@@ -235,7 +250,7 @@ if(BUILD_TESTING)
     target_link_libraries(PrismQueueManagerTests PRIVATE Qt6::Core)
     target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_17)
 
-    foreach(target PrismDownloaderTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests)
+    foreach(target PrismDownloaderTests PrismMediaMetadataTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests)
         if(MSVC)
             target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
             add_custom_command(TARGET ${target} POST_BUILD
@@ -257,6 +272,7 @@ if(BUILD_TESTING)
     endforeach()
 
     add_test(NAME PrismDownloader.ProfileSelection COMMAND PrismDownloaderTests)
+    add_test(NAME PrismDownloader.MediaMetadata COMMAND PrismMediaMetadataTests)
     add_test(NAME PrismDownloader.MediaToolResolver COMMAND PrismMediaToolResolverTests)
     add_test(NAME PrismDownloader.YtDlpUpdateService COMMAND PrismYtDlpUpdateServiceTests)
     add_test(NAME PrismDownloader.AppUpdateService COMMAND PrismAppUpdateServiceTests)
