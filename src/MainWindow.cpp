@@ -2865,7 +2865,7 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     headers << "Título / Qualidade" << "Formato e Codec" << "Resolução / Modo";
     headers << "Estimativa";
     table->setHorizontalHeaderLabels(headers);
-    table->horizontalHeaderItem(0)->setText(QStringLiteral("Perfil / Qualidade real"));
+    table->horizontalHeaderItem(0)->setText(QStringLiteral("Qualidade real / Perfil"));
     table->horizontalHeaderItem(1)->setText(QStringLiteral("Formato da fonte / Codec"));
     table->horizontalHeaderItem(2)->setText(QStringLiteral("Resolu\u00e7\u00e3o real / Modo"));
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
@@ -2900,8 +2900,8 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
         if (option.available) {
             const QString requestedProfile = table->item(i, 0)->text();
             const QString outputFormat = i == 3 ? QStringLiteral("MP3") : QStringLiteral("MP4");
-            table->item(i, 0)->setText(QStringLiteral("%1 -> %2")
-                                           .arg(requestedProfile, option.resolutionMode));
+            table->item(i, 0)->setText(QStringLiteral("%1 | perfil: %2")
+                                           .arg(option.resolutionMode, requestedProfile));
             table->item(i, 0)->setToolTip(QStringLiteral(
                 "Perfil solicitado: %1\nFormato real encontrado: %2\nSa\u00edda final: %3")
                 .arg(requestedProfile, option.formatCodec, outputFormat));
