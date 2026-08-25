@@ -24,6 +24,19 @@
 namespace {
 constexpr auto kCompletedFilePrefix = "__PRISM_OUTPUT__";
 constexpr qsizetype kMaximumUnterminatedOutputBytes = 1024 * 1024;
+
+QString processErrorName(QProcess::ProcessError error)
+{
+    switch (error) {
+    case QProcess::FailedToStart: return QStringLiteral("falha ao iniciar");
+    case QProcess::Crashed: return QStringLiteral("processo encerrado inesperadamente");
+    case QProcess::Timedout: return QStringLiteral("tempo limite excedido");
+    case QProcess::ReadError: return QStringLiteral("erro de leitura");
+    case QProcess::WriteError: return QStringLiteral("erro de escrita");
+    case QProcess::UnknownError: return QStringLiteral("erro desconhecido");
+    }
+    return QStringLiteral("erro não identificado");
+}
 }
 
 struct DownloadManager::Job {
@@ -255,9 +268,19 @@ void DownloadManager::startJob(Job *job)
         readProcessOutput(id);
     });
     connect(process, &QProcess::errorOccurred, this, [this, id = job->id](QProcess::ProcessError error) {
+        Job *currentJob = m_jobs.value(id, nullptr);
+        if (!currentJob || currentJob->terminal || !currentJob->process) {
+            return;
+        }
+        const QString detail = currentJob->process->errorString().trimmed();
+        const QString diagnostic = QStringLiteral("Erro do processo yt-dlp (%1)%2")
+            .arg(processErrorName(error), detail.isEmpty() ? QString() : QStringLiteral(": ") + detail);
         if (error == QProcess::FailedToStart) {
+            emit jobLog(id, diagnostic);
             failToStart(id, "Não foi possível iniciar "
                             + MediaToolResolver::executableName(MediaTool::YtDlp) + ".");
+        } else {
+            emit jobLog(id, diagnostic);
         }
     });
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),

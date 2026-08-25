@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QPlainTextEdit>
+#include <QFile>
 #include <QCheckBox>
 #include <QStackedWidget>
 #include <QButtonGroup>
@@ -99,6 +100,8 @@ private:
     void logMessage(const QString &msg);
     void updateLogFilter(int mode);
     void refreshLogDisplay();
+    void initializeLogFile();
+    void updateLogSummary();
     bool shouldShowLogLine(const QString &line) const;
     bool showFormatSelectionDialog(QString &outQuality, QString &outTimeRange, bool &outDoConvert, QString &outConvertFormat, QString &outCustomOutputDir);
     int findDownloadRow(DownloadId id) const;
@@ -201,6 +204,8 @@ private:
 
     // Tela de Terminal de Logs (Página 3)
     QPlainTextEdit *m_logEdit{nullptr};
+    QLineEdit *m_logSearchInput{nullptr};
+    QLabel *m_logSummaryLabel{nullptr};
     QStringList m_allLogs;
     QStringList m_pendingLogLines;
     QTimer *m_logFlushTimer{nullptr};
@@ -209,7 +214,10 @@ private:
     QPushButton *m_filterProcessesBtn{nullptr};
     QPushButton *m_filterErrorsBtn{nullptr};
     QPushButton *m_filterGeneralBtn{nullptr};
+    QPushButton *m_copyLogsBtn{nullptr};
     QPushButton *m_clearLogsBtn{nullptr};
+    QFile m_logFile;
+    QString m_logFilePath;
 
     // Componentes da Tela de Informações e Hardware (Página 4)
     QLabel *m_gpuModelLabel;

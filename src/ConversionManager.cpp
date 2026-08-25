@@ -12,6 +12,19 @@
 
 namespace {
 
+QString processErrorName(QProcess::ProcessError error)
+{
+    switch (error) {
+    case QProcess::FailedToStart: return QStringLiteral("falha ao iniciar");
+    case QProcess::Crashed: return QStringLiteral("processo encerrado inesperadamente");
+    case QProcess::Timedout: return QStringLiteral("tempo limite excedido");
+    case QProcess::ReadError: return QStringLiteral("erro de leitura");
+    case QProcess::WriteError: return QStringLiteral("erro de escrita");
+    case QProcess::UnknownError: return QStringLiteral("erro desconhecido");
+    }
+    return QStringLiteral("erro não identificado");
+}
+
 QString encoderFor(const ConversionRequest &request, bool hevc)
 {
     if (request.gpuType != GPUType::CPU_ONLY && !request.gpuCodec.isEmpty()) {
@@ -230,6 +243,12 @@ void ConversionManager::startActiveProcess(const QStringList &arguments)
             }
         });
         connect(process, &QProcess::errorOccurred, this, [this, process, jobId](QProcess::ProcessError error) {
+            if (m_active && m_active->id == jobId && m_active->process == process) {
+                const QString detail = process->errorString().trimmed();
+                const QString diagnostic = QStringLiteral("Erro do processo FFmpeg (%1)%2")
+                    .arg(processErrorName(error), detail.isEmpty() ? QString() : QStringLiteral(": ") + detail);
+                emit conversionLog(jobId, m_active->request.ownerDownloadId, diagnostic);
+            }
             if (error == QProcess::FailedToStart && m_active
                 && m_active->id == jobId && m_active->process == process) {
                 finishActiveFailure("Não foi possível iniciar "

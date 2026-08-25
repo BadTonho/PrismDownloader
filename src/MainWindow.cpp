@@ -33,6 +33,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QApplication>
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QCloseEvent>
@@ -40,6 +41,8 @@
 #include <QRegularExpression>
 #include <QPointer>
 #include <QScrollBar>
+#include <QSyntaxHighlighter>
+#include <QTextCharFormat>
 #include <QUrlQuery>
 #include <QVersionNumber>
 #include <QUuid>
@@ -57,6 +60,89 @@ constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
 constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
 constexpr qsizetype kMaximumLibraryThumbnailBytes = 3 * 1024 * 1024;
 constexpr int kMaximumConcurrentLibraryThumbnails = 3;
+
+enum class LogLevel {
+    Info,
+    Warning,
+    Error
+};
+
+LogLevel logLevelForMessage(const QString &message)
+{
+    if (message.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
+        return LogLevel::Error;
+    }
+    if (message.contains(QStringLiteral("[WARN]"), Qt::CaseInsensitive)) {
+        return LogLevel::Warning;
+    }
+    const QString lower = message.toLower();
+    static const QStringList errorMarkers{
+        QStringLiteral("erro"), QStringLiteral("error"), QStringLiteral("falha"),
+        QStringLiteral("failed"), QStringLiteral("fatal"), QStringLiteral("inválid"),
+        QStringLiteral("invalid"), QStringLiteral("não foi possível"),
+        QStringLiteral("não encontrado"), QStringLiteral("ausente"),
+        QStringLiteral("crash"), QStringLiteral("encerrou com código")};
+    for (const QString &marker : errorMarkers) {
+        if (lower.contains(marker)) {
+            return LogLevel::Error;
+        }
+    }
+
+    static const QStringList warningMarkers{
+        QStringLiteral("alerta"), QStringLiteral("warning"), QStringLiteral("fallback"),
+        QStringLiteral("aguarda confirmação"), QStringLiteral("não contém a chave"),
+        QStringLiteral("desativada"), QStringLiteral("indisponível"),
+        QStringLiteral("não localizado"), QStringLiteral("nenhum encoder")};
+    for (const QString &marker : warningMarkers) {
+        if (lower.contains(marker)) {
+            return LogLevel::Warning;
+        }
+    }
+    return LogLevel::Info;
+}
+
+QString logLevelLabel(LogLevel level)
+{
+    switch (level) {
+    case LogLevel::Error:
+        return QStringLiteral("ERROR");
+    case LogLevel::Warning:
+        return QStringLiteral("WARN");
+    case LogLevel::Info:
+        return QStringLiteral("INFO");
+    }
+    return QStringLiteral("INFO");
+}
+
+QString normalizedLogLine(const QString &message)
+{
+    const QString clean = message.trimmed();
+    return QStringLiteral("[%1] [%2] %3")
+        .arg(QDateTime::currentDateTime().toString(QStringLiteral("HH:mm:ss.zzz")),
+             logLevelLabel(logLevelForMessage(clean)), clean);
+}
+
+class LogHighlighter final : public QSyntaxHighlighter {
+public:
+    explicit LogHighlighter(QTextDocument *document)
+        : QSyntaxHighlighter(document)
+    {
+    }
+
+protected:
+    void highlightBlock(const QString &text) override
+    {
+        QTextCharFormat format;
+        if (text.contains(QStringLiteral("[ERROR]"))) {
+            format.setForeground(QColor(QStringLiteral("#fca5a5")));
+        } else if (text.contains(QStringLiteral("[WARN]"))) {
+            format.setForeground(QColor(QStringLiteral("#fcd34d")));
+        } else {
+            format.setForeground(QColor(QStringLiteral("#a7f3d0")));
+        }
+        setFormat(0, text.size(), format);
+    }
+};
 
 qint64 toSeconds(const QRegularExpressionMatch &match, int hourIndex, int minuteIndex, int secondIndex)
 {
@@ -137,6 +223,12 @@ MainWindow::MainWindow(QWidget *parent)
     m_logFlushTimer = new QTimer(this);
     m_logFlushTimer->setInterval(75);
     connect(m_logFlushTimer, &QTimer::timeout, this, &MainWindow::flushLogBuffer);
+    initializeLogFile();
+    logMessage(QStringLiteral("[System] Sessão iniciada | versão %1 | arquivo de log: %2")
+                   .arg(NEOV_VERSION_TAG,
+                        m_logFilePath.isEmpty()
+                            ? QStringLiteral("somente na memória")
+                            : QDir::toNativeSeparators(m_logFilePath)));
 
     m_thumbnailNetwork = new QNetworkAccessManager(this);
     auto *thumbnailCache = new QNetworkDiskCache(m_thumbnailNetwork);
@@ -484,6 +576,10 @@ MainWindow::~MainWindow()
     if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
     if (m_concurrencySpin) settings.setValue("maxConcurrentDownloads", m_concurrencySpin->value());
     if (m_autoDownloadUpdatesChk) settings.setValue("autoDownloadUpdates", m_autoDownloadUpdatesChk->isChecked());
+    if (m_logFile.isOpen()) {
+        m_logFile.flush();
+        m_logFile.close();
+    }
     stopLibraryThumbnailProcesses();
     if (m_gpuProbeThread) {
         m_gpuProbeThread->wait();
@@ -954,23 +1050,38 @@ void MainWindow::setupUI()
     logsLayout->setSpacing(12);
     logsLayout->setContentsMargins(24, 20, 24, 20);
 
+    auto *logsHeaderLayout = new QHBoxLayout();
     QLabel *logsTitle = new QLabel("Terminal de logs do processador e telemetria:", pageLogs);
     logsTitle->setStyleSheet("font-weight: bold; color: #10b981; font-size: 15px;");
-    logsLayout->addWidget(logsTitle);
+    logsHeaderLayout->addWidget(logsTitle);
+    logsHeaderLayout->addStretch();
+    m_logSearchInput = new QLineEdit(pageLogs);
+    m_logSearchInput->setObjectName("logSearchInput");
+    m_logSearchInput->setPlaceholderText("Buscar nos logs...");
+    m_logSearchInput->setClearButtonEnabled(true);
+    m_logSearchInput->setMaximumWidth(220);
+    logsHeaderLayout->addWidget(m_logSearchInput);
+    m_logSummaryLabel = new QLabel("Total: 0 | Visíveis: 0 | Erros: 0 | Alertas: 0", pageLogs);
+    m_logSummaryLabel->setObjectName("logSummaryLabel");
+    m_logSummaryLabel->setToolTip("Os logs da sessão também são gravados em arquivo.");
+    logsHeaderLayout->addWidget(m_logSummaryLabel);
+    logsLayout->addLayout(logsHeaderLayout);
 
     QHBoxLayout *logFilterLayout = new QHBoxLayout();
     logFilterLayout->setSpacing(8);
 
     m_filterAllBtn = new QPushButton("🌐 Todos os Logs", pageLogs);
     m_filterProcessesBtn = new QPushButton("⚙️ Apenas Processos", pageLogs);
-    m_filterErrorsBtn = new QPushButton("❌ Apenas Erros", pageLogs);
+    m_filterErrorsBtn = new QPushButton("⚠️ Erros e Alertas", pageLogs);
     m_filterGeneralBtn = new QPushButton("📌 Sistema & Gerais", pageLogs);
+    m_copyLogsBtn = new QPushButton("📋 Copiar visíveis", pageLogs);
     m_clearLogsBtn = new QPushButton("🧹 Limpar Terminal", pageLogs);
 
     m_filterAllBtn->setCursor(Qt::PointingHandCursor);
     m_filterProcessesBtn->setCursor(Qt::PointingHandCursor);
     m_filterErrorsBtn->setCursor(Qt::PointingHandCursor);
     m_filterGeneralBtn->setCursor(Qt::PointingHandCursor);
+    m_copyLogsBtn->setCursor(Qt::PointingHandCursor);
     m_clearLogsBtn->setCursor(Qt::PointingHandCursor);
 
     logFilterLayout->addWidget(m_filterAllBtn);
@@ -978,6 +1089,7 @@ void MainWindow::setupUI()
     logFilterLayout->addWidget(m_filterErrorsBtn);
     logFilterLayout->addWidget(m_filterGeneralBtn);
     logFilterLayout->addStretch();
+    logFilterLayout->addWidget(m_copyLogsBtn);
     logFilterLayout->addWidget(m_clearLogsBtn);
     logsLayout->addLayout(logFilterLayout);
 
@@ -985,12 +1097,21 @@ void MainWindow::setupUI()
     connect(m_filterProcessesBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(1); });
     connect(m_filterErrorsBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(2); });
     connect(m_filterGeneralBtn, &QPushButton::clicked, this, [this]() { updateLogFilter(3); });
+    connect(m_logSearchInput, &QLineEdit::textChanged, this, [this](const QString &) {
+        refreshLogDisplay();
+    });
+    connect(m_copyLogsBtn, &QPushButton::clicked, this, [this]() {
+        if (m_logEdit) {
+            QApplication::clipboard()->setText(m_logEdit->toPlainText());
+        }
+    });
     connect(m_clearLogsBtn, &QPushButton::clicked, this, [this]() { m_allLogs.clear(); refreshLogDisplay(); });
 
     m_logEdit = new QPlainTextEdit(pageLogs);
     m_logEdit->setReadOnly(true);
     m_logEdit->setMaximumBlockCount(kMaximumLogEntries);
     m_logEdit->setObjectName("logArea");
+    new LogHighlighter(m_logEdit->document());
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
 
@@ -2810,22 +2931,61 @@ void MainWindow::flushLogBuffer()
     }
 }
 
+void MainWindow::initializeLogFile()
+{
+    const QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    if (appDataPath.isEmpty()) {
+        return;
+    }
+
+    const QDir logDirectory(QDir(appDataPath).filePath(QStringLiteral("logs")));
+    if (!QDir().mkpath(logDirectory.absolutePath())) {
+        return;
+    }
+
+    m_logFilePath = logDirectory.filePath(
+        QStringLiteral("prism-%1.log").arg(QDate::currentDate().toString(QStringLiteral("yyyy-MM-dd"))));
+    m_logFile.setFileName(m_logFilePath);
+    if (!m_logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        m_logFilePath.clear();
+    }
+}
+
 void MainWindow::logMessage(const QString &msg)
 {
-    m_allLogs.append(msg);
+    const QStringList messages = msg.split(QRegularExpression(QStringLiteral("[\\r\\n]+")),
+                                           Qt::SkipEmptyParts);
+    for (const QString &message : messages) {
+        const QString line = normalizedLogLine(message);
+        m_allLogs.append(line);
+        if (m_logFile.isOpen()) {
+            m_logFile.write(line.toUtf8());
+            m_logFile.putChar('\n');
+        }
+        if (m_logEdit && shouldShowLogLine(line)) {
+            m_pendingLogLines.append(line);
+        }
+    }
     if (m_allLogs.size() > kMaximumLogEntries) {
         m_allLogs.erase(m_allLogs.begin(), m_allLogs.begin() + (m_allLogs.size() - kMaximumLogEntries));
     }
-    if (m_logEdit && shouldShowLogLine(msg)) {
-        m_pendingLogLines.append(msg);
+    if (m_logFile.isOpen() && !messages.isEmpty()) {
+        m_logFile.flush();
+    }
+    if (m_logEdit && !m_pendingLogLines.isEmpty()) {
         if (m_logFlushTimer && !m_logFlushTimer->isActive()) {
             m_logFlushTimer->start();
         }
     }
+    updateLogSummary();
 }
 
 bool MainWindow::shouldShowLogLine(const QString &line) const
 {
+    if (m_logSearchInput && !m_logSearchInput->text().trimmed().isEmpty()
+        && !line.contains(m_logSearchInput->text().trimmed(), Qt::CaseInsensitive)) {
+        return false;
+    }
     if (m_logFilterMode == 0) return true; // Todos
     if (m_logFilterMode == 1) {
         // Apenas Processos (yt-dlp, FFmpeg, junção, conversão)
@@ -2841,23 +3001,17 @@ bool MainWindow::shouldShowLogLine(const QString &line) const
                line.contains("[Sucesso]", Qt::CaseInsensitive);
     }
     if (m_logFilterMode == 2) {
-        // Apenas Erros e Alertas
-        return line.contains("[Erro", Qt::CaseInsensitive) ||
-               line.contains("Erro", Qt::CaseInsensitive) ||
-               line.contains("Falha", Qt::CaseInsensitive) ||
-               line.contains("[Alerta", Qt::CaseInsensitive) ||
-               line.contains("Warning", Qt::CaseInsensitive) ||
-               line.contains("Error", Qt::CaseInsensitive) ||
-               line.contains("404", Qt::CaseInsensitive) ||
-               line.contains("403", Qt::CaseInsensitive) ||
-               line.contains("Unavailable", Qt::CaseInsensitive);
+        return logLevelForMessage(line) != LogLevel::Info;
     }
     if (m_logFilterMode == 3) {
         // Apenas Gerais (Sistema, GPU, Biblioteca, Updater, Destino)
         return line.contains("[System]", Qt::CaseInsensitive) ||
+               line.contains("[GPUDetector]", Qt::CaseInsensitive) ||
                line.contains("[Biblioteca]", Qt::CaseInsensitive) ||
                line.contains("[Updater]", Qt::CaseInsensitive) ||
+               line.contains("[Motor Extrator]", Qt::CaseInsensitive) ||
                line.contains("[Destino", Qt::CaseInsensitive) ||
+               line.contains("[Playlist]", Qt::CaseInsensitive) ||
                line.contains("Placa gráfica", Qt::CaseInsensitive) ||
                line.contains("===");
     }
@@ -2892,6 +3046,36 @@ void MainWindow::refreshLogDisplay()
         if (shouldShowLogLine(line)) {
             m_logEdit->appendPlainText(line);
         }
+    }
+    updateLogSummary();
+}
+
+void MainWindow::updateLogSummary()
+{
+    if (!m_logSummaryLabel) {
+        return;
+    }
+
+    int visible = 0;
+    int errors = 0;
+    int warnings = 0;
+    for (const QString &line : m_allLogs) {
+        const LogLevel level = logLevelForMessage(line);
+        if (level == LogLevel::Error) {
+            ++errors;
+        } else if (level == LogLevel::Warning) {
+            ++warnings;
+        }
+        if (shouldShowLogLine(line)) {
+            ++visible;
+        }
+    }
+    m_logSummaryLabel->setText(QStringLiteral("Total: %1 | Visíveis: %2 | Erros: %3 | Alertas: %4")
+                                   .arg(m_allLogs.size()).arg(visible).arg(errors).arg(warnings));
+    if (!m_logFilePath.isEmpty()) {
+        m_logSummaryLabel->setToolTip(
+            QStringLiteral("Arquivo de log da sessão:\n%1")
+                .arg(QDir::toNativeSeparators(m_logFilePath)));
     }
 }
 
@@ -3166,6 +3350,18 @@ void MainWindow::setupStyles()
             color: #10b981;
             font-size: 11px;
             font-weight: bold;
+        }
+        QLabel#logSummaryLabel {
+            color: #94a3b8;
+            font-size: 11px;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+        QLineEdit#logSearchInput {
+            background-color: #171f1a;
+            color: #d1fae5;
+            border: 1px solid #315344;
+            border-radius: 5px;
+            padding: 5px 8px;
         }
         QPlainTextEdit#logArea {
             background-color: #0a0e0b;
