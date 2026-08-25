@@ -62,8 +62,6 @@ static const QString NEOV_VERSION_NUMBER = QStringLiteral(PRISM_VERSION_NUMBER);
 namespace {
 constexpr int kMaximumLogEntries = 5000;
 constexpr int kMaximumPlaylistItems = 500;
-constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
-constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
 
 enum class LogLevel {
     Info,
@@ -168,40 +166,6 @@ bool isValidTimeRange(const QString &timeRange)
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
 }
 
-QList<PlaylistItem> parsePlaylistPreview(const QByteArray &output)
-{
-    QList<PlaylistItem> items;
-    QSet<QString> seenUrls;
-    const QStringList lines = QString::fromUtf8(output).split('\n');
-    for (const QString &rawLine : lines) {
-        if (items.size() >= kMaximumPlaylistItems) {
-            break;
-        }
-        const QString line = rawLine.trimmed();
-        const QStringList fields = line.split('\t');
-        if (fields.size() < 2) {
-            continue;
-        }
-
-        PlaylistItem item;
-        item.title = fields.at(0).trimmed();
-        item.url = QUrl(fields.at(1).trimmed());
-        item.duration = fields.value(2).trimmed();
-        item.thumbnailUrl = QUrl(fields.value(3).trimmed());
-        if (item.title.isEmpty() || !item.url.isValid() || item.url.host().isEmpty()
-            || (item.url.scheme() != "http" && item.url.scheme() != "https")) {
-            continue;
-        }
-
-        const QString normalizedUrl = item.url.adjusted(QUrl::RemoveFragment).toString(QUrl::FullyEncoded);
-        if (!seenUrls.contains(normalizedUrl)) {
-            seenUrls.insert(normalizedUrl);
-            items.append(item);
-        }
-    }
-    return items;
-}
-
 QString ytdlpCurrentDescription()
 {
     const MediaToolInfo info = MediaToolResolver::resolveInfo(MediaTool::YtDlp);
@@ -272,6 +236,23 @@ MainWindow::MainWindow(QWidget *parent)
         }
         continueDownloadWithMetadata(items, metadata);
     });
+
+    m_playlistPreviewService = new PlaylistPreviewService(this, this);
+    connect(m_playlistPreviewService, &PlaylistPreviewService::busyChanged, this,
+            [this](bool busy) {
+        if (m_startBtn) {
+            const bool metadataBusy = m_metadataService && m_metadataService->isRunning();
+            m_startBtn->setEnabled(!busy && !metadataBusy);
+        }
+    });
+    connect(m_playlistPreviewService, &PlaylistPreviewService::logMessage,
+            this, &MainWindow::logMessage);
+    connect(m_playlistPreviewService, &PlaylistPreviewService::previewError, this,
+            [this](const QString &title, const QString &message) {
+        QMessageBox::warning(this, title, message);
+    });
+    connect(m_playlistPreviewService, &PlaylistPreviewService::previewReady, this,
+            &MainWindow::handlePlaylistPreviewReady);
 
     m_appUpdateService = new AppUpdateService(
         AppUpdateService::packageForCurrentPlatform(isInstalledWindowsCopy()), this);
@@ -1281,12 +1262,9 @@ void MainWindow::showDownloadsPage()
 
 void MainWindow::closePlaylistPreviewDialog()
 {
-    if (!m_playlistPreviewDialog) {
-        return;
+    if (m_playlistPreviewService) {
+        m_playlistPreviewService->closeDialog();
     }
-    m_playlistPreviewDialog->hide();
-    m_playlistPreviewDialog->deleteLater();
-    m_playlistPreviewDialog = nullptr;
 }
 
 void MainWindow::startMetadataLookup(const QList<PlaylistItem> &items)
@@ -1299,162 +1277,43 @@ void MainWindow::startMetadataLookup(const QList<PlaylistItem> &items)
 
 void MainWindow::startPlaylistPreview(const QUrl &url)
 {
-    if (m_playlistPreviewProcess) {
+    if (m_playlistPreviewService) {
+        m_playlistPreviewService->start(url);
+    }
+}
+
+void MainWindow::handlePlaylistPreviewReady(const QList<PlaylistItem> &items,
+                                            int exitCode,
+                                            bool truncated,
+                                            const QString &errorOutput)
+{
+    if (items.isEmpty()) {
+        const QString detail = errorOutput.isEmpty()
+            ? "Nenhum vídeo foi encontrado nessa playlist."
+            : errorOutput;
+        QMessageBox::warning(this, "Playlist não identificada",
+                             "Não foi possível listar os vídeos da playlist.\n\n" + detail);
+        logMessage("[Playlist] Não foi possível obter os itens da playlist.");
         return;
     }
 
-    const QString program = MediaToolResolver::resolve(MediaTool::YtDlp);
-    if (program.isEmpty() || !QFile::exists(program)) {
-        QMessageBox::warning(this, "Motor indisponível",
-                             MediaToolResolver::missingMessage(MediaTool::YtDlp));
-        return;
+    if (exitCode != 0) {
+        logMessage(QString("[Playlist] yt-dlp retornou código %1, mas %2 item(ns) foram identificados.")
+                       .arg(exitCode).arg(items.size()));
+    } else {
+        logMessage(QString("[Playlist] %1 item(ns) encontrado(s) para seleção.").arg(items.size()));
+    }
+    if (truncated) {
+        logMessage(QString("[Playlist] Prévia limitada aos primeiros %1 itens para preservar desempenho.")
+                       .arg(kMaximumPlaylistItems));
     }
 
-    auto *process = new QProcess(this);
-    m_playlistPreviewProcess = process;
-    m_playlistPreviewOutput.clear();
-    m_playlistPreviewErrorOutput.clear();
-    m_playlistPreviewTruncated = false;
-    process->setProcessChannelMode(QProcess::SeparateChannels);
-
-    const auto consumePlaylistOutput = [this](const QByteArray &chunk) {
-        if (chunk.isEmpty()) {
-            return;
-        }
-        const qsizetype remaining = kMaximumPlaylistOutputBytes - m_playlistPreviewOutput.size();
-        if (remaining <= 0) {
-            m_playlistPreviewTruncated = true;
-            return;
-        }
-        if (chunk.size() > remaining) {
-            m_playlistPreviewOutput.append(chunk.constData(), static_cast<int>(remaining));
-            m_playlistPreviewTruncated = true;
-        } else {
-            m_playlistPreviewOutput.append(chunk);
-        }
-    };
-    connect(process, &QProcess::readyReadStandardOutput, this,
-            [process, consumePlaylistOutput]() {
-        consumePlaylistOutput(process->readAllStandardOutput());
-    });
-    const auto consumePlaylistError = [this](const QByteArray &chunk) {
-        if (chunk.isEmpty()) {
-            return;
-        }
-        const qsizetype remaining = kMaximumPlaylistErrorBytes - m_playlistPreviewErrorOutput.size();
-        if (remaining > 0) {
-            m_playlistPreviewErrorOutput.append(
-                chunk.constData(), static_cast<int>(qMin<qsizetype>(remaining, chunk.size())));
-        }
-    };
-    connect(process, &QProcess::readyReadStandardError, this,
-            [process, consumePlaylistError]() {
-        consumePlaylistError(process->readAllStandardError());
-    });
-
-    connect(process, &QProcess::finished, this,
-            [this, process, consumePlaylistOutput, consumePlaylistError](int exitCode, QProcess::ExitStatus) {
-        if (m_playlistPreviewProcess != process) {
-            process->deleteLater();
-            return;
-        }
-
-        consumePlaylistOutput(process->readAllStandardOutput());
-        consumePlaylistError(process->readAllStandardError());
-        const bool truncated = m_playlistPreviewTruncated;
-        const QList<PlaylistItem> items = parsePlaylistPreview(m_playlistPreviewOutput);
-        const QString errorOutput = QString::fromUtf8(m_playlistPreviewErrorOutput).trimmed();
-        m_playlistPreviewOutput.clear();
-        m_playlistPreviewErrorOutput.clear();
-        m_playlistPreviewTruncated = false;
-        m_playlistPreviewProcess = nullptr;
-        process->deleteLater();
-        closePlaylistPreviewDialog();
-        m_startBtn->setEnabled(true);
-
-        if (items.isEmpty()) {
-            const QString detail = errorOutput.isEmpty()
-                ? "Nenhum vídeo foi encontrado nessa playlist."
-                : errorOutput;
-            QMessageBox::warning(this, "Playlist não identificada",
-                                 "Não foi possível listar os vídeos da playlist.\n\n" + detail);
-            logMessage("[Playlist] Não foi possível obter os itens da playlist.");
-            return;
-        }
-
-        if (exitCode != 0) {
-            logMessage(QString("[Playlist] yt-dlp retornou código %1, mas %2 item(ns) foram identificados.")
-                           .arg(exitCode).arg(items.size()));
-        } else {
-            logMessage(QString("[Playlist] %1 item(ns) encontrado(s) para seleção.").arg(items.size()));
-        }
-        if (truncated) {
-            logMessage(QString("[Playlist] Prévia limitada aos primeiros %1 itens para preservar desempenho.")
-                           .arg(kMaximumPlaylistItems));
-        }
-
-        QList<PlaylistItem> selectedItems;
-        if (!showPlaylistSelectionDialog(items, selectedItems)) {
-            logMessage("[Playlist] Seleção de itens cancelada pelo usuário.");
-            return;
-        }
-        continueDownload(selectedItems);
-    });
-
-    connect(process, &QProcess::errorOccurred, this,
-            [this, process](QProcess::ProcessError error) {
-        if (error != QProcess::FailedToStart || m_playlistPreviewProcess != process) {
-            return;
-        }
-        m_playlistPreviewOutput.clear();
-        m_playlistPreviewErrorOutput.clear();
-        m_playlistPreviewTruncated = false;
-        m_playlistPreviewProcess = nullptr;
-        process->deleteLater();
-        closePlaylistPreviewDialog();
-        m_startBtn->setEnabled(true);
-        QMessageBox::warning(this, "Falha ao consultar playlist",
-                             "Não foi possível iniciar o yt-dlp para listar a playlist.");
-    });
-
-    m_startBtn->setEnabled(false);
-    m_playlistPreviewDialog = new QProgressDialog(
-        "Consultando os vídeos da playlist...\nIsso pode levar alguns segundos.",
-        "Cancelar", 0, 0, this);
-    m_playlistPreviewDialog->setWindowTitle("Consultando playlist");
-    m_playlistPreviewDialog->setWindowModality(Qt::WindowModal);
-    m_playlistPreviewDialog->setMinimumDuration(0);
-    m_playlistPreviewDialog->setAutoClose(false);
-    m_playlistPreviewDialog->setAutoReset(false);
-    m_playlistPreviewDialog->show();
-    connect(m_playlistPreviewDialog, &QProgressDialog::canceled, this, [this, process]() {
-        if (m_playlistPreviewProcess != process) {
-            return;
-        }
-        m_playlistPreviewProcess = nullptr;
-        m_playlistPreviewOutput.clear();
-        m_playlistPreviewErrorOutput.clear();
-        m_playlistPreviewTruncated = false;
-        process->kill();
-        process->deleteLater();
-        closePlaylistPreviewDialog();
-        m_startBtn->setEnabled(true);
-        logMessage("[Playlist] Consulta cancelada pelo usuário.");
-    });
-
-    logMessage("[Playlist] Consultando os vídeos disponíveis...");
-    const QStringList arguments = {
-        "--flat-playlist",
-        "--print", "%(title)s\t%(webpage_url)s\t%(duration_string)s\t%(thumbnail)s",
-        "--skip-download",
-        "--quiet",
-        "--no-warnings",
-        "--no-color",
-        "--ignore-errors",
-        "--",
-        url.toString(QUrl::FullyEncoded)
-    };
-    process->start(program, arguments);
+    QList<PlaylistItem> selectedItems;
+    if (!showPlaylistSelectionDialog(items, selectedItems)) {
+        logMessage("[Playlist] Seleção de itens cancelada pelo usuário.");
+        return;
+    }
+    continueDownload(selectedItems);
 }
 
 bool MainWindow::showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
@@ -2092,13 +1951,14 @@ void MainWindow::closeEvent(QCloseEvent *event)
         event->ignore();
         return;
     }
-    if (!m_downloadManager->hasWork() && !m_conversionManager->hasWork()) {
+    const bool playlistPreviewBusy = m_playlistPreviewService && m_playlistPreviewService->isBusy();
+    if (!m_downloadManager->hasWork() && !m_conversionManager->hasWork() && !playlistPreviewBusy) {
         event->accept();
         return;
     }
     const QMessageBox::StandardButton answer = QMessageBox::question(
         this, "Trabalho em andamento",
-        "Há downloads ou conversões pendentes. Deseja cancelar toda a sessão e fechar?",
+        "Há downloads, conversões ou consultas de playlist pendentes. Deseja cancelar toda a sessão e fechar?",
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (answer != QMessageBox::Yes) {
         event->ignore();
@@ -2107,6 +1967,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
     m_closing = true;
     m_downloadManager->cancelAll();
     m_conversionManager->cancelAllAutomatic();
+    if (playlistPreviewBusy) {
+        m_playlistPreviewService->cancel();
+    }
     if (m_manualConversionId != 0) {
         m_conversionManager->cancelConversion(m_manualConversionId);
     }
@@ -2616,7 +2479,8 @@ void MainWindow::requestAppUpdate()
 bool MainWindow::canInstallAppUpdate() const
 {
     return !m_closing && !m_installingAppUpdate && !m_downloadManager->hasWork()
-        && !m_conversionManager->hasWork() && !m_playlistPreviewProcess;
+        && !m_conversionManager->hasWork()
+        && (!m_playlistPreviewService || !m_playlistPreviewService->isBusy());
 }
 
 void MainWindow::tryStartPendingAppUpdate()
@@ -2811,7 +2675,8 @@ void MainWindow::updateYtdlpEngine()
                                  + " já é igual ou mais recente que a Nightly publicada.");
         return;
     }
-    if (m_downloadManager->hasWork() || m_conversionManager->hasWork() || m_playlistPreviewProcess) {
+    if (m_downloadManager->hasWork() || m_conversionManager->hasWork()
+        || (m_playlistPreviewService && m_playlistPreviewService->isBusy())) {
         QMessageBox::warning(this, "Atualização adiada",
                              "Conclua ou cancele downloads, conversões e prévias antes de atualizar o yt-dlp.");
         return;

@@ -32,6 +32,7 @@
 #include "GPUDetector.h"
 #include "MediaMetadata.h"
 #include "PlaylistItem.h"
+#include "PlaylistPreviewService.h"
 
 class QCloseEvent;
 class QProcess;
@@ -110,6 +111,10 @@ private:
     void showDownloadsPage();
     void startPlaylistPreview(const QUrl &url);
     void closePlaylistPreviewDialog();
+    void handlePlaylistPreviewReady(const QList<PlaylistItem> &items,
+                                    int exitCode,
+                                    bool truncated,
+                                    const QString &errorOutput);
     void continueDownload(const QList<PlaylistItem> &items);
     void startMetadataLookup(const QList<PlaylistItem> &items);
     void continueDownloadWithMetadata(const QList<PlaylistItem> &items,
@@ -235,11 +240,7 @@ private:
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;
     std::unique_ptr<DownloadQueueWorkflow> m_downloadQueueWorkflow;
-    QProcess *m_playlistPreviewProcess{nullptr};
-    QProgressDialog *m_playlistPreviewDialog{nullptr};
-    QByteArray m_playlistPreviewOutput;
-    QByteArray m_playlistPreviewErrorOutput;
-    bool m_playlistPreviewTruncated{false};
+    PlaylistPreviewService *m_playlistPreviewService{nullptr};
     YtDlpMetadataService *m_metadataService{nullptr};
     QNetworkAccessManager *m_thumbnailNetwork{nullptr};
     QThread *m_gpuProbeThread{nullptr};
