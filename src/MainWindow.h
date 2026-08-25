@@ -53,6 +53,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void onStartClicked();
@@ -114,6 +115,9 @@ private:
     void showPlaylistItemDetailsDialog(const PlaylistItem &item);
     void setLibraryViewMode(bool blocks);
     void refreshLibraryBlocks(const QFileInfoList &fileList);
+    void updateLibraryBlockLayout();
+    void scheduleLibraryThumbnailLoading();
+    void loadVisibleLibraryThumbnails();
     void loadLibraryThumbnail(const QFileInfo &fileInfo, QLabel *thumbnailLabel);
     void stopLibraryThumbnailProcesses();
     void openLibraryFile(const QString &filePath);
@@ -180,6 +184,7 @@ private:
     QListWidget *m_libraryBlocks{nullptr};
     QPushButton *m_libraryListViewBtn{nullptr};
     QPushButton *m_libraryBlocksViewBtn{nullptr};
+    QTimer *m_libraryThumbnailTimer{nullptr};
     QHash<QString, QPixmap> m_libraryThumbnailCache;
     QSet<QProcess *> m_libraryThumbnailProcesses;
 

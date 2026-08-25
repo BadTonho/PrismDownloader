@@ -36,8 +36,10 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QCloseEvent>
+#include <QEvent>
 #include <QRegularExpression>
 #include <QPointer>
+#include <QScrollBar>
 #include <QUrlQuery>
 #include <QVersionNumber>
 #include <QUuid>
@@ -54,6 +56,7 @@ constexpr int kMaximumPlaylistItems = 500;
 constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
 constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
 constexpr qsizetype kMaximumLibraryThumbnailBytes = 3 * 1024 * 1024;
+constexpr int kMaximumConcurrentLibraryThumbnails = 3;
 
 qint64 toSeconds(const QRegularExpressionMatch &match, int hourIndex, int minuteIndex, int secondIndex)
 {
@@ -820,12 +823,22 @@ void MainWindow::setupUI()
     m_libraryBlocks->setMovement(QListView::Static);
     m_libraryBlocks->setWrapping(true);
     m_libraryBlocks->setSpacing(12);
-    m_libraryBlocks->setGridSize(QSize(220, 204));
+    m_libraryBlocks->setGridSize(QSize(208, 204));
     m_libraryBlocks->setSelectionMode(QAbstractItemView::SingleSelection);
     m_libraryBlocks->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_libraryBlocks->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_libraryBlocks->installEventFilter(this);
+    m_libraryBlocks->viewport()->installEventFilter(this);
     connect(m_libraryBlocks, &QListWidget::itemDoubleClicked,
             this, &MainWindow::onLibraryBlockDoubleClicked);
+    connect(m_libraryBlocks->verticalScrollBar(), &QAbstractSlider::valueChanged,
+            this, [this](int) { scheduleLibraryThumbnailLoading(); });
+
+    m_libraryThumbnailTimer = new QTimer(this);
+    m_libraryThumbnailTimer->setSingleShot(true);
+    m_libraryThumbnailTimer->setInterval(50);
+    connect(m_libraryThumbnailTimer, &QTimer::timeout,
+            this, &MainWindow::loadVisibleLibraryThumbnails);
 
     m_libraryViewStack = new QStackedWidget(pageLibrary);
     m_libraryViewStack->addWidget(m_libraryTable);
@@ -1969,7 +1982,81 @@ void MainWindow::refreshLibraryBlocks(const QFileInfoList &fileList)
         cardLayout->addWidget(metadata);
 
         m_libraryBlocks->setItemWidget(item, card);
-        loadLibraryThumbnail(info, thumbnail);
+    }
+
+    updateLibraryBlockLayout();
+    scheduleLibraryThumbnailLoading();
+}
+
+void MainWindow::updateLibraryBlockLayout()
+{
+    if (!m_libraryBlocks) {
+        return;
+    }
+
+    constexpr int spacing = 12;
+    constexpr int minimumCardWidth = 208;
+    constexpr int itemHeight = 204;
+    const int viewportWidth = qMax(m_libraryBlocks->viewport()->width(), minimumCardWidth);
+    const int usableWidth = qMax(minimumCardWidth, viewportWidth - 16);
+    const int columns = qMax(1, (usableWidth + spacing) / (minimumCardWidth + spacing));
+    const int cardWidth = qMax(minimumCardWidth,
+                               (usableWidth - (columns - 1) * spacing) / columns);
+
+    m_libraryBlocks->setGridSize(QSize(cardWidth, itemHeight));
+    for (int index = 0; index < m_libraryBlocks->count(); ++index) {
+        QListWidgetItem *item = m_libraryBlocks->item(index);
+        if (!item) {
+            continue;
+        }
+        item->setSizeHint(QSize(cardWidth, itemHeight));
+
+        QWidget *card = m_libraryBlocks->itemWidget(item);
+        if (!card) {
+            continue;
+        }
+        card->setFixedWidth(qMax(194, cardWidth - 4));
+        if (auto *thumbnail = card->findChild<QLabel *>(QStringLiteral("libraryCardThumb"))) {
+            thumbnail->setFixedSize(qMax(184, cardWidth - 14), 112);
+        }
+    }
+}
+
+void MainWindow::scheduleLibraryThumbnailLoading()
+{
+    if (!m_libraryThumbnailTimer || !m_libraryBlocks || !m_libraryViewStack
+        || m_libraryViewStack->currentIndex() != 1) {
+        return;
+    }
+    if (!m_libraryThumbnailTimer->isActive()) {
+        m_libraryThumbnailTimer->start();
+    }
+}
+
+void MainWindow::loadVisibleLibraryThumbnails()
+{
+    if (!m_libraryBlocks || !m_libraryViewStack || m_libraryViewStack->currentIndex() != 1) {
+        return;
+    }
+
+    const QRect visibleRect = m_libraryBlocks->viewport()->rect().adjusted(0, -220, 0, 220);
+    for (int index = 0; index < m_libraryBlocks->count(); ++index) {
+        if (m_libraryThumbnailProcesses.size() >= kMaximumConcurrentLibraryThumbnails) {
+            break;
+        }
+        QListWidgetItem *item = m_libraryBlocks->item(index);
+        if (!item || !m_libraryBlocks->visualItemRect(item).intersects(visibleRect)) {
+            continue;
+        }
+
+        QWidget *card = m_libraryBlocks->itemWidget(item);
+        auto *thumbnail = card ? card->findChild<QLabel *>(QStringLiteral("libraryCardThumb")) : nullptr;
+        if (!thumbnail || thumbnail->property("thumbnailRequested").toBool()) {
+            continue;
+        }
+
+        thumbnail->setProperty("thumbnailRequested", true);
+        loadLibraryThumbnail(QFileInfo(item->data(Qt::UserRole).toString()), thumbnail);
     }
 }
 
@@ -2024,6 +2111,7 @@ void MainWindow::loadLibraryThumbnail(const QFileInfo &fileInfo, QLabel *thumbna
     connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
             [this, process, output, labelGuard, path](int exitCode, QProcess::ExitStatus status) {
         m_libraryThumbnailProcesses.remove(process);
+        scheduleLibraryThumbnailLoading();
         if (labelGuard && status == QProcess::NormalExit && exitCode == 0) {
             QPixmap image;
             if (image.loadFromData(*output)) {
@@ -2053,6 +2141,9 @@ void MainWindow::loadLibraryThumbnail(const QFileInfo &fileInfo, QLabel *thumbna
 
 void MainWindow::stopLibraryThumbnailProcesses()
 {
+    if (m_libraryThumbnailTimer) {
+        m_libraryThumbnailTimer->stop();
+    }
     const QSet<QProcess *> processes = m_libraryThumbnailProcesses;
     m_libraryThumbnailProcesses.clear();
     for (QProcess *process : processes) {
@@ -2063,6 +2154,16 @@ void MainWindow::stopLibraryThumbnailProcesses()
         process->kill();
         process->deleteLater();
     }
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if ((watched == m_libraryBlocks || (m_libraryBlocks && watched == m_libraryBlocks->viewport()))
+        && event && event->type() == QEvent::Resize) {
+        updateLibraryBlockLayout();
+        scheduleLibraryThumbnailLoading();
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 void MainWindow::onPlaySelectedMedia()
