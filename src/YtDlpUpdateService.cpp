@@ -14,7 +14,9 @@
 #include <QNetworkRequest>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QStandardPaths>
 #include <QTemporaryFile>
+#include <QTimer>
 
 namespace {
 
@@ -23,6 +25,15 @@ const QUrl kNightlyReleaseApi(
 constexpr qint64 kMaximumBinaryBytes = 128LL * 1024 * 1024;
 constexpr qint64 kMaximumReleasePayloadBytes = 2LL * 1024 * 1024;
 constexpr qint64 kMaximumChecksumsBytes = 2LL * 1024 * 1024;
+
+void armReplyTimeout(QNetworkReply *reply, int timeoutMs)
+{
+    QTimer::singleShot(timeoutMs, reply, [reply]() {
+        if (reply->isRunning()) {
+            reply->abort();
+        }
+    });
+}
 
 bool isOfficialGitHubUrl(const QUrl &url)
 {
@@ -54,6 +65,8 @@ YtDlpUpdateService::YtDlpUpdateService(QObject *parent)
       m_networkManager(new QNetworkAccessManager(this))
 {
 }
+
+YtDlpUpdateService::~YtDlpUpdateService() = default;
 
 QString YtDlpUpdateService::platformAssetName()
 {
@@ -151,6 +164,7 @@ void YtDlpUpdateService::checkLatestRelease()
     m_latestRelease = {};
     m_checking = true;
     QNetworkReply *reply = m_networkManager->get(githubRequest(kNightlyReleaseApi));
+    armReplyTimeout(reply, 30000);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         m_checking = false;
@@ -191,6 +205,7 @@ void YtDlpUpdateService::installLatestRelease()
 void YtDlpUpdateService::downloadChecksums()
 {
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_latestRelease.checksumsUrl));
+    armReplyTimeout(reply, 30000);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
@@ -214,65 +229,110 @@ void YtDlpUpdateService::downloadChecksums()
 
 void YtDlpUpdateService::downloadBinary(const QString &expectedSha256)
 {
-    m_binaryBuffer.clear();
-    m_binaryTooLarge = false;
+    QString temporaryDirectory = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    if (temporaryDirectory.isEmpty()) {
+        temporaryDirectory = QDir::tempPath();
+    }
+    temporaryDirectory = QDir(temporaryDirectory).filePath(QStringLiteral("PrismDownloader/yt-dlp"));
+    if (!QDir().mkpath(temporaryDirectory)) {
+        finishUpdateFailure(QStringLiteral("Não foi possível preparar o arquivo temporário do yt-dlp."));
+        return;
+    }
+#ifdef Q_OS_WIN
+    const QString templateName = QDir(temporaryDirectory).filePath(QStringLiteral(".yt-dlp-XXXXXX.exe"));
+#else
+    const QString templateName = QDir(temporaryDirectory).filePath(QStringLiteral(".yt-dlp-XXXXXX"));
+#endif
+    m_binaryFile = std::make_unique<QTemporaryFile>(templateName);
+    m_binaryFile->setAutoRemove(true);
+    if (!m_binaryFile->open()) {
+        m_binaryFile.reset();
+        finishUpdateFailure(QStringLiteral("Não foi possível criar o arquivo temporário do yt-dlp."));
+        return;
+    }
+    m_binaryHasher.reset();
+    m_binaryDownloaded = 0;
+    m_binaryWriteFailed = false;
+
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_latestRelease.binaryUrl));
+    armReplyTimeout(reply, 5 * 60 * 1000);
     connect(reply, &QNetworkReply::downloadProgress, this, &YtDlpUpdateService::updateProgress);
-    connect(reply, &QIODevice::readyRead, this, [this, reply]() {
-        if (m_binaryTooLarge) {
+    const auto writeChunk = [this](const QByteArray &bytes) {
+        if (bytes.isEmpty() || !m_binaryFile) {
+            return true;
+        }
+        if (m_binaryDownloaded > kMaximumBinaryBytes - bytes.size()
+            || m_binaryFile->write(bytes) != bytes.size()) {
+            return false;
+        }
+        m_binaryDownloaded += bytes.size();
+        m_binaryHasher.addData(bytes);
+        return true;
+    };
+    connect(reply, &QIODevice::readyRead, this, [this, reply, writeChunk]() {
+        if (m_binaryWriteFailed) {
             return;
         }
         const QByteArray bytes = reply->readAll();
-        if (m_binaryBuffer.size() > kMaximumBinaryBytes - bytes.size()) {
-            m_binaryTooLarge = true;
+        if (!writeChunk(bytes)) {
+            m_binaryWriteFailed = true;
             reply->abort();
-            return;
         }
-        m_binaryBuffer.append(bytes);
     });
     connect(reply, &QNetworkReply::finished, this, [this, reply, expectedSha256]() {
         const QByteArray remaining = reply->readAll();
-        if (!remaining.isEmpty() && !m_binaryTooLarge) {
-            if (m_binaryBuffer.size() > kMaximumBinaryBytes - remaining.size()) {
-                m_binaryTooLarge = true;
+        if (!remaining.isEmpty() && !m_binaryWriteFailed) {
+            if (m_binaryDownloaded > kMaximumBinaryBytes - remaining.size()
+                || !m_binaryFile || m_binaryFile->write(remaining) != remaining.size()) {
+                m_binaryWriteFailed = true;
             } else {
-                m_binaryBuffer.append(remaining);
+                m_binaryDownloaded += remaining.size();
+                m_binaryHasher.addData(remaining);
             }
         }
         reply->deleteLater();
-        if (m_binaryTooLarge) {
-            m_binaryBuffer.clear();
-            finishUpdateFailure(QStringLiteral("O binário Nightly excede o limite de tamanho permitido."));
+        if (m_binaryWriteFailed) {
+            finishUpdateFailure(QStringLiteral("Não foi possível gravar o binário Nightly."));
             return;
         }
-        if (reply->error() != QNetworkReply::NoError) {
-            m_binaryBuffer.clear();
+        if (reply->error() != QNetworkReply::NoError || !m_binaryFile) {
             finishUpdateFailure(QStringLiteral("Não foi possível baixar o binário Nightly: ")
                                 + reply->errorString());
             return;
         }
-        const QByteArray binary = m_binaryBuffer;
-        m_binaryBuffer.clear();
-        if (!hasValidChecksum(binary, expectedSha256)) {
+        if (!m_binaryFile->flush()) {
+            finishUpdateFailure(QStringLiteral("Não foi possível finalizar o binário Nightly."));
+            return;
+        }
+        m_binaryFile->close();
+        const QByteArray actual = m_binaryHasher.result().toHex();
+        if (actual.compare(expectedSha256.toLatin1(), Qt::CaseInsensitive) != 0) {
             finishUpdateFailure(QStringLiteral("Checksum inválido; a versão atual foi preservada."));
             return;
         }
 
         QString version;
         QString error;
-        if (!installBinary(binary, m_latestRelease.version, &version, &error)) {
+        const QString binaryPath = m_binaryFile->fileName();
+        if (!installBinary(binaryPath, m_latestRelease.version, &version, &error)) {
             finishUpdateFailure(error);
             return;
         }
 
+        m_binaryFile.reset();
         m_updating = false;
+        MediaToolResolver::clearVersionCache();
         emit updateCompleted(version, MediaToolResolver::ytDlpUserPath());
     });
 }
 
-bool YtDlpUpdateService::installBinary(const QByteArray &binary, const QString &expectedVersion,
+bool YtDlpUpdateService::installBinary(const QString &binaryPath, const QString &expectedVersion,
                                        QString *installedVersion, QString *errorMessage) const
 {
+    if (!QFileInfo(binaryPath).isFile()) {
+        *errorMessage = QStringLiteral("O binário temporário do yt-dlp não existe.");
+        return false;
+    }
     const QString destination = MediaToolResolver::ytDlpUserPath();
     if (destination.isEmpty()) {
         *errorMessage = QStringLiteral("Não foi possível determinar a pasta de dados do usuário.");
@@ -285,31 +345,15 @@ bool YtDlpUpdateService::installBinary(const QByteArray &binary, const QString &
         return false;
     }
 
-#ifdef Q_OS_WIN
-    const QString templateName = directory.absoluteFilePath(QStringLiteral(".yt-dlp-XXXXXX.exe"));
-#else
-    const QString templateName = directory.absoluteFilePath(QStringLiteral(".yt-dlp-XXXXXX"));
-#endif
-    QTemporaryFile temporaryFile(templateName);
-    temporaryFile.setAutoRemove(true);
-    if (!temporaryFile.open()) {
-        *errorMessage = QStringLiteral("Não foi possível preparar o arquivo temporário da atualização.");
-        return false;
-    }
-    if (temporaryFile.write(binary) != binary.size() || !temporaryFile.flush()) {
-        *errorMessage = QStringLiteral("Não foi possível gravar o arquivo temporário da atualização.");
-        return false;
-    }
-    temporaryFile.close();
 #ifndef Q_OS_WIN
-    if (!QFile::setPermissions(temporaryFile.fileName(),
+    if (!QFile::setPermissions(binaryPath,
                                QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner)) {
         *errorMessage = QStringLiteral("Não foi possível tornar executável o novo yt-dlp.");
         return false;
     }
 #endif
 
-    const QString version = MediaToolResolver::versionForExecutable(temporaryFile.fileName());
+    const QString version = MediaToolResolver::versionForExecutable(binaryPath);
     if (version.isEmpty()) {
         *errorMessage = QStringLiteral("O binário baixado não respondeu corretamente a --version.");
         return false;
@@ -320,10 +364,25 @@ bool YtDlpUpdateService::installBinary(const QByteArray &binary, const QString &
         return false;
     }
 
+    QFile sourceFile(binaryPath);
     QSaveFile destinationFile(destination);
-    if (!destinationFile.open(QIODevice::WriteOnly)
-        || destinationFile.write(binary) != binary.size()
-        || !destinationFile.commit()) {
+    if (!sourceFile.open(QIODevice::ReadOnly)
+        || !destinationFile.open(QIODevice::WriteOnly)) {
+        *errorMessage = QStringLiteral("Não foi possível substituir a cópia privada do yt-dlp; a versão anterior foi preservada.");
+        return false;
+    }
+    while (!sourceFile.atEnd()) {
+        const QByteArray chunk = sourceFile.read(1024 * 1024);
+        if (chunk.isEmpty() && sourceFile.error() != QFileDevice::NoError) {
+            *errorMessage = QStringLiteral("Não foi possível ler o binário temporário do yt-dlp.");
+            return false;
+        }
+        if (destinationFile.write(chunk) != chunk.size()) {
+            *errorMessage = QStringLiteral("Não foi possível gravar a cópia privada do yt-dlp.");
+            return false;
+        }
+    }
+    if (!destinationFile.commit()) {
         *errorMessage = QStringLiteral("Não foi possível substituir a cópia privada do yt-dlp; a versão anterior foi preservada.");
         return false;
     }
@@ -340,6 +399,7 @@ bool YtDlpUpdateService::installBinary(const QByteArray &binary, const QString &
 
 void YtDlpUpdateService::finishUpdateFailure(const QString &message)
 {
+    m_binaryFile.reset();
     m_updating = false;
     emit updateFailed(message);
 }

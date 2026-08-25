@@ -90,29 +90,14 @@ bool runProbe(QProcess &probe, const QString &program, const QStringList &argume
     return success;
 }
 
-bool ffmpegListsEncoder(const QString &ffmpeg, const QString &encoder, bool verbose)
+bool ffmpegListsEncoder(const QByteArray &output, const QString &encoder, bool verbose)
 {
-    QProcess probe;
-    QByteArray output;
-    QString failure;
-    if (runProbe(probe, ffmpeg,
-                 QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")},
-                 &output, &failure)) {
-        const bool listed = output.contains(encoder.toLatin1());
-        if (verbose) {
-            std::cout << "[GPUDetector] -encoders: " << encoder.toStdString()
-                      << (listed ? " listado" : " não listado") << "\n";
-        }
-        return listed;
-    }
+    const bool listed = output.contains(encoder.toLatin1());
     if (verbose) {
-        std::cout << "[GPUDetector] Falha ao consultar -encoders: "
-                  << failure.toStdString() << "\n";
-        if (!output.isEmpty()) {
-            std::cout << output.toStdString() << "\n";
-        }
+        std::cout << "[GPUDetector] -encoders: " << encoder.toStdString()
+                  << (listed ? " listado" : " não listado") << "\n";
     }
-    return false;
+    return listed;
 }
 
 void printProbeResult(const QString &encoder, const QString &device,
@@ -242,6 +227,19 @@ DetectedHardware findUsableHardwareEncoder(bool verbose)
         std::cout << "[GPUDetector] FFmpeg selecionado: " << ffmpeg.toStdString() << "\n";
     }
 
+    QProcess encoderProbe;
+    QByteArray encoderList;
+    QString encoderFailure;
+    if (!runProbe(encoderProbe, ffmpeg,
+                  QStringList{QStringLiteral("-hide_banner"), QStringLiteral("-encoders")},
+                  &encoderList, &encoderFailure)) {
+        if (verbose) {
+            std::cout << "[GPUDetector] Falha ao consultar -encoders: "
+                      << encoderFailure.toStdString() << "\n";
+        }
+        return {};
+    }
+
     // A lista de encoders não basta: distribuições costumam compilar NVENC,
     // QSV e VAAPI mesmo em máquinas sem o driver correspondente. Este teste
     // renderiza um frame mínimo e só aceita o encoder que realmente inicializa.
@@ -251,7 +249,7 @@ DetectedHardware findUsableHardwareEncoder(bool verbose)
         QStringLiteral("h264_qsv")
     };
     for (const QString &candidate : candidates) {
-        if (ffmpegListsEncoder(ffmpeg, candidate, verbose)
+        if (ffmpegListsEncoder(encoderList, candidate, verbose)
             && encoderWorks(ffmpeg, candidate, {}, verbose)) {
             DetectedHardware usable;
             usable.encoder = candidate;
@@ -260,7 +258,7 @@ DetectedHardware findUsableHardwareEncoder(bool verbose)
         }
     }
 
-    if (ffmpegListsEncoder(ffmpeg, QStringLiteral("h264_vaapi"), verbose)) {
+    if (ffmpegListsEncoder(encoderList, QStringLiteral("h264_vaapi"), verbose)) {
         const QStringList devices = vaapiRenderDevices();
         if (verbose) {
             std::cout << "[GPUDetector] Dispositivos VAAPI encontrados: "
@@ -311,6 +309,7 @@ void GPUDetector::detect(bool verbose)
     std::string totalDump;
     QString diagnostic;
 #ifdef _WIN32
+    static_cast<void>(verbose);
     DISPLAY_DEVICEA displayDevice{};
     displayDevice.cb = sizeof(displayDevice);
     DWORD deviceNumber = 0;

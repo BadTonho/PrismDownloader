@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Cache pinned yt-dlp bundle
+        uses: actions/cache@v4
+        with:
+          path: build/third_party/yt-dlp
+          key: ytdlp-${{ runner.os }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
       - run: sudo apt-get update && sudo apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools libssl-dev openssl ffmpeg dpkg-dev
       - name: Configure signed release build
         shell: bash
@@ -50,6 +55,11 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+      - name: Cache pinned yt-dlp bundle
+        uses: actions/cache@v4
+        with:
+          path: build/third_party/yt-dlp
+          key: ytdlp-${{ runner.os }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
       - uses: jurplel/install-qt-action@v4
         with:
           version: 6.7.2

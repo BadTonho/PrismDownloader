@@ -180,6 +180,8 @@ bool testConversionQueue(const QString &toolPath)
     QSet<ConversionId> active;
     int maximumActive = 0;
     int completions = 0;
+    int progressEvents = 0;
+    bool sawMidProgress = false;
     QObject::connect(&manager, &ConversionManager::conversionStatus,
                      [&active, &maximumActive](ConversionId id, DownloadId, const QString &message) {
         if (message == "Convertendo mídia...") active.insert(id);
@@ -192,13 +194,20 @@ bool testConversionQueue(const QString &toolPath)
     });
     QObject::connect(&manager, &ConversionManager::conversionFailed,
                      [&active](ConversionId id, DownloadId, const QString &) { active.remove(id); });
+    QObject::connect(&manager, &ConversionManager::conversionProgress,
+                     [&progressEvents, &sawMidProgress](ConversionId, DownloadId, double percent) {
+        ++progressEvents;
+        sawMidProgress = sawMidProgress || (percent >= 49.0 && percent <= 51.0);
+    });
 
     if (!check(manager.enqueueConversion(conversionFor(input, output.path(), 101)).accepted,
                "first automatic conversion accepted")) return false;
     if (!check(manager.enqueueConversion(conversionFor(input, output.path(), 102)).accepted,
                "second automatic conversion accepted")) return false;
     if (!check(waitUntil([&manager]() { return !manager.hasWork(); }), "conversion queue completes")) return false;
-    if (!check(completions == 2 && maximumActive == 1, "automatic conversions are strictly serial")) return false;
+    if (!check(completions == 2 && maximumActive == 1, "automatic conversions are strictly serial")
+        || !check(progressEvents >= 4 && sawMidProgress,
+                  "conversion progress is parsed and reaches the UI")) return false;
 
     int manualCompleted = 0;
     int automaticCancelled = 0;

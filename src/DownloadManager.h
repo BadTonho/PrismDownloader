@@ -55,6 +55,7 @@ private:
     struct Job;
 
     QHash<DownloadId, Job *> m_jobs;
+    QHash<QString, DownloadId> m_urlOwners;
     QQueue<DownloadId> m_pending;
     DownloadId m_nextId{1};
     int m_concurrencyLimit{2};

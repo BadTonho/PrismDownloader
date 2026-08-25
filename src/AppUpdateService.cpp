@@ -16,13 +16,24 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTemporaryFile>
+#include <QTimer>
 
 namespace {
 
 const QUrl kLatestReleaseApi(
     QStringLiteral("https://api.github.com/repos/BadTonho/PrismDownloader/releases/latest"));
 constexpr qint64 kMaximumManifestBytes = 64 * 1024;
+constexpr qint64 kMaximumReleasePayloadBytes = 2LL * 1024 * 1024;
 constexpr qint64 kMaximumPackageBytes = 1024LL * 1024 * 1024;
+
+void armReplyTimeout(QNetworkReply *reply, int timeoutMs)
+{
+    QTimer::singleShot(timeoutMs, reply, [reply]() {
+        if (reply->isRunning()) {
+            reply->abort();
+        }
+    });
+}
 
 bool isOfficialGitHubUrl(const QUrl &url)
 {
@@ -242,6 +253,7 @@ void AppUpdateService::checkLatestRelease()
     m_checking = true;
     m_latestRelease = {};
     QNetworkReply *reply = m_networkManager->get(githubRequest(kLatestReleaseApi));
+    armReplyTimeout(reply, 30000);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
@@ -253,6 +265,11 @@ void AppUpdateService::checkLatestRelease()
             return;
         }
         m_releasePayload = reply->readAll();
+        if (m_releasePayload.size() > kMaximumReleasePayloadBytes) {
+            m_checking = false;
+            emit checkFailed(failMessage(QStringLiteral("resposta da API excede o limite permitido.")));
+            return;
+        }
         QJsonParseError parseError;
         const QJsonDocument document = QJsonDocument::fromJson(m_releasePayload, &parseError);
         if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
@@ -276,6 +293,7 @@ void AppUpdateService::checkLatestRelease()
 void AppUpdateService::downloadManifest()
 {
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_manifestUrl));
+    armReplyTimeout(reply, 30000);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
@@ -297,12 +315,18 @@ void AppUpdateService::downloadManifest()
 void AppUpdateService::downloadSignature()
 {
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_signatureUrl));
+    armReplyTimeout(reply, 30000);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
             m_checking = false;
             emit checkFailed(failMessage(QStringLiteral("não foi possível baixar a assinatura: ")
                                          + reply->errorString()));
+            return;
+        }
+        if (reply->bytesAvailable() > 64) {
+            m_checking = false;
+            emit checkFailed(failMessage(QStringLiteral("assinatura excede o tamanho esperado.")));
             return;
         }
         const QByteArray signature = reply->readAll();
@@ -352,6 +376,7 @@ void AppUpdateService::downloadLatestRelease()
     m_downloadWriteFailed = false;
     m_downloading = true;
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_latestRelease.downloadUrl));
+    armReplyTimeout(reply, 15 * 60 * 1000);
     connect(reply, &QNetworkReply::downloadProgress, this, &AppUpdateService::downloadProgress);
     connect(reply, &QIODevice::readyRead, this, [this, reply]() {
         const QByteArray bytes = reply->readAll();

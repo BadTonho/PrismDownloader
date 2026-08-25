@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QTimer>
 
 namespace {
@@ -53,12 +54,15 @@ struct ConversionManager::Job {
     ConversionId id{0};
     ConversionRequest request;
     QProcess *process{nullptr};
+    QByteArray outputBuffer;
     QString outputFile;
     QStringList hardwareArguments;
     QStringList cpuArguments;
     bool usesHardware{false};
     bool fallbackAttempted{false};
     bool cancelRequested{false};
+    double durationSeconds{0.0};
+    double lastProgress{-1.0};
 };
 
 ConversionManager::ConversionManager(QObject *parent, const QString &programPath)
@@ -217,10 +221,7 @@ void ConversionManager::startActiveProcess(const QStringList &arguments)
             if (!m_active || m_active->id != jobId || m_active->process != process) {
                 return;
             }
-            const QString output = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
-            if (!output.isEmpty()) {
-                emit conversionLog(m_active->id, m_active->request.ownerDownloadId, output);
-            }
+            readActiveOutput(m_active);
         });
         connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
                 this, [this, process, jobId](int exitCode, QProcess::ExitStatus exitStatus) {
@@ -236,7 +237,57 @@ void ConversionManager::startActiveProcess(const QStringList &arguments)
             }
         });
     }
+    job->outputBuffer.clear();
+    job->durationSeconds = 0.0;
+    job->lastProgress = -1.0;
     m_active->process->start(m_programPath, arguments);
+}
+
+void ConversionManager::readActiveOutput(Job *job, bool flushRemainder)
+{
+    if (!job || !job->process) {
+        return;
+    }
+    job->outputBuffer += job->process->readAllStandardOutput();
+    qsizetype scanOffset = 0;
+    qsizetype newline = -1;
+    static const QRegularExpression durationPattern(
+        QStringLiteral("Duration:\\s*(\\d+):(\\d+):(\\d+(?:\\.\\d+)?)"));
+    while ((newline = job->outputBuffer.indexOf('\n', scanOffset)) >= 0) {
+        const QString line = QString::fromUtf8(
+            job->outputBuffer.mid(scanOffset, newline - scanOffset)).trimmed();
+        scanOffset = newline + 1;
+        const QRegularExpressionMatch durationMatch = durationPattern.match(line);
+        if (durationMatch.hasMatch()) {
+            job->durationSeconds = durationMatch.captured(1).toDouble() * 3600.0
+                + durationMatch.captured(2).toDouble() * 60.0
+                + durationMatch.captured(3).toDouble();
+            continue;
+        }
+        if (line.startsWith(QStringLiteral("out_time_ms="))) {
+            if (job->durationSeconds > 0.0) {
+                const double elapsedSeconds = line.mid(12).toDouble() / 1000000.0;
+                const double progress = qBound(0.0, elapsedSeconds / job->durationSeconds * 100.0, 100.0);
+                if (job->lastProgress < 0.0 || progress - job->lastProgress >= 0.5 || progress >= 100.0) {
+                    job->lastProgress = progress;
+                    emit conversionProgress(job->id, job->request.ownerDownloadId, progress);
+                }
+            }
+            continue;
+        }
+        if (line.startsWith(QStringLiteral("progress=")) || line.isEmpty()) {
+            continue;
+        }
+        emit conversionLog(job->id, job->request.ownerDownloadId, line);
+    }
+    if (scanOffset > 0) {
+        job->outputBuffer.remove(0, scanOffset);
+    }
+    if (flushRemainder && !job->outputBuffer.isEmpty()) {
+        emit conversionLog(job->id, job->request.ownerDownloadId,
+                           QString::fromUtf8(job->outputBuffer).trimmed());
+        job->outputBuffer.clear();
+    }
 }
 
 void ConversionManager::onActiveFinished(int exitCode, QProcess::ExitStatus exitStatus)
@@ -244,6 +295,7 @@ void ConversionManager::onActiveFinished(int exitCode, QProcess::ExitStatus exit
     if (!m_active) {
         return;
     }
+    readActiveOutput(m_active, true);
     if (m_active->cancelRequested) {
         Job *cancelled = m_active;
         emit conversionCancelled(cancelled->id, cancelled->request.ownerDownloadId);
@@ -276,6 +328,7 @@ void ConversionManager::finishActiveSuccess()
 {
     Job *completed = m_active;
     m_active = nullptr;
+    emit conversionProgress(completed->id, completed->request.ownerDownloadId, 100.0);
     emit conversionCompleted(completed->id, completed->request.ownerDownloadId, completed->outputFile);
     emit conversionLog(completed->id, completed->request.ownerDownloadId, "Conversão concluída.");
     cleanupJob(completed);
@@ -326,8 +379,9 @@ void ConversionManager::prepareArguments(Job *job)
     QString stem = input.completeBaseName() + "_convertido";
     QString extension = ".mp4";
 
-    QStringList hardwareArgs{"-n", "-i", job->request.inputFile};
-    QStringList cpuArgs{"-n", "-i", job->request.inputFile};
+    QStringList hardwareArgs{"-hide_banner", "-nostats", "-progress", "pipe:1",
+                             "-n", "-i", job->request.inputFile};
+    QStringList cpuArgs = hardwareArgs;
     const QString format = job->request.format;
 
     if (format.startsWith("MP4 (H.264")) {

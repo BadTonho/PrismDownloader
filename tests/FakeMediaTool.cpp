@@ -50,6 +50,11 @@ int main(int argc, char *argv[])
     }
 
     if (arguments.isEmpty()) return 4;
+    if (arguments.contains("-progress")) {
+        output << "Duration: 00:00:02.00" << Qt::endl;
+        output << "out_time_ms=1000000" << Qt::endl;
+        output << "progress=continue" << Qt::endl;
+    }
     QThread::msleep(220);
     return createFile(arguments.constLast()) ? 0 : 5;
 }

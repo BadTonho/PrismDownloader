@@ -3,9 +3,13 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QCryptographicHash>
 #include <QUrl>
 
+#include <memory>
+
 class QNetworkAccessManager;
+class QTemporaryFile;
 
 struct YtDlpReleaseInfo {
     QString version;
@@ -22,6 +26,7 @@ class YtDlpUpdateService : public QObject {
 
 public:
     explicit YtDlpUpdateService(QObject *parent = nullptr);
+    ~YtDlpUpdateService() override;
 
     static QString platformAssetName();
     static YtDlpReleaseInfo parseLatestRelease(const QByteArray &payload, QString *errorMessage = nullptr);
@@ -46,12 +51,14 @@ private:
     YtDlpReleaseInfo m_latestRelease;
     bool m_checking{false};
     bool m_updating{false};
-    QByteArray m_binaryBuffer;
-    bool m_binaryTooLarge{false};
+    std::unique_ptr<QTemporaryFile> m_binaryFile;
+    QCryptographicHash m_binaryHasher{QCryptographicHash::Sha256};
+    qint64 m_binaryDownloaded{0};
+    bool m_binaryWriteFailed{false};
 
     void downloadChecksums();
     void downloadBinary(const QString &expectedSha256);
-    bool installBinary(const QByteArray &binary, const QString &expectedVersion,
+    bool installBinary(const QString &binaryPath, const QString &expectedVersion,
                        QString *installedVersion, QString *errorMessage) const;
     void finishUpdateFailure(const QString &message);
 };

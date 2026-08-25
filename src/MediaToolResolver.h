@@ -37,6 +37,7 @@ public:
     static QString ytDlpUserPath();
     static QString ytDlpBundledPath();
     static QString missingMessage(MediaTool tool);
+    static void clearVersionCache();
 };
 
 #endif // MEDIATOOLRESOLVER_H

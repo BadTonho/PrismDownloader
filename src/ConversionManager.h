@@ -49,6 +49,7 @@ public:
 signals:
     void conversionQueued(ConversionId id, DownloadId ownerDownloadId, int position);
     void conversionStatus(ConversionId id, DownloadId ownerDownloadId, const QString &message);
+    void conversionProgress(ConversionId id, DownloadId ownerDownloadId, double percent);
     void conversionCompleted(ConversionId id, DownloadId ownerDownloadId, const QString &outputFile);
     void conversionFailed(ConversionId id, DownloadId ownerDownloadId, const QString &message);
     void conversionCancelled(ConversionId id, DownloadId ownerDownloadId);
@@ -71,6 +72,7 @@ private:
     void onActiveFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void finishActiveSuccess();
     void finishActiveFailure(const QString &message);
+    void readActiveOutput(Job *job, bool flushRemainder = false);
     void cleanupJob(Job *job);
     void emitQueueState();
     void prepareArguments(Job *job);

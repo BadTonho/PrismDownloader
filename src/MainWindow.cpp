@@ -26,18 +26,23 @@
 #include <QProgressDialog>
 #include <QPixmap>
 #include <QTableWidgetItem>
+#include <QThread>
 #include <QProcess>
 #include <QNetworkAccessManager>
+#include <QNetworkDiskCache>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QCloseEvent>
 #include <QRegularExpression>
+#include <QPointer>
 #include <QUrlQuery>
 #include <QVersionNumber>
 #include <QUuid>
 
+#include <memory>
 #include <utility>
 
 static const QString NEOV_VERSION_TAG = QStringLiteral(PRISM_VERSION_TAG);
@@ -45,6 +50,9 @@ static const QString NEOV_VERSION_NUMBER = QStringLiteral(PRISM_VERSION_NUMBER);
 
 namespace {
 constexpr int kMaximumLogEntries = 5000;
+constexpr int kMaximumPlaylistItems = 500;
+constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
+constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
 
 qint64 toSeconds(const QRegularExpressionMatch &match, int hourIndex, int minuteIndex, int secondIndex)
 {
@@ -71,6 +79,9 @@ QList<PlaylistItem> parsePlaylistPreview(const QByteArray &output)
     QSet<QString> seenUrls;
     const QStringList lines = QString::fromUtf8(output).split('\n');
     for (const QString &rawLine : lines) {
+        if (items.size() >= kMaximumPlaylistItems) {
+            break;
+        }
         const QString line = rawLine.trimmed();
         const QStringList fields = line.split('\t');
         if (fields.size() < 2) {
@@ -118,6 +129,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUI();
     setupStyles();
+
+    m_logFlushTimer = new QTimer(this);
+    m_logFlushTimer->setInterval(75);
+    connect(m_logFlushTimer, &QTimer::timeout, this, &MainWindow::flushLogBuffer);
+
+    m_thumbnailNetwork = new QNetworkAccessManager(this);
+    auto *thumbnailCache = new QNetworkDiskCache(m_thumbnailNetwork);
+    QString thumbnailCachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!thumbnailCachePath.isEmpty()) {
+        thumbnailCachePath = QDir(thumbnailCachePath).filePath(QStringLiteral("thumbnails"));
+        if (QDir().mkpath(thumbnailCachePath)) {
+            thumbnailCache->setCacheDirectory(thumbnailCachePath);
+            thumbnailCache->setMaximumCacheSize(32LL * 1024 * 1024);
+            m_thumbnailNetwork->setCache(thumbnailCache);
+        }
+    }
 
     m_appUpdateService = new AppUpdateService(
         AppUpdateService::packageForCurrentPlatform(isInstalledWindowsCopy()), this);
@@ -319,42 +346,7 @@ MainWindow::MainWindow(QWidget *parent)
         QMessageBox::warning(this, "Falha ao atualizar yt-dlp", message);
     });
 
-    m_gpuDetector.detect();
-
-    GPUDetector *gpu = &m_gpuDetector;
-    QString gpuName = QString::fromStdString(gpu->getGPUName());
-    QString codec = QString::fromStdString(gpu->getRecommendedCodec());
-    bool hasAccel = gpu->hasHardwareAcceleration();
-
-    if (hasAccel) {
-        if (m_gpuModelLabel) m_gpuModelLabel->setText(gpuName);
-        if (m_gpuCodecLabel) m_gpuCodecLabel->setText(codec);
-        if (m_gpuStatusLabel) {
-            m_gpuStatusLabel->setText("ATIVO E OPERANTE (" + codec.toUpper() + ")");
-            m_gpuStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
-        }
-        if (m_convertEngineLabel) {
-            m_convertEngineLabel->setText("Acelerado por Hardware (" + gpuName + " / " + codec + ")");
-            m_convertEngineLabel->setStyleSheet("color: #10b981; font-weight: bold;");
-        }
-        logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
-    } else {
-        const QString gpuDiagnostic = QString::fromStdString(gpu->getDiagnostic());
-        if (m_gpuModelLabel) m_gpuModelLabel->setText("Nenhuma aceleração de hardware compatível foi localizada");
-        if (m_gpuCodecLabel) m_gpuCodecLabel->setText("Codec Fallback CPU Padrão");
-        if (m_gpuStatusLabel) {
-            m_gpuStatusLabel->setText("MODO FALLBACK CPU (Multi-thread)");
-            m_gpuStatusLabel->setStyleSheet("color: #f59e0b; font-weight: bold; font-size: 13px;");
-        }
-        if (m_convertEngineLabel) {
-            m_convertEngineLabel->setText("Modo Fallback CPU Padrão (Multi-thread)");
-            m_convertEngineLabel->setStyleSheet("color: #f59e0b; font-weight: bold;");
-        }
-        logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
-        if (!gpuDiagnostic.isEmpty()) {
-            logMessage("[GPUDetector] " + gpuDiagnostic);
-        }
-    }
+    startGpuProbe();
 
     connect(m_downloadManager, &DownloadManager::jobProgress, this, &MainWindow::onDownloadProgress);
     connect(m_downloadManager, &DownloadManager::jobStatus, this, &MainWindow::onDownloadStatus);
@@ -367,6 +359,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(m_conversionManager, &ConversionManager::conversionStatus, this, &MainWindow::onConversionStatus);
+    connect(m_conversionManager, &ConversionManager::conversionProgress, this, &MainWindow::onConversionProgress);
     connect(m_conversionManager, &ConversionManager::conversionCompleted, this, &MainWindow::onConversionCompleted);
     connect(m_conversionManager, &ConversionManager::conversionFailed, this, &MainWindow::onConversionFailed);
     connect(m_conversionManager, &ConversionManager::conversionCancelled, this, &MainWindow::onConversionCancelled);
@@ -413,6 +406,70 @@ MainWindow::MainWindow(QWidget *parent)
     }
 }
 
+void MainWindow::startGpuProbe()
+{
+    if (m_gpuProbeThread) {
+        return;
+    }
+    auto *result = new GPUDetector;
+    auto *thread = QThread::create([result]() {
+        result->detect();
+    });
+    m_gpuProbeResult = result;
+    m_gpuProbeThread = thread;
+    connect(thread, &QThread::finished, this, [this, thread, result]() {
+        if (m_gpuProbeResult == result) {
+            m_gpuDetector = *result;
+            m_gpuProbeResult = nullptr;
+            applyGpuProbeResult();
+        }
+        if (m_gpuProbeThread == thread) {
+            m_gpuProbeThread = nullptr;
+        }
+        delete result;
+        thread->deleteLater();
+    }, Qt::QueuedConnection);
+    thread->start();
+}
+
+void MainWindow::applyGpuProbeResult()
+{
+    GPUDetector *gpu = &m_gpuDetector;
+    const QString gpuName = QString::fromStdString(gpu->getGPUName());
+    const QString codec = QString::fromStdString(gpu->getRecommendedCodec());
+    const bool hasAccel = gpu->hasHardwareAcceleration();
+
+    if (hasAccel) {
+        if (m_gpuModelLabel) m_gpuModelLabel->setText(gpuName);
+        if (m_gpuCodecLabel) m_gpuCodecLabel->setText(codec);
+        if (m_gpuStatusLabel) {
+            m_gpuStatusLabel->setText("ATIVO E OPERANTE (" + codec.toUpper() + ")");
+            m_gpuStatusLabel->setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;");
+        }
+        if (m_convertEngineLabel) {
+            m_convertEngineLabel->setText("Acelerado por Hardware (" + gpuName + " / " + codec + ")");
+            m_convertEngineLabel->setStyleSheet("color: #10b981; font-weight: bold;");
+        }
+        logMessage(QString("[System] Placa gráfica ativa no motor: %1 (Codec: %2)").arg(gpuName, codec));
+    } else {
+        const QString gpuDiagnostic = QString::fromStdString(gpu->getDiagnostic());
+        if (m_gpuModelLabel) m_gpuModelLabel->setText("Nenhuma aceleração de hardware compatível foi localizada");
+        if (m_gpuCodecLabel) m_gpuCodecLabel->setText("Codec Fallback CPU Padrão");
+        if (m_gpuStatusLabel) {
+            m_gpuStatusLabel->setText("MODO FALLBACK CPU (Multi-thread)");
+            m_gpuStatusLabel->setStyleSheet("color: #f59e0b; font-weight: bold; font-size: 13px;");
+        }
+        if (m_convertEngineLabel) {
+            m_convertEngineLabel->setText("Modo Fallback CPU Padrão (Multi-thread)");
+            m_convertEngineLabel->setStyleSheet("color: #f59e0b; font-weight: bold;");
+        }
+        logMessage("[System] Operando no modo Fallback Multi-thread CPU.");
+        if (!gpuDiagnostic.isEmpty()) {
+            logMessage("[GPUDetector] " + gpuDiagnostic);
+        }
+    }
+}
+
 MainWindow::~MainWindow()
 {
     QSettings settings("Tonho Studios", "PrismDownloader");
@@ -423,6 +480,13 @@ MainWindow::~MainWindow()
     if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
     if (m_concurrencySpin) settings.setValue("maxConcurrentDownloads", m_concurrencySpin->value());
     if (m_autoDownloadUpdatesChk) settings.setValue("autoDownloadUpdates", m_autoDownloadUpdatesChk->isChecked());
+    if (m_gpuProbeThread) {
+        m_gpuProbeThread->wait();
+        delete m_gpuProbeThread;
+        m_gpuProbeThread = nullptr;
+    }
+    delete m_gpuProbeResult;
+    m_gpuProbeResult = nullptr;
 }
 
 void MainWindow::setupUI()
@@ -865,6 +929,7 @@ void MainWindow::setupUI()
 
     m_logEdit = new QPlainTextEdit(pageLogs);
     m_logEdit->setReadOnly(true);
+    m_logEdit->setMaximumBlockCount(kMaximumLogEntries);
     m_logEdit->setObjectName("logArea");
     logsLayout->addWidget(m_logEdit);
     m_stackedWidget->addWidget(pageLogs);
@@ -1130,18 +1195,61 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
 
     auto *process = new QProcess(this);
     m_playlistPreviewProcess = process;
+    m_playlistPreviewOutput.clear();
+    m_playlistPreviewErrorOutput.clear();
+    m_playlistPreviewTruncated = false;
     process->setProcessChannelMode(QProcess::SeparateChannels);
 
+    const auto consumePlaylistOutput = [this](const QByteArray &chunk) {
+        if (chunk.isEmpty()) {
+            return;
+        }
+        const qsizetype remaining = kMaximumPlaylistOutputBytes - m_playlistPreviewOutput.size();
+        if (remaining <= 0) {
+            m_playlistPreviewTruncated = true;
+            return;
+        }
+        if (chunk.size() > remaining) {
+            m_playlistPreviewOutput.append(chunk.constData(), static_cast<int>(remaining));
+            m_playlistPreviewTruncated = true;
+        } else {
+            m_playlistPreviewOutput.append(chunk);
+        }
+    };
+    connect(process, &QProcess::readyReadStandardOutput, this,
+            [process, consumePlaylistOutput]() {
+        consumePlaylistOutput(process->readAllStandardOutput());
+    });
+    const auto consumePlaylistError = [this](const QByteArray &chunk) {
+        if (chunk.isEmpty()) {
+            return;
+        }
+        const qsizetype remaining = kMaximumPlaylistErrorBytes - m_playlistPreviewErrorOutput.size();
+        if (remaining > 0) {
+            m_playlistPreviewErrorOutput.append(
+                chunk.constData(), static_cast<int>(qMin<qsizetype>(remaining, chunk.size())));
+        }
+    };
+    connect(process, &QProcess::readyReadStandardError, this,
+            [process, consumePlaylistError]() {
+        consumePlaylistError(process->readAllStandardError());
+    });
+
     connect(process, &QProcess::finished, this,
-            [this, process](int exitCode, QProcess::ExitStatus) {
+            [this, process, consumePlaylistOutput, consumePlaylistError](int exitCode, QProcess::ExitStatus) {
         if (m_playlistPreviewProcess != process) {
             process->deleteLater();
             return;
         }
 
-        const QList<PlaylistItem> items =
-            parsePlaylistPreview(process->readAllStandardOutput());
-        const QString errorOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
+        consumePlaylistOutput(process->readAllStandardOutput());
+        consumePlaylistError(process->readAllStandardError());
+        const bool truncated = m_playlistPreviewTruncated;
+        const QList<PlaylistItem> items = parsePlaylistPreview(m_playlistPreviewOutput);
+        const QString errorOutput = QString::fromUtf8(m_playlistPreviewErrorOutput).trimmed();
+        m_playlistPreviewOutput.clear();
+        m_playlistPreviewErrorOutput.clear();
+        m_playlistPreviewTruncated = false;
         m_playlistPreviewProcess = nullptr;
         process->deleteLater();
         closePlaylistPreviewDialog();
@@ -1163,6 +1271,10 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
         } else {
             logMessage(QString("[Playlist] %1 item(ns) encontrado(s) para seleção.").arg(items.size()));
         }
+        if (truncated) {
+            logMessage(QString("[Playlist] Prévia limitada aos primeiros %1 itens para preservar desempenho.")
+                           .arg(kMaximumPlaylistItems));
+        }
 
         QList<PlaylistItem> selectedItems;
         if (!showPlaylistSelectionDialog(items, selectedItems)) {
@@ -1177,6 +1289,9 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
         if (error != QProcess::FailedToStart || m_playlistPreviewProcess != process) {
             return;
         }
+        m_playlistPreviewOutput.clear();
+        m_playlistPreviewErrorOutput.clear();
+        m_playlistPreviewTruncated = false;
         m_playlistPreviewProcess = nullptr;
         process->deleteLater();
         closePlaylistPreviewDialog();
@@ -1200,6 +1315,9 @@ void MainWindow::startPlaylistPreview(const QUrl &url)
             return;
         }
         m_playlistPreviewProcess = nullptr;
+        m_playlistPreviewOutput.clear();
+        m_playlistPreviewErrorOutput.clear();
+        m_playlistPreviewTruncated = false;
         process->kill();
         process->deleteLater();
         closePlaylistPreviewDialog();
@@ -1506,23 +1624,43 @@ void MainWindow::showPlaylistItemDetailsDialog(const PlaylistItem &item)
     if (!item.thumbnailUrl.isValid() || item.thumbnailUrl.host().isEmpty()
         || (item.thumbnailUrl.scheme() != "http" && item.thumbnailUrl.scheme() != "https")) {
         thumbnail->setText("Miniatura não disponível para este vídeo.");
-    } else {
-        auto *thumbnailManager = new QNetworkAccessManager(&dialog);
+    } else if (m_thumbnailNetwork) {
         QNetworkRequest request(item.thumbnailUrl);
         request.setHeader(QNetworkRequest::UserAgentHeader,
                           "PrismDownloader/1.1 (playlist details)");
-        QNetworkReply *reply = thumbnailManager->get(request);
-        connect(reply, &QNetworkReply::finished, &dialog, [reply, thumbnail]() {
-            const QByteArray imageData = reply->readAll();
+        QNetworkReply *reply = m_thumbnailNetwork->get(request);
+        auto imageData = std::make_shared<QByteArray>();
+        const QPointer<QLabel> thumbnailGuard = thumbnail;
+        connect(reply, &QIODevice::readyRead, reply, [reply, imageData]() {
+            constexpr qsizetype kMaximumThumbnailBytes = 5 * 1024 * 1024;
+            const QByteArray chunk = reply->readAll();
+            if (imageData->size() > kMaximumThumbnailBytes - chunk.size()) {
+                reply->abort();
+                return;
+            }
+            imageData->append(chunk);
+        });
+        connect(reply, &QNetworkReply::finished, reply,
+                [reply, imageData, thumbnailGuard]() {
             QPixmap image;
-            if (reply->error() == QNetworkReply::NoError && image.loadFromData(imageData)) {
-                thumbnail->setPixmap(image.scaled(thumbnail->size(), Qt::KeepAspectRatio,
-                                                  Qt::SmoothTransformation));
-            } else {
-                thumbnail->setText("Não foi possível carregar a miniatura.");
+            if (thumbnailGuard) {
+                if (reply->error() == QNetworkReply::NoError && image.loadFromData(*imageData)) {
+                    thumbnailGuard->setPixmap(image.scaled(thumbnailGuard->size(), Qt::KeepAspectRatio,
+                                                           Qt::SmoothTransformation));
+                } else {
+                    thumbnailGuard->setText("Não foi possível carregar a miniatura.");
+                }
             }
             reply->deleteLater();
         });
+        connect(&dialog, &QDialog::finished, reply, &QNetworkReply::abort);
+        QTimer::singleShot(10000, reply, [reply]() {
+            if (reply->isRunning()) {
+                reply->abort();
+            }
+        });
+    } else {
+        thumbnail->setText("Miniatura não disponível para este vídeo.");
     }
 
     dialog.exec();
@@ -1593,6 +1731,7 @@ void MainWindow::continueDownload(const QList<PlaylistItem> &items)
             }
             m_downloadsQueueTable->item(0, 0)->setData(
                 Qt::UserRole, QVariant::fromValue<qulonglong>(result.id));
+            m_downloadRowItems.insert(result.id, m_downloadsQueueTable->item(0, 0));
             updateJobRow(result.id);
             m_downloadsQueueTable->selectRow(0);
         }
@@ -1684,7 +1823,7 @@ void MainWindow::onCancelConvertClicked()
 
 void MainWindow::refreshLibrary()
 {
-    if (!m_libraryTable) return;
+    if (!m_libraryTable || !m_stackedWidget || m_stackedWidget->currentIndex() != 1) return;
     m_libraryTable->setRowCount(0);
 
     QString folder = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
@@ -2012,13 +2151,8 @@ int MainWindow::findDownloadRow(DownloadId id) const
     if (!m_downloadsQueueTable || id == 0) {
         return -1;
     }
-    for (int row = 0; row < m_downloadsQueueTable->rowCount(); ++row) {
-        const QTableWidgetItem *item = m_downloadsQueueTable->item(row, 0);
-        if (item && item->data(Qt::UserRole).toULongLong() == id) {
-            return row;
-        }
-    }
-    return -1;
+    const QTableWidgetItem *item = m_downloadRowItems.value(id, nullptr);
+    return item ? item->row() : -1;
 }
 
 DownloadId MainWindow::selectedDownloadId() const
@@ -2074,9 +2208,15 @@ void MainWindow::onDownloadProgress(DownloadId id, double percent, const QString
 {
     auto iterator = m_downloadJobs.find(id);
     if (iterator == m_downloadJobs.end()) return;
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
     iterator->progress = qBound(0.0, percent, 100.0);
     iterator->speed = speed;
     iterator->eta = eta;
+    if (iterator->lastUiRefreshMs != 0 && nowMs - iterator->lastUiRefreshMs < 100
+        && iterator->progress < 100.0) {
+        return;
+    }
+    iterator->lastUiRefreshMs = nowMs;
     updateJobRow(id);
     updateSelectedMonitor();
 }
@@ -2180,6 +2320,24 @@ void MainWindow::onConversionStatus(ConversionId id, DownloadId ownerDownloadId,
     if (iterator == m_downloadJobs.end()) return;
     iterator->status = DownloadStatus::ConvertingGPU;
     iterator->statusText = message;
+    updateJobRow(ownerDownloadId);
+    updateSelectedMonitor();
+}
+
+void MainWindow::onConversionProgress(ConversionId id, DownloadId ownerDownloadId, double percent)
+{
+    if (ownerDownloadId == 0 && id == m_manualConversionId) {
+        m_convertProgressBar->setRange(0, 100);
+        m_convertProgressBar->setValue(qRound(percent));
+        m_convertStatusLabel->setText(QString("Status: Convertendo mídia (%1%)")
+                                       .arg(QString::number(percent, 'f', 1)));
+        return;
+    }
+    auto iterator = m_downloadJobs.find(ownerDownloadId);
+    if (iterator == m_downloadJobs.end()) return;
+    iterator->progress = qBound(0.0, percent, 100.0);
+    iterator->status = DownloadStatus::ConvertingGPU;
+    iterator->statusText = QString("Convertendo mídia (%1%)").arg(QString::number(percent, 'f', 1));
     updateJobRow(ownerDownloadId);
     updateSelectedMonitor();
 }
@@ -2307,6 +2465,21 @@ void MainWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
+void MainWindow::flushLogBuffer()
+{
+    if (!m_logEdit || m_pendingLogLines.isEmpty()) {
+        if (m_logFlushTimer && m_pendingLogLines.isEmpty()) {
+            m_logFlushTimer->stop();
+        }
+        return;
+    }
+    m_logEdit->appendPlainText(m_pendingLogLines.join(QLatin1Char('\n')));
+    m_pendingLogLines.clear();
+    if (m_logFlushTimer) {
+        m_logFlushTimer->stop();
+    }
+}
+
 void MainWindow::logMessage(const QString &msg)
 {
     m_allLogs.append(msg);
@@ -2314,7 +2487,10 @@ void MainWindow::logMessage(const QString &msg)
         m_allLogs.erase(m_allLogs.begin(), m_allLogs.begin() + (m_allLogs.size() - kMaximumLogEntries));
     }
     if (m_logEdit && shouldShowLogLine(msg)) {
-        m_logEdit->appendPlainText(msg);
+        m_pendingLogLines.append(msg);
+        if (m_logFlushTimer && !m_logFlushTimer->isActive()) {
+            m_logFlushTimer->start();
+        }
     }
 }
 
@@ -2377,6 +2553,10 @@ void MainWindow::updateLogFilter(int mode)
 void MainWindow::refreshLogDisplay()
 {
     if (!m_logEdit) return;
+    m_pendingLogLines.clear();
+    if (m_logFlushTimer) {
+        m_logFlushTimer->stop();
+    }
     m_logEdit->clear();
     for (const QString &line : m_allLogs) {
         if (shouldShowLogLine(line)) {

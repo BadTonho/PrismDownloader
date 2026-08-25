@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QByteArray>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QProgressBar>
@@ -28,7 +29,9 @@
 
 class QCloseEvent;
 class QProcess;
+class QThread;
 class QProgressDialog;
+class QNetworkAccessManager;
 class AppUpdateService;
 class YtDlpUpdateService;
 
@@ -75,6 +78,7 @@ private slots:
     void onDownloadCompleted(DownloadId id, const QString &filePath);
     void onDownloadQueueStateChanged(int active, int pending);
     void onConversionStatus(ConversionId id, DownloadId ownerDownloadId, const QString &message);
+    void onConversionProgress(ConversionId id, DownloadId ownerDownloadId, double percent);
     void onConversionCompleted(ConversionId id, DownloadId ownerDownloadId, const QString &outputFile);
     void onConversionFailed(ConversionId id, DownloadId ownerDownloadId, const QString &message);
     void onConversionCancelled(ConversionId id, DownloadId ownerDownloadId);
@@ -154,9 +158,11 @@ private:
         DownloadStatus status{DownloadStatus::Queued};
         ConversionId conversionId{0};
         bool terminal{false};
+        qint64 lastUiRefreshMs{0};
     };
 
     QHash<DownloadId, UiDownloadJob> m_downloadJobs;
+    QHash<DownloadId, QTableWidgetItem *> m_downloadRowItems;
     QSet<DownloadId> m_currentBatchJobs;
     QString m_currentDownloadDir;
 
@@ -177,6 +183,8 @@ private:
     // Tela de Terminal de Logs (Página 3)
     QPlainTextEdit *m_logEdit{nullptr};
     QStringList m_allLogs;
+    QStringList m_pendingLogLines;
+    QTimer *m_logFlushTimer{nullptr};
     int m_logFilterMode{0}; // 0=Todos, 1=Processos, 2=Erros, 3=Geral
     QPushButton *m_filterAllBtn{nullptr};
     QPushButton *m_filterProcessesBtn{nullptr};
@@ -206,10 +214,20 @@ private:
     bool m_appUpdatePending{false};
     bool m_installingAppUpdate{false};
 
+    void flushLogBuffer();
+    void startGpuProbe();
+    void applyGpuProbeResult();
+
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;
     QProcess *m_playlistPreviewProcess{nullptr};
     QProgressDialog *m_playlistPreviewDialog{nullptr};
+    QByteArray m_playlistPreviewOutput;
+    QByteArray m_playlistPreviewErrorOutput;
+    bool m_playlistPreviewTruncated{false};
+    QNetworkAccessManager *m_thumbnailNetwork{nullptr};
+    QThread *m_gpuProbeThread{nullptr};
+    GPUDetector *m_gpuProbeResult{nullptr};
     GPUDetector m_gpuDetector;
     bool m_closing{false};
 };

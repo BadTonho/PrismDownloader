@@ -10,6 +10,9 @@ project(PrismDownloader VERSION ${PRISM_VERSION} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+option(PRISM_ENABLE_LTO "Ativar otimização de link-time no build de release" OFF)
 
 if(WIN32 OR (UNIX AND NOT APPLE))
     option(PRISM_FETCH_BUNDLED_YTDLP "Baixar o yt-dlp Nightly fixado para o pacote" ON)
@@ -22,7 +25,7 @@ endif()
 # Caminho opcional para uma instalação local do Qt. No Linux, normalmente o Qt
 # é descoberto pelas dependências instaladas pelo gerenciador de pacotes.
 if(WIN32)
-    set(PRISM_QT_ROOT "C:/Qt/6.7.2/msvc2019_64" CACHE PATH
+    set(PRISM_QT_ROOT "" CACHE PATH
         "Raiz da instalação do Qt usada pelo Prism Downloader")
 else()
     set(PRISM_QT_ROOT "" CACHE PATH "Raiz opcional da instalação do Qt")
@@ -83,8 +86,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network OpenSSL:
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /utf-8)
     target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
-    if(NOT PRISM_QT_ROOT OR NOT EXISTS "${PRISM_QT_ROOT}/bin/Qt6Core.dll")
-        message(FATAL_ERROR "PRISM_QT_ROOT deve apontar para uma instalação Qt com os binários de runtime.")
+    get_target_property(PRISM_QT_CORE_RUNTIME Qt6::Core IMPORTED_LOCATION_RELEASE)
+    if(NOT PRISM_QT_CORE_RUNTIME)
+        get_target_property(PRISM_QT_CORE_RUNTIME Qt6::Core IMPORTED_LOCATION)
+    endif()
+    if(PRISM_QT_CORE_RUNTIME)
+        get_filename_component(PRISM_QT_BIN_DIR "${PRISM_QT_CORE_RUNTIME}" DIRECTORY)
+    elseif(PRISM_QT_ROOT)
+        set(PRISM_QT_BIN_DIR "${PRISM_QT_ROOT}/bin")
+    endif()
+    if(NOT PRISM_QT_BIN_DIR OR NOT EXISTS "${PRISM_QT_BIN_DIR}/Qt6Core.dll")
+        message(FATAL_ERROR "Qt6Core.dll não foi localizado; defina PRISM_QT_ROOT ou CMAKE_PREFIX_PATH.")
     endif()
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -94,16 +106,16 @@ if(MSVC)
     )
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${PRISM_QT_ROOT}/bin/Qt6Core.dll"
-        "${PRISM_QT_ROOT}/bin/Qt6Gui.dll"
-        "${PRISM_QT_ROOT}/bin/Qt6Widgets.dll"
-        "${PRISM_QT_ROOT}/bin/Qt6Network.dll"
+        "${PRISM_QT_BIN_DIR}/Qt6Core.dll"
+        "${PRISM_QT_BIN_DIR}/Qt6Gui.dll"
+        "${PRISM_QT_BIN_DIR}/Qt6Widgets.dll"
+        "${PRISM_QT_BIN_DIR}/Qt6Network.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
     )
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${PRISM_QT_ROOT}/plugins/platforms/qwindows.dll"
+        "${PRISM_QT_BIN_DIR}/../plugins/platforms/qwindows.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms/"
     )
     get_target_property(PRISM_OPENSSL_RUNTIME OpenSSL::Crypto IMPORTED_LOCATION_RELEASE)
@@ -116,6 +128,16 @@ if(MSVC)
     if(NOT PRISM_OPENSSL_RUNTIME AND OPENSSL_ROOT_DIR)
         file(GLOB PRISM_OPENSSL_RUNTIME_CANDIDATES
             "${OPENSSL_ROOT_DIR}/bin/libcrypto*.dll")
+        list(LENGTH PRISM_OPENSSL_RUNTIME_CANDIDATES PRISM_OPENSSL_RUNTIME_COUNT)
+        if(PRISM_OPENSSL_RUNTIME_COUNT GREATER 0)
+            list(GET PRISM_OPENSSL_RUNTIME_CANDIDATES 0 PRISM_OPENSSL_RUNTIME)
+        endif()
+    endif()
+    if(NOT PRISM_OPENSSL_RUNTIME AND OPENSSL_CRYPTO_LIBRARY)
+        get_filename_component(PRISM_OPENSSL_LIB_DIR "${OPENSSL_CRYPTO_LIBRARY}" DIRECTORY)
+        file(GLOB PRISM_OPENSSL_RUNTIME_CANDIDATES
+            "${PRISM_OPENSSL_LIB_DIR}/../bin/libcrypto*.dll"
+            "${PRISM_OPENSSL_LIB_DIR}/../bin/crypto*.dll")
         list(LENGTH PRISM_OPENSSL_RUNTIME_CANDIDATES PRISM_OPENSSL_RUNTIME_COUNT)
         if(PRISM_OPENSSL_RUNTIME_COUNT GREATER 0)
             list(GET PRISM_OPENSSL_RUNTIME_CANDIDATES 0 PRISM_OPENSSL_RUNTIME)
@@ -218,8 +240,8 @@ if(BUILD_TESTING)
             target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
             add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${PRISM_QT_ROOT}/bin/Qt6Core.dll"
-                "${PRISM_QT_ROOT}/bin/Qt6Network.dll"
+                "${PRISM_QT_BIN_DIR}/Qt6Core.dll"
+                "${PRISM_QT_BIN_DIR}/Qt6Network.dll"
                 $<TARGET_FILE_DIR:${target}>
             )
             if(PRISM_OPENSSL_RUNTIME AND EXISTS "${PRISM_OPENSSL_RUNTIME}")
@@ -241,6 +263,17 @@ if(BUILD_TESTING)
     add_test(NAME PrismDownloader.PortableUpdateCommon COMMAND PrismPortableUpdateCommonTests)
     add_test(NAME PrismDownloader.QueueManagers
              COMMAND PrismQueueManagerTests $<TARGET_FILE:PrismFakeMediaTool>)
+endif()
+
+if(PRISM_ENABLE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT PRISM_IPO_SUPPORTED OUTPUT PRISM_IPO_ERROR)
+    if(PRISM_IPO_SUPPORTED)
+        set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+        set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
+    else()
+        message(WARNING "LTO solicitado, mas não suportado: ${PRISM_IPO_ERROR}")
+    endif()
 endif()
 
 if(WIN32)

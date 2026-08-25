@@ -1,8 +1,11 @@
 #include "MediaToolResolver.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
+#include <QMutex>
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
@@ -11,6 +14,27 @@
 #include <QVersionNumber>
 
 namespace {
+
+constexpr qint64 kVersionCacheLifetimeMs = 30000;
+
+struct VersionCacheEntry {
+    qint64 fileSize{-1};
+    QDateTime lastModified;
+    qint64 checkedAtMs{0};
+    QString version;
+};
+
+QHash<QString, VersionCacheEntry> &versionCache()
+{
+    static QHash<QString, VersionCacheEntry> cache;
+    return cache;
+}
+
+QMutex &versionCacheMutex()
+{
+    static QMutex mutex;
+    return mutex;
+}
 
 QString packageName(MediaTool tool)
 {
@@ -154,6 +178,22 @@ QString MediaToolResolver::versionForExecutable(const QString &programPath)
         return {};
     }
 
+    const QFileInfo fileInfo(programPath);
+    const QString cacheKey = fileInfo.canonicalFilePath().isEmpty()
+        ? fileInfo.absoluteFilePath()
+        : fileInfo.canonicalFilePath();
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    {
+        QMutexLocker locker(&versionCacheMutex());
+        const auto iterator = versionCache().constFind(cacheKey);
+        if (iterator != versionCache().cend()
+            && iterator->fileSize == fileInfo.size()
+            && iterator->lastModified == fileInfo.lastModified()
+            && nowMs - iterator->checkedAtMs < kVersionCacheLifetimeMs) {
+            return iterator->version;
+        }
+    }
+
     QProcess probe;
     probe.setProcessChannelMode(QProcess::MergedChannels);
     probe.start(programPath, {QStringLiteral("--version")});
@@ -162,21 +202,36 @@ QString MediaToolResolver::versionForExecutable(const QString &programPath)
             probe.kill();
             probe.waitForFinished(1000);
         }
+        QMutexLocker locker(&versionCacheMutex());
+        versionCache().insert(cacheKey, {fileInfo.size(), fileInfo.lastModified(), nowMs, {}});
         return {};
     }
     if (!probe.waitForFinished(4000)) {
         probe.kill();
         probe.waitForFinished(1000);
+        QMutexLocker locker(&versionCacheMutex());
+        versionCache().insert(cacheKey, {fileInfo.size(), fileInfo.lastModified(), nowMs, {}});
         return {};
     }
     if (probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {
+        QMutexLocker locker(&versionCacheMutex());
+        versionCache().insert(cacheKey, {fileInfo.size(), fileInfo.lastModified(), nowMs, {}});
         return {};
     }
 
     static const QRegularExpression versionPattern(
         QStringLiteral("(\\d+(?:\\.\\d+)+)"));
     const QRegularExpressionMatch match = versionPattern.match(QString::fromUtf8(probe.readAll()));
-    return match.hasMatch() ? match.captured(1) : QString();
+    const QString version = match.hasMatch() ? match.captured(1) : QString();
+    QMutexLocker locker(&versionCacheMutex());
+    versionCache().insert(cacheKey, {fileInfo.size(), fileInfo.lastModified(), nowMs, version});
+    return version;
+}
+
+void MediaToolResolver::clearVersionCache()
+{
+    QMutexLocker locker(&versionCacheMutex());
+    versionCache().clear();
 }
 
 bool MediaToolResolver::isVersionNewer(const QString &candidate, const QString &current)

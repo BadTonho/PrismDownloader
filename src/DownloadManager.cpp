@@ -11,8 +11,6 @@
 #include <QStandardPaths>
 #include <QTimer>
 
-#include <utility>
-
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -25,6 +23,7 @@
 
 namespace {
 constexpr auto kCompletedFilePrefix = "__PRISM_OUTPUT__";
+constexpr qsizetype kMaximumUnterminatedOutputBytes = 1024 * 1024;
 }
 
 struct DownloadManager::Job {
@@ -81,10 +80,9 @@ EnqueueResult DownloadManager::enqueueDownload(const DownloadRequest &request)
     }
 
     const QString canonicalUrl = normalizedUrl(request.url);
-    for (Job *existing : std::as_const(m_jobs)) {
-        if (!existing->terminal && existing->normalizedUrl == canonicalUrl) {
-            return {false, existing->id, "Esta URL já está ativa ou aguardando na fila."};
-        }
+    const DownloadId existingId = m_urlOwners.value(canonicalUrl, 0);
+    if (existingId != 0 && m_jobs.contains(existingId)) {
+        return {false, existingId, "Esta URL já está ativa ou aguardando na fila."};
     }
 
     auto *job = new Job;
@@ -92,6 +90,7 @@ EnqueueResult DownloadManager::enqueueDownload(const DownloadRequest &request)
     job->request = request;
     job->normalizedUrl = canonicalUrl;
     m_jobs.insert(job->id, job);
+    m_urlOwners.insert(canonicalUrl, job->id);
     m_pending.enqueue(job->id);
 
     QTimer::singleShot(0, this, [this, id = job->id]() {
@@ -296,14 +295,21 @@ void DownloadManager::readProcessOutput(DownloadId id, bool flushRemainder)
     }
 
     job->outputBuffer += job->process->readAllStandardOutput();
+    qsizetype scanOffset = 0;
     qsizetype newline = -1;
-    while ((newline = job->outputBuffer.indexOf('\n')) >= 0) {
-        QByteArray line = job->outputBuffer.left(newline + 1);
-        job->outputBuffer.remove(0, newline + 1);
+    while ((newline = job->outputBuffer.indexOf('\n', scanOffset)) >= 0) {
+        const QByteArray line = job->outputBuffer.mid(scanOffset, newline - scanOffset);
+        scanOffset = newline + 1;
         parseOutputLine(job, QString::fromUtf8(line).trimmed());
+    }
+    if (scanOffset > 0) {
+        job->outputBuffer.remove(0, scanOffset);
     }
     if (flushRemainder && !job->outputBuffer.isEmpty()) {
         parseOutputLine(job, QString::fromUtf8(job->outputBuffer).trimmed());
+        job->outputBuffer.clear();
+    } else if (job->outputBuffer.size() > kMaximumUnterminatedOutputBytes) {
+        parseOutputLine(job, QString::fromUtf8(job->outputBuffer.left(kMaximumUnterminatedOutputBytes)).trimmed());
         job->outputBuffer.clear();
     }
 }
@@ -399,6 +405,9 @@ void DownloadManager::cleanupJob(DownloadId id)
     if (!job) {
         return;
     }
+    if (m_urlOwners.value(job->normalizedUrl) == id) {
+        m_urlOwners.remove(job->normalizedUrl);
+    }
 #ifdef _WIN32
     if (job->nativeJobHandle) {
         CloseHandle(static_cast<HANDLE>(job->nativeJobHandle));
@@ -465,7 +474,8 @@ QString DownloadManager::normalizedUrl(const QUrl &url) const
 QStringList DownloadManager::buildArguments(const DownloadRequest &request) const
 {
     QStringList arguments;
-    arguments << "--progress" << "--newline" << "--no-mtime";
+    arguments << "--progress" << "--progress-delta" << "0.25"
+              << "--newline" << "--no-mtime";
 #ifdef Q_OS_WIN
     arguments << "--windows-filenames";
 #endif

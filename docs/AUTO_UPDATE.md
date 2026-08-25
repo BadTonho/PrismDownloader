@@ -52,23 +52,19 @@ Each official release publishes two companion metadata assets:
 ### Manifest Format Example (`prism-update-manifest.json`):
 ```json
 {
-  "version": "2.1.0",
-  "packages": {
-    "windows_setup": {
-      "asset_name": "PrismDownloader_v2.1.0_Setup.exe",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    "windows_portable": {
-      "asset_name": "PrismDownloader_v2.1.0_Portable.zip",
-      "sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
-    },
-    "linux_deb": {
-      "asset_name": "prism-downloader_2.1.0_amd64.deb",
-      "sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
-    }
-  }
+  "assets": [
+    {"name": "PrismDownloader_v2.1.0_Portable.zip", "sha256": "..."},
+    {"name": "PrismDownloader_v2.1.0_Setup.exe", "sha256": "..."},
+    {"name": "prism-downloader_2.1.0_amd64.deb", "sha256": "..."}
+  ],
+  "schema": 1,
+  "version": "2.1.0"
 }
 ```
+
+The release workflow generates exactly these three assets through
+`scripts/create_update_manifest.py`; the application rejects missing or
+unexpected asset names before downloading a package.
 
 ---
 
@@ -124,5 +120,8 @@ Generates an Ed25519 private/public keypair in temporary memory and uploads the 
 ### 5.2. `create_update_manifest.py`
 Computes SHA-256 hashes of release artifacts and creates `prism-update-manifest.json` for signing during CI:
 ```bash
-python scripts/create_update_manifest.py --version 2.1.0 --dist-dir ./dist --output prism-update-manifest.json
+python scripts/create_update_manifest.py --version 2.1.0 --output prism-update-manifest.json \
+  --asset PrismDownloader_v2.1.0_Setup.exe=dist/PrismDownloader_v2.1.0_Setup.exe \
+  --asset PrismDownloader_v2.1.0_Portable.zip=dist/PrismDownloader_v2.1.0_Portable.zip \
+  --asset prism-downloader_2.1.0_amd64.deb=dist/prism-downloader_2.1.0_amd64.deb
 ```
