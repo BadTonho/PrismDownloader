@@ -78,7 +78,8 @@ LogLevel logLevelForMessage(const QString &message)
     const QString lower = message.toLower();
     static const QStringList errorMarkers{
         QStringLiteral("erro"), QStringLiteral("error"), QStringLiteral("falha"),
-        QStringLiteral("failed"), QStringLiteral("fatal"), QStringLiteral("inválid"),
+        QStringLiteral("failed"), QStringLiteral("falhou"), QStringLiteral("falhar"),
+        QStringLiteral("fatal"), QStringLiteral("inválid"),
         QStringLiteral("invalid"), QStringLiteral("não foi possível"),
         QStringLiteral("não encontrado"), QStringLiteral("ausente"),
         QStringLiteral("crash"), QStringLiteral("encerrou com código")};

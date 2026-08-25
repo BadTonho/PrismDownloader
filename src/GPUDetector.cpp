@@ -26,9 +26,12 @@ std::string lowerCase(std::string value)
     return value;
 }
 
-bool ffmpegEncoderWorks(const QString &ffmpeg, const QString &encoder)
+bool ffmpegEncoderWorks(const QString &ffmpeg, const QString &encoder, QString *failure = nullptr)
 {
     if (ffmpeg.isEmpty() || !QFileInfo(ffmpeg).isFile()) {
+        if (failure) {
+            *failure = QStringLiteral("FFmpeg não foi localizado no caminho esperado.");
+        }
         return false;
     }
 
@@ -37,17 +40,36 @@ bool ffmpegEncoderWorks(const QString &ffmpeg, const QString &encoder)
     probe.start(ffmpeg, {
         QStringLiteral("-hide_banner"), QStringLiteral("-loglevel"), QStringLiteral("error"),
         QStringLiteral("-f"), QStringLiteral("lavfi"), QStringLiteral("-i"),
-        QStringLiteral("color=size=128x128:rate=1"), QStringLiteral("-frames:v"), QStringLiteral("1"),
+        // Alguns encoders de hardware rejeitam dimensões menores que 144p.
+        QStringLiteral("color=size=320x240:rate=1"), QStringLiteral("-frames:v"), QStringLiteral("1"),
         QStringLiteral("-c:v"), encoder, QStringLiteral("-f"), QStringLiteral("null"), QStringLiteral("-")
     });
     if (!probe.waitForStarted(1000) || !probe.waitForFinished(5000)) {
+        if (failure) {
+            *failure = probe.errorString().trimmed();
+            if (failure->isEmpty()) {
+                *failure = QStringLiteral("tempo limite ao executar o teste do encoder.");
+            }
+        }
         if (probe.state() != QProcess::NotRunning) {
             probe.kill();
             probe.waitForFinished(1000);
         }
         return false;
     }
-    return probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0;
+    const QByteArray output = probe.readAll();
+    const bool success = probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0;
+    if (!success && failure) {
+        *failure = QString::fromUtf8(output).simplified();
+        if (failure->isEmpty()) {
+            *failure = QStringLiteral("FFmpeg encerrou com código %1.").arg(probe.exitCode());
+        }
+        if (failure->size() > 512) {
+            failure->truncate(512);
+            failure->append(QStringLiteral("..."));
+        }
+    }
+    return success;
 }
 
 #ifdef Q_OS_LINUX
@@ -141,7 +163,7 @@ bool encoderWorks(const QString &ffmpeg, const QString &encoder, const QString &
         // Keep this input graph software-only. The lavfi demuxer is created
         // before -filter_hw_device is associated with an output graph, so an
         // hwupload placed here has no hardware-device reference.
-        << QStringLiteral("color=size=128x128:rate=1")
+        << QStringLiteral("color=size=320x240:rate=1")
         << QStringLiteral("-frames:v") << QStringLiteral("1");
     if (encoder.endsWith(QStringLiteral("_vaapi"))) {
         // Attach hwupload to the output filter graph, after the named VAAPI
@@ -335,7 +357,9 @@ void GPUDetector::detect(bool verbose)
         expectedType = GPUType::INTEL;
     }
 
-    if (!expectedEncoder.isEmpty() && ffmpegEncoderWorks(windowsFfmpeg, expectedEncoder)) {
+    QString encoderFailure;
+    if (!expectedEncoder.isEmpty()
+        && ffmpegEncoderWorks(windowsFfmpeg, expectedEncoder, &encoderFailure)) {
         m_type = expectedType;
         m_codec = expectedEncoder.toStdString();
         m_name = expectedType == GPUType::NVIDIA
@@ -346,9 +370,18 @@ void GPUDetector::detect(bool verbose)
         std::cout << "[GPUDetector] Encoder de hardware validado: "
                   << expectedEncoder.toStdString() << "\n";
     } else {
-        m_diagnostic = expectedEncoder.isEmpty()
-            ? "Nenhum adaptador NVIDIA, AMD ou Intel compatível foi identificado."
-            : "O adaptador foi identificado, mas o teste real do encoder FFmpeg falhou.";
+        if (expectedEncoder.isEmpty()) {
+            m_diagnostic = "Nenhum adaptador NVIDIA, AMD ou Intel compatível foi identificado.";
+        } else if (windowsFfmpeg.isEmpty() || !QFileInfo(windowsFfmpeg).isFile()) {
+            m_diagnostic = "O adaptador foi identificado, mas o FFmpeg não foi localizado.";
+        } else {
+            QString diagnosticText = QStringLiteral("O adaptador foi identificado, mas o teste real do encoder %1 falhou.")
+                .arg(expectedEncoder);
+            if (!encoderFailure.isEmpty()) {
+                diagnosticText += QStringLiteral(" Motivo do FFmpeg: %1").arg(encoderFailure);
+            }
+            m_diagnostic = diagnosticText.toStdString();
+        }
         std::cout << "[GPUDetector] Nenhum encoder de hardware passou no teste real.\n";
     }
     return;
