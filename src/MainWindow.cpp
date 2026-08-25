@@ -53,6 +53,7 @@ constexpr int kMaximumLogEntries = 5000;
 constexpr int kMaximumPlaylistItems = 500;
 constexpr qsizetype kMaximumPlaylistOutputBytes = 4 * 1024 * 1024;
 constexpr qsizetype kMaximumPlaylistErrorBytes = 128 * 1024;
+constexpr qsizetype kMaximumLibraryThumbnailBytes = 3 * 1024 * 1024;
 
 qint64 toSeconds(const QRegularExpressionMatch &match, int hourIndex, int minuteIndex, int secondIndex)
 {
@@ -480,6 +481,7 @@ MainWindow::~MainWindow()
     if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
     if (m_concurrencySpin) settings.setValue("maxConcurrentDownloads", m_concurrencySpin->value());
     if (m_autoDownloadUpdatesChk) settings.setValue("autoDownloadUpdates", m_autoDownloadUpdatesChk->isChecked());
+    stopLibraryThumbnailProcesses();
     if (m_gpuProbeThread) {
         m_gpuProbeThread->wait();
         delete m_gpuProbeThread;
@@ -767,6 +769,32 @@ void MainWindow::setupUI()
     connect(btnRefreshLib, &QPushButton::clicked, this, &MainWindow::refreshLibrary);
     libTopLayout->addWidget(btnRefreshLib);
 
+    m_libraryListViewBtn = new QPushButton("☷ Lista", pageLibrary);
+    m_libraryListViewBtn->setObjectName("libraryViewBtn");
+    m_libraryListViewBtn->setCheckable(true);
+    m_libraryListViewBtn->setChecked(true);
+    m_libraryListViewBtn->setCursor(Qt::PointingHandCursor);
+    m_libraryListViewBtn->setMinimumHeight(32);
+    connect(m_libraryListViewBtn, &QPushButton::clicked, this, [this]() {
+        setLibraryViewMode(false);
+    });
+
+    m_libraryBlocksViewBtn = new QPushButton("▦ Blocos", pageLibrary);
+    m_libraryBlocksViewBtn->setObjectName("libraryViewBtn");
+    m_libraryBlocksViewBtn->setCheckable(true);
+    m_libraryBlocksViewBtn->setCursor(Qt::PointingHandCursor);
+    m_libraryBlocksViewBtn->setMinimumHeight(32);
+    connect(m_libraryBlocksViewBtn, &QPushButton::clicked, this, [this]() {
+        setLibraryViewMode(true);
+    });
+
+    auto *libraryViewGroup = new QButtonGroup(pageLibrary);
+    libraryViewGroup->setExclusive(true);
+    libraryViewGroup->addButton(m_libraryListViewBtn);
+    libraryViewGroup->addButton(m_libraryBlocksViewBtn);
+    libTopLayout->addWidget(m_libraryListViewBtn);
+    libTopLayout->addWidget(m_libraryBlocksViewBtn);
+
     libLayout->addLayout(libTopLayout);
 
     m_libraryTable = new QTableWidget(0, 3, pageLibrary);
@@ -784,7 +812,26 @@ void MainWindow::setupUI()
     m_libraryTable->setObjectName("libraryTable");
     connect(m_libraryTable, &QTableWidget::cellDoubleClicked, this, &MainWindow::onLibraryDoubleClicked);
 
-    libLayout->addWidget(m_libraryTable);
+    m_libraryBlocks = new QListWidget(pageLibrary);
+    m_libraryBlocks->setObjectName("libraryBlocks");
+    m_libraryBlocks->setViewMode(QListView::IconMode);
+    m_libraryBlocks->setFlow(QListView::LeftToRight);
+    m_libraryBlocks->setResizeMode(QListView::Adjust);
+    m_libraryBlocks->setMovement(QListView::Static);
+    m_libraryBlocks->setWrapping(true);
+    m_libraryBlocks->setSpacing(12);
+    m_libraryBlocks->setGridSize(QSize(220, 204));
+    m_libraryBlocks->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_libraryBlocks->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_libraryBlocks->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    connect(m_libraryBlocks, &QListWidget::itemDoubleClicked,
+            this, &MainWindow::onLibraryBlockDoubleClicked);
+
+    m_libraryViewStack = new QStackedWidget(pageLibrary);
+    m_libraryViewStack->addWidget(m_libraryTable);
+    m_libraryViewStack->addWidget(m_libraryBlocks);
+    m_libraryViewStack->setCurrentIndex(0);
+    libLayout->addWidget(m_libraryViewStack);
 
     QHBoxLayout *libBottomLayout = new QHBoxLayout();
     QPushButton *btnPlay = new QPushButton("REPRODUZIR / ABRIR SELECIONADO", pageLibrary);
@@ -1824,7 +1871,11 @@ void MainWindow::onCancelConvertClicked()
 void MainWindow::refreshLibrary()
 {
     if (!m_libraryTable || !m_stackedWidget || m_stackedWidget->currentIndex() != 1) return;
+    stopLibraryThumbnailProcesses();
     m_libraryTable->setRowCount(0);
+    if (m_libraryBlocks) {
+        m_libraryBlocks->clear();
+    }
 
     QString folder = m_currentDownloadDir.isEmpty() ? m_outputDirInput->text() : m_currentDownloadDir;
     QDir dir(folder);
@@ -1834,32 +1885,197 @@ void MainWindow::refreshLibrary()
     filters << "*.mp4" << "*.mp3" << "*.mkv" << "*.webm" << "*.m4a" << "*.avi" << "*.flv" << "*.wav";
     QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks, QDir::Time);
 
-    m_libraryTable->setRowCount(fileList.size());
-    for (int i = 0; i < fileList.size(); ++i) {
-        QFileInfo info = fileList.at(i);
-        
-        QTableWidgetItem *itemTitle = new QTableWidgetItem(info.fileName());
-        itemTitle->setFlags(itemTitle->flags() ^ Qt::ItemIsEditable);
-        itemTitle->setData(Qt::UserRole, info.absoluteFilePath());
-        
-        QTableWidgetItem *itemExt = new QTableWidgetItem(info.suffix().toUpper());
-        itemExt->setFlags(itemExt->flags() ^ Qt::ItemIsEditable);
-        itemExt->setTextAlignment(Qt::AlignCenter);
+    if (m_libraryViewStack && m_libraryViewStack->currentIndex() == 1) {
+        refreshLibraryBlocks(fileList);
+    } else {
+        m_libraryTable->setRowCount(fileList.size());
+        for (int i = 0; i < fileList.size(); ++i) {
+            const QFileInfo &info = fileList.at(i);
 
-        double sizeMB = static_cast<double>(info.size()) / (1024.0 * 1024.0);
-        QTableWidgetItem *itemSize = new QTableWidgetItem(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
-        itemSize->setFlags(itemSize->flags() ^ Qt::ItemIsEditable);
-        itemSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            auto *itemTitle = new QTableWidgetItem(info.fileName());
+            itemTitle->setFlags(itemTitle->flags() ^ Qt::ItemIsEditable);
+            itemTitle->setData(Qt::UserRole, info.absoluteFilePath());
 
-        m_libraryTable->setItem(i, 0, itemTitle);
-        m_libraryTable->setItem(i, 1, itemExt);
-        m_libraryTable->setItem(i, 2, itemSize);
+            auto *itemExt = new QTableWidgetItem(info.suffix().toUpper());
+            itemExt->setFlags(itemExt->flags() ^ Qt::ItemIsEditable);
+            itemExt->setTextAlignment(Qt::AlignCenter);
+
+            const double sizeMB = static_cast<double>(info.size()) / (1024.0 * 1024.0);
+            auto *itemSize = new QTableWidgetItem(QString("%1 MB").arg(sizeMB, 0, 'f', 1));
+            itemSize->setFlags(itemSize->flags() ^ Qt::ItemIsEditable);
+            itemSize->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+            m_libraryTable->setItem(i, 0, itemTitle);
+            m_libraryTable->setItem(i, 1, itemExt);
+            m_libraryTable->setItem(i, 2, itemSize);
+        }
     }
     logMessage(QString("[Biblioteca] Lista de mídias atualizada: %1 arquivo(s) encontrado(s).").arg(fileList.size()));
 }
 
+void MainWindow::setLibraryViewMode(bool blocks)
+{
+    if (!m_libraryViewStack) {
+        return;
+    }
+    m_libraryViewStack->setCurrentIndex(blocks ? 1 : 0);
+    if (m_libraryListViewBtn) {
+        m_libraryListViewBtn->setChecked(!blocks);
+    }
+    if (m_libraryBlocksViewBtn) {
+        m_libraryBlocksViewBtn->setChecked(blocks);
+    }
+    refreshLibrary();
+}
+
+void MainWindow::refreshLibraryBlocks(const QFileInfoList &fileList)
+{
+    if (!m_libraryBlocks) {
+        return;
+    }
+
+    for (const QFileInfo &info : fileList) {
+        auto *item = new QListWidgetItem(m_libraryBlocks);
+        item->setData(Qt::UserRole, info.absoluteFilePath());
+        item->setSizeHint(QSize(208, 194));
+
+        auto *card = new QWidget(m_libraryBlocks);
+        card->setObjectName("libraryCard");
+        card->setAttribute(Qt::WA_TransparentForMouseEvents);
+        auto *cardLayout = new QVBoxLayout(card);
+        cardLayout->setContentsMargins(5, 5, 5, 5);
+        cardLayout->setSpacing(5);
+
+        auto *thumbnail = new QLabel("Gerando miniatura...", card);
+        thumbnail->setObjectName("libraryCardThumb");
+        thumbnail->setAlignment(Qt::AlignCenter);
+        thumbnail->setFixedSize(198, 112);
+        thumbnail->setWordWrap(true);
+        cardLayout->addWidget(thumbnail, 0, Qt::AlignHCenter);
+
+        auto *title = new QLabel(info.fileName(), card);
+        title->setObjectName("libraryCardTitle");
+        title->setWordWrap(true);
+        title->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        title->setMaximumHeight(38);
+        title->setToolTip(info.fileName());
+        cardLayout->addWidget(title);
+
+        const double sizeMB = static_cast<double>(info.size()) / (1024.0 * 1024.0);
+        auto *metadata = new QLabel(QString("%1  •  %2 MB")
+                                         .arg(info.suffix().toUpper())
+                                         .arg(sizeMB, 0, 'f', 1), card);
+        metadata->setObjectName("libraryCardMeta");
+        cardLayout->addWidget(metadata);
+
+        m_libraryBlocks->setItemWidget(item, card);
+        loadLibraryThumbnail(info, thumbnail);
+    }
+}
+
+void MainWindow::loadLibraryThumbnail(const QFileInfo &fileInfo, QLabel *thumbnailLabel)
+{
+    if (!thumbnailLabel) {
+        return;
+    }
+
+    const QString path = fileInfo.absoluteFilePath();
+    const QString extension = fileInfo.suffix().toLower();
+    const QStringList videoExtensions{
+        QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("webm"),
+        QStringLiteral("avi"), QStringLiteral("flv"), QStringLiteral("mov"),
+        QStringLiteral("m4v"), QStringLiteral("wmv")};
+    if (!videoExtensions.contains(extension)) {
+        thumbnailLabel->setText(QString("ÁUDIO\n%1").arg(extension.toUpper()));
+        return;
+    }
+
+    const auto cached = m_libraryThumbnailCache.constFind(path);
+    if (cached != m_libraryThumbnailCache.cend()) {
+        thumbnailLabel->setPixmap(cached.value().scaled(thumbnailLabel->size(),
+                                                         Qt::KeepAspectRatio,
+                                                         Qt::SmoothTransformation));
+        return;
+    }
+
+    const QString ffmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
+    if (ffmpeg.isEmpty() || !QFileInfo(ffmpeg).isFile()) {
+        thumbnailLabel->setText("Miniatura indisponível\n(FFmpeg não encontrado)");
+        return;
+    }
+
+    auto *process = new QProcess(this);
+    process->setProcessChannelMode(QProcess::SeparateChannels);
+    m_libraryThumbnailProcesses.insert(process);
+    auto output = std::make_shared<QByteArray>();
+    const QPointer<QLabel> labelGuard = thumbnailLabel;
+
+    connect(process, &QProcess::readyReadStandardOutput, process, [process, output]() {
+        const QByteArray chunk = process->readAllStandardOutput();
+        if (output->size() > kMaximumLibraryThumbnailBytes - chunk.size()) {
+            process->kill();
+            return;
+        }
+        output->append(chunk);
+    });
+    connect(process, &QProcess::readyReadStandardError, process, [process]() {
+        process->readAllStandardError();
+    });
+    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+            [this, process, output, labelGuard, path](int exitCode, QProcess::ExitStatus status) {
+        m_libraryThumbnailProcesses.remove(process);
+        if (labelGuard && status == QProcess::NormalExit && exitCode == 0) {
+            QPixmap image;
+            if (image.loadFromData(*output)) {
+                if (m_libraryThumbnailCache.size() >= 64) {
+                    m_libraryThumbnailCache.erase(m_libraryThumbnailCache.begin());
+                }
+                m_libraryThumbnailCache.insert(path, image);
+                labelGuard->setPixmap(image.scaled(labelGuard->size(), Qt::KeepAspectRatio,
+                                                   Qt::SmoothTransformation));
+            } else {
+                labelGuard->setText("Miniatura indisponível");
+            }
+        } else if (labelGuard) {
+            labelGuard->setText("Miniatura indisponível");
+        }
+        process->deleteLater();
+    });
+    process->start(ffmpeg, {
+        QStringLiteral("-hide_banner"), QStringLiteral("-loglevel"), QStringLiteral("error"),
+        QStringLiteral("-ss"), QStringLiteral("1"), QStringLiteral("-i"), path,
+        QStringLiteral("-frames:v"), QStringLiteral("1"),
+        QStringLiteral("-vf"), QStringLiteral("scale=320:180:force_original_aspect_ratio=decrease"),
+        QStringLiteral("-f"), QStringLiteral("image2pipe"),
+        QStringLiteral("-vcodec"), QStringLiteral("mjpeg"), QStringLiteral("-q:v"), QStringLiteral("5"),
+        QStringLiteral("pipe:1")});
+}
+
+void MainWindow::stopLibraryThumbnailProcesses()
+{
+    const QSet<QProcess *> processes = m_libraryThumbnailProcesses;
+    m_libraryThumbnailProcesses.clear();
+    for (QProcess *process : processes) {
+        if (!process) {
+            continue;
+        }
+        disconnect(process, nullptr, this, nullptr);
+        process->kill();
+        process->deleteLater();
+    }
+}
+
 void MainWindow::onPlaySelectedMedia()
 {
+    if (m_libraryViewStack && m_libraryViewStack->currentIndex() == 1) {
+        const QListWidgetItem *item = m_libraryBlocks ? m_libraryBlocks->currentItem() : nullptr;
+        if (!item) {
+            QMessageBox::information(this, "Biblioteca", "Selecione um bloco de mídia para reproduzir.");
+            return;
+        }
+        openLibraryFile(item->data(Qt::UserRole).toString());
+        return;
+    }
     int row = m_libraryTable->currentRow();
     if (row < 0) {
         QMessageBox::information(this, "Biblioteca", "Selecione um arquivo de mídia da lista acima para reproduzir.");
@@ -1880,9 +2096,22 @@ void MainWindow::onLibraryDoubleClicked(int row, int /*column*/)
         filePath = dir.absoluteFilePath(fileName);
     }
 
+    openLibraryFile(filePath);
+}
+
+void MainWindow::onLibraryBlockDoubleClicked(QListWidgetItem *item)
+{
+    if (item) {
+        openLibraryFile(item->data(Qt::UserRole).toString());
+    }
+}
+
+void MainWindow::openLibraryFile(const QString &filePath)
+{
     if (QFile::exists(filePath)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
-        logMessage("[Biblioteca] Abrindo arquivo no player padrão do sistema: " + fileName);
+        logMessage("[Biblioteca] Abrindo arquivo no player padrão do sistema: "
+                   + QFileInfo(filePath).fileName());
     } else {
         QMessageBox::warning(this, "Aviso", "O arquivo selecionado não foi encontrado fisicamente no disco:\n" + filePath);
         refreshLibrary();
@@ -2779,6 +3008,62 @@ void MainWindow::setupStyles()
         QTableWidget#libraryTable::item:selected {
             background-color: #10b981;
             color: #021810;
+            font-weight: bold;
+        }
+        QPushButton#libraryViewBtn {
+            background-color: #263530;
+            color: #a7f3d0;
+            border: 1px solid #315344;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: bold;
+        }
+        QPushButton#libraryViewBtn:hover {
+            background-color: #354a43;
+            color: #ffffff;
+        }
+        QPushButton#libraryViewBtn:checked {
+            background-color: #10b981;
+            color: #021810;
+            border-color: #10b981;
+        }
+        QListWidget#libraryBlocks {
+            background-color: #1a1a1a;
+            border: 1px solid #282828;
+            border-radius: 6px;
+            outline: none;
+            padding: 8px;
+        }
+        QListWidget#libraryBlocks::item {
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 2px;
+        }
+        QListWidget#libraryBlocks::item:selected {
+            background-color: #263e34;
+            border: 1px solid #10b981;
+        }
+        QWidget#libraryCard {
+            background-color: #202522;
+            border: 1px solid #303a34;
+            border-radius: 7px;
+        }
+        QLabel#libraryCardThumb {
+            background-color: #111513;
+            border: 1px solid #35443b;
+            border-radius: 5px;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+        QLabel#libraryCardTitle {
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        QLabel#libraryCardMeta {
+            color: #10b981;
+            font-size: 11px;
             font-weight: bold;
         }
         QPlainTextEdit#logArea {

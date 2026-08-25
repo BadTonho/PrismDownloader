@@ -15,6 +15,8 @@
 #include <QFrame>
 #include <QTableWidget>
 #include <QHeaderView>
+#include <QListWidget>
+#include <QPixmap>
 #include <QFileInfoList>
 #include <QDialog>
 #include <QTimer>
@@ -66,6 +68,7 @@ private slots:
     void refreshLibrary();
     void onPlaySelectedMedia();
     void onLibraryDoubleClicked(int row, int column);
+    void onLibraryBlockDoubleClicked(QListWidgetItem *item);
     void onDownloadQueueDoubleClicked(int row, int column);
 
     // Slots do Conversor de Mídia
@@ -109,6 +112,11 @@ private:
     bool showPlaylistSelectionDialog(const QList<PlaylistItem> &items,
                                      QList<PlaylistItem> &selectedItems);
     void showPlaylistItemDetailsDialog(const PlaylistItem &item);
+    void setLibraryViewMode(bool blocks);
+    void refreshLibraryBlocks(const QFileInfoList &fileList);
+    void loadLibraryThumbnail(const QFileInfo &fileInfo, QLabel *thumbnailLabel);
+    void stopLibraryThumbnailProcesses();
+    void openLibraryFile(const QString &filePath);
     bool canInstallAppUpdate() const;
     void tryStartPendingAppUpdate();
     void installVerifiedAppPackage(const QString &version, const QString &packagePath);
@@ -168,6 +176,12 @@ private:
 
     // Tela de Biblioteca de Mídias (Página 1)
     QTableWidget *m_libraryTable;
+    QStackedWidget *m_libraryViewStack{nullptr};
+    QListWidget *m_libraryBlocks{nullptr};
+    QPushButton *m_libraryListViewBtn{nullptr};
+    QPushButton *m_libraryBlocksViewBtn{nullptr};
+    QHash<QString, QPixmap> m_libraryThumbnailCache;
+    QSet<QProcess *> m_libraryThumbnailProcesses;
 
     // Tela de Conversão de Vídeo (Página 2)
     QLineEdit *m_convertInput;
