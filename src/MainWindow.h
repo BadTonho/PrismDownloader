@@ -48,6 +48,7 @@ struct PlaylistItem {
 struct MediaFormatOption {
     QString formatCodec;
     QString resolutionMode;
+    int actualHeight{0};
     qint64 estimatedBytes{0};
     double estimatedBytesPerSecond{0.0};
     bool available{false};

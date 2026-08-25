@@ -314,6 +314,7 @@ MediaFormatOption makeVideoFormatOption(const QList<ParsedMediaFormat> &formats,
     const int audioIndex = hasAudio(video) ? videoIndex : bestAudioFormat(formats);
     const ParsedMediaFormat *audio = audioIndex >= 0 ? &formats.at(audioIndex) : nullptr;
     option.available = true;
+    option.actualHeight = video.height;
     option.formatCodec = QStringLiteral("%1/%2")
         .arg(video.ext.toUpper(), codecLabel(video.videoCodec, false));
     double bytesPerSecond = formatBytesPerSecond(video, durationSeconds);
@@ -358,6 +359,24 @@ MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats,
         ? QStringLiteral("Áudio • %1 kbps").arg(qRound(bitrate))
         : QStringLiteral("Áudio");
     return option;
+}
+
+QString actualQualityLabel(int height)
+{
+    if (height >= 2160) {
+        return QStringLiteral("2160p / 4K");
+    }
+    if (height >= 1440) {
+        return QStringLiteral("1440p / QHD");
+    }
+    if (height >= 1080) {
+        return QStringLiteral("1080p / Full HD");
+    }
+    if (height >= 720) {
+        return QStringLiteral("720p / HD");
+    }
+    return height > 0 ? QStringLiteral("%1p / Fonte").arg(height)
+                      : QStringLiteral("Qualidade nao informada");
 }
 
 QString readableBytes(qint64 bytes)
@@ -2865,7 +2884,7 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     headers << "Título / Qualidade" << "Formato e Codec" << "Resolução / Modo";
     headers << "Estimativa";
     table->setHorizontalHeaderLabels(headers);
-    table->horizontalHeaderItem(0)->setText(QStringLiteral("Qualidade real / Perfil"));
+    table->horizontalHeaderItem(0)->setText(QStringLiteral("Qualidade real"));
     table->horizontalHeaderItem(1)->setText(QStringLiteral("Formato da fonte / Codec"));
     table->horizontalHeaderItem(2)->setText(QStringLiteral("Resolu\u00e7\u00e3o real / Modo"));
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
@@ -2898,19 +2917,19 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     for (int i = 0; i < 4; ++i) {
         const MediaFormatOption option = metadata.options.value(i);
         if (option.available) {
-            const QString requestedProfile = table->item(i, 0)->text();
             const QString outputFormat = i == 3 ? QStringLiteral("MP3") : QStringLiteral("MP4");
-            table->item(i, 0)->setText(QStringLiteral("%1 | perfil: %2")
-                                           .arg(option.resolutionMode, requestedProfile));
+            const QString actualQuality = i == 3
+                ? QStringLiteral("Audio")
+                : actualQualityLabel(option.actualHeight);
+            table->item(i, 0)->setText(actualQuality);
             table->item(i, 0)->setToolTip(QStringLiteral(
-                "Perfil solicitado: %1\nFormato real encontrado: %2\nSa\u00edda final: %3")
-                .arg(requestedProfile, option.formatCodec, outputFormat));
+                "Qualidade real: %1\nFormato real encontrado: %2\nSa\u00edda final: %3")
+                .arg(actualQuality, option.formatCodec, outputFormat));
             table->item(i, 1)->setText(option.formatCodec);
             table->item(i, 2)->setText(option.resolutionMode);
             table->item(i, 3)->setText(readableBytes(option.estimatedBytes));
         } else if (!metadata.options.isEmpty()) {
-            const QString requestedProfile = table->item(i, 0)->text();
-            table->item(i, 0)->setText(requestedProfile + QStringLiteral(" (indispon\u00edvel)"));
+            table->item(i, 0)->setText(QStringLiteral("Qualidade indispon\u00edvel"));
             table->item(i, 0)->setToolTip(QStringLiteral(
                 "Este v\u00eddeo n\u00e3o possui uma fonte correspondente a este perfil."));
             table->item(i, 1)->setText(option.formatCodec.isEmpty()
@@ -2925,11 +2944,38 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
         }
     }
 
+    if (!metadata.options.isEmpty()) {
+        for (int i = 0; i < 3; ++i) {
+            const MediaFormatOption option = metadata.options.value(i);
+            bool hideRow = !option.available;
+            int nextIndex = i + 1;
+            while (!hideRow && nextIndex < 3
+                   && !metadata.options.value(nextIndex).available) {
+                ++nextIndex;
+            }
+            if (!hideRow && nextIndex < 3
+                && option.actualHeight > 0
+                && option.actualHeight == metadata.options.value(nextIndex).actualHeight) {
+                hideRow = true;
+            }
+            table->setRowHidden(i, hideRow);
+        }
+    }
+
     int defaultIdx = m_qualityCombo->currentIndex();
-    if (defaultIdx >= 0 && defaultIdx < 4) {
+    if (defaultIdx >= 0 && defaultIdx < 4 && !table->isRowHidden(defaultIdx)) {
         table->selectRow(defaultIdx);
     } else {
-        table->selectRow(1);
+        int firstVisibleRow = -1;
+        for (int i = 0; i < table->rowCount(); ++i) {
+            if (!table->isRowHidden(i)) {
+                firstVisibleRow = i;
+                break;
+            }
+        }
+        if (firstVisibleRow >= 0) {
+            table->selectRow(firstVisibleRow);
+        }
     }
 
     dlgLayout->addWidget(table);
