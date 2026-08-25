@@ -20,12 +20,15 @@ namespace {
 
 const QUrl kNightlyReleaseApi(
     QStringLiteral("https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest"));
+constexpr qint64 kMaximumBinaryBytes = 128LL * 1024 * 1024;
+constexpr qint64 kMaximumReleasePayloadBytes = 2LL * 1024 * 1024;
+constexpr qint64 kMaximumChecksumsBytes = 2LL * 1024 * 1024;
 
 bool isOfficialGitHubUrl(const QUrl &url)
 {
     const QString host = url.host().toLower();
     return url.scheme() == QStringLiteral("https")
-        && (host == QStringLiteral("github.com") || host.endsWith(QStringLiteral(".github.com")));
+        && host == QStringLiteral("github.com");
 }
 
 QNetworkRequest githubRequest(const QUrl &url)
@@ -145,6 +148,7 @@ void YtDlpUpdateService::checkLatestRelease()
         return;
     }
 
+    m_latestRelease = {};
     m_checking = true;
     QNetworkReply *reply = m_networkManager->get(githubRequest(kNightlyReleaseApi));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
@@ -155,8 +159,13 @@ void YtDlpUpdateService::checkLatestRelease()
             return;
         }
 
+        const QByteArray payload = reply->readAll();
+        if (payload.size() > kMaximumReleasePayloadBytes) {
+            emit checkFailed(releaseError(QStringLiteral("resposta da release excede o limite permitido.")));
+            return;
+        }
         QString error;
-        const YtDlpReleaseInfo release = parseLatestRelease(reply->readAll(), &error);
+        const YtDlpReleaseInfo release = parseLatestRelease(payload, &error);
         if (!release.isValid()) {
             emit checkFailed(releaseError(error));
             return;
@@ -189,7 +198,12 @@ void YtDlpUpdateService::downloadChecksums()
                                 + reply->errorString());
             return;
         }
-        const QString checksum = checksumForAsset(reply->readAll(), platformAssetName());
+        const QByteArray checksums = reply->readAll();
+        if (checksums.size() > kMaximumChecksumsBytes) {
+            finishUpdateFailure(QStringLiteral("O arquivo de checksums excede o limite permitido."));
+            return;
+        }
+        const QString checksum = checksumForAsset(checksums, platformAssetName());
         if (checksum.isEmpty()) {
             finishUpdateFailure(QStringLiteral("O checksum do binário Nightly não foi encontrado."));
             return;
@@ -200,16 +214,45 @@ void YtDlpUpdateService::downloadChecksums()
 
 void YtDlpUpdateService::downloadBinary(const QString &expectedSha256)
 {
+    m_binaryBuffer.clear();
+    m_binaryTooLarge = false;
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_latestRelease.binaryUrl));
     connect(reply, &QNetworkReply::downloadProgress, this, &YtDlpUpdateService::updateProgress);
+    connect(reply, &QIODevice::readyRead, this, [this, reply]() {
+        if (m_binaryTooLarge) {
+            return;
+        }
+        const QByteArray bytes = reply->readAll();
+        if (m_binaryBuffer.size() > kMaximumBinaryBytes - bytes.size()) {
+            m_binaryTooLarge = true;
+            reply->abort();
+            return;
+        }
+        m_binaryBuffer.append(bytes);
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, expectedSha256]() {
+        const QByteArray remaining = reply->readAll();
+        if (!remaining.isEmpty() && !m_binaryTooLarge) {
+            if (m_binaryBuffer.size() > kMaximumBinaryBytes - remaining.size()) {
+                m_binaryTooLarge = true;
+            } else {
+                m_binaryBuffer.append(remaining);
+            }
+        }
         reply->deleteLater();
+        if (m_binaryTooLarge) {
+            m_binaryBuffer.clear();
+            finishUpdateFailure(QStringLiteral("O binário Nightly excede o limite de tamanho permitido."));
+            return;
+        }
         if (reply->error() != QNetworkReply::NoError) {
+            m_binaryBuffer.clear();
             finishUpdateFailure(QStringLiteral("Não foi possível baixar o binário Nightly: ")
                                 + reply->errorString());
             return;
         }
-        const QByteArray binary = reply->readAll();
+        const QByteArray binary = m_binaryBuffer;
+        m_binaryBuffer.clear();
         if (!hasValidChecksum(binary, expectedSha256)) {
             finishUpdateFailure(QStringLiteral("Checksum inválido; a versão atual foi preservada."));
             return;

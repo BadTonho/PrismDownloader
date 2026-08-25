@@ -2,6 +2,7 @@
 #define YTDLPUPDATESERVICE_H
 
 #include <QObject>
+#include <QByteArray>
 #include <QUrl>
 
 class QNetworkAccessManager;
@@ -45,6 +46,8 @@ private:
     YtDlpReleaseInfo m_latestRelease;
     bool m_checking{false};
     bool m_updating{false};
+    QByteArray m_binaryBuffer;
+    bool m_binaryTooLarge{false};
 
     void downloadChecksums();
     void downloadBinary(const QString &expectedSha256);

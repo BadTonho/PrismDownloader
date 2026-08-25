@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>The most comprehensive, fast, and intelligent desktop suite for media download, trimming, and conversion.</b><br>
-  Engineered with high-precision in <b>Pure C++17</b> and <b>Qt 6</b>, featuring native hardware acceleration and advanced telemetry logs.
+  Engineered with high-precision in <b>Pure C++17</b> and <b>Qt 6</b>, featuring native hardware acceleration and advanced operational logs.
 </p>
 
 <p align="center">

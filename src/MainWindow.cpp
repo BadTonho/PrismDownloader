@@ -131,6 +131,10 @@ MainWindow::MainWindow(QWidget *parent)
         const QVersionNumber remote = QVersionNumber::fromString(release.version);
         const int comparison = QVersionNumber::compare(remote, local);
         if (comparison <= 0) {
+            if (m_updateAppBtn) {
+                m_updateAppBtn->setVisible(false);
+                m_updateAppBtn->setEnabled(false);
+            }
             if (m_updateStatusLabel) {
                 m_updateStatusLabel->setText(comparison == 0
                     ? QString("Versão %1 está atualizada e validada por assinatura.").arg(NEOV_VERSION_TAG)
@@ -178,6 +182,10 @@ MainWindow::MainWindow(QWidget *parent)
         if (m_sidebarUpdateNotification) {
             m_sidebarUpdateNotification->setText("🛡️ " + NEOV_VERSION_TAG + " (Não validado)");
             m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+        }
+        if (m_updateAppBtn) {
+            m_updateAppBtn->setVisible(false);
+            m_updateAppBtn->setEnabled(false);
         }
         logMessage("[Updater] " + message);
         if (!m_appUpdateCheckSilent) {
@@ -1641,6 +1649,7 @@ void MainWindow::onStartConvertClicked()
         QMessageBox::critical(this, "Erro", "Não foi possível criar ou acessar a pasta de destino da conversão.");
         return;
     }
+    m_currentDownloadDir = QDir(outFolder).absolutePath();
 
     ConversionRequest request;
     request.inputFile = inFile;
@@ -2612,6 +2621,11 @@ void MainWindow::checkForUpdates(bool silent)
         return;
     }
     m_appUpdateCheckSilent = silent;
+    m_appUpdatePending = false;
+    if (m_updateAppBtn) {
+        m_updateAppBtn->setVisible(false);
+        m_updateAppBtn->setEnabled(false);
+    }
     if (m_updateStatusLabel) {
         m_updateStatusLabel->setText("Consultando a release assinada no GitHub...");
     }
@@ -2741,6 +2755,16 @@ void MainWindow::installVerifiedAppPackage(const QString &version, const QString
     m_closing = true;
     QCoreApplication::quit();
 #else
+    const QString pkexec = QStandardPaths::findExecutable(QStringLiteral("pkexec"));
+    const QString aptGet = QStandardPaths::findExecutable(QStringLiteral("apt-get"));
+    if (pkexec.isEmpty() || aptGet.isEmpty()) {
+        m_installingAppUpdate = false;
+        QFile::remove(packagePath);
+        if (m_updateAppBtn) m_updateAppBtn->setEnabled(true);
+        QMessageBox::warning(this, "AtualizaÃ§Ã£o indisponÃ­vel",
+                             "pkexec e apt-get sÃ£o necessÃ¡rios para instalar atualizaÃ§Ãµes no Linux.");
+        return;
+    }
     m_installingAppUpdate = true;
     auto *process = new QProcess(this);
     m_appUpdateInstallProcess = process;
@@ -2784,8 +2808,8 @@ void MainWindow::installVerifiedAppPackage(const QString &version, const QString
         QMessageBox::warning(this, "Atualização preservada",
                              "Não foi possível iniciar o pkexec para instalar o pacote validado.");
     });
-    process->start(QStringLiteral("/usr/bin/pkexec"), {
-        QStringLiteral("/usr/bin/apt-get"), QStringLiteral("install"),
+    process->start(pkexec, {
+        aptGet, QStringLiteral("install"),
         QStringLiteral("--yes"), packagePath});
     if (m_updateStatusLabel) {
         m_updateStatusLabel->setText("Aguardando autorização para instalar a atualização v" + version + ".");

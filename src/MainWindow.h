@@ -20,6 +20,7 @@
 #include <QHash>
 #include <QSet>
 #include <QList>
+#include <QStringList>
 #include <QSpinBox>
 #include "DownloadManager.h"
 #include "ConversionManager.h"

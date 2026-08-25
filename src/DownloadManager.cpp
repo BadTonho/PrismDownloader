@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QTimer>
 
 #include <utility>
@@ -56,6 +57,10 @@ DownloadManager::~DownloadManager()
             terminateProcessTree(job);
             job->process->kill();
             job->process->waitForFinished(2000);
+            if (job->process->state() != QProcess::NotRunning) {
+                forceTerminateProcessTree(job);
+                job->process->waitForFinished(1000);
+            }
         }
         cleanupJob(job->id);
     }
@@ -128,6 +133,14 @@ bool DownloadManager::cancelDownload(DownloadId id)
 #ifndef Q_OS_LINUX
     job->process->kill();
 #endif
+    QTimer::singleShot(3000, this, [this, id]() {
+        Job *current = m_jobs.value(id, nullptr);
+        if (!current || !current->process || !current->cancelRequested
+            || current->process->state() == QProcess::NotRunning) {
+            return;
+        }
+        forceTerminateProcessTree(current);
+    });
     return true;
 }
 
@@ -256,9 +269,14 @@ void DownloadManager::startJob(Job *job)
 #ifdef Q_OS_LINUX
     // yt-dlp pode iniciar o FFmpeg. Uma sessão própria permite sinalizar toda
     // a árvore de processos quando o usuário cancela a tarefa.
+    const QString setsid = QStandardPaths::findExecutable(QStringLiteral("setsid"));
+    if (setsid.isEmpty()) {
+        failToStart(job->id, "O utilitário setsid não foi encontrado para isolar o download.");
+        return;
+    }
     QStringList sessionArguments;
     sessionArguments << m_programPath << buildArguments(job->request);
-    process->start(QStringLiteral("/usr/bin/setsid"), sessionArguments);
+    process->start(setsid, sessionArguments);
 #else
     process->start(m_programPath, buildArguments(job->request));
 #endif
@@ -408,6 +426,25 @@ void DownloadManager::terminateProcessTree(Job *job)
 #else
     Q_UNUSED(job);
 #endif
+}
+
+void DownloadManager::forceTerminateProcessTree(Job *job)
+{
+#ifdef _WIN32
+    if (job && job->nativeJobHandle) {
+        TerminateJobObject(static_cast<HANDLE>(job->nativeJobHandle), 1);
+    }
+#elif defined(Q_OS_LINUX)
+    if (job && job->process && job->process->processId() > 0) {
+        const pid_t sessionLeader = static_cast<pid_t>(job->process->processId());
+        ::kill(-sessionLeader, SIGKILL);
+    }
+#else
+    Q_UNUSED(job);
+#endif
+    if (job && job->process && job->process->state() != QProcess::NotRunning) {
+        job->process->kill();
+    }
 }
 
 void DownloadManager::emitQueueState()

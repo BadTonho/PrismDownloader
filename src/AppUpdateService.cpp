@@ -97,6 +97,8 @@ AppUpdateService::AppUpdateService(AppUpdatePackageKind packageKind, QObject *pa
 {
 }
 
+AppUpdateService::~AppUpdateService() = default;
+
 AppUpdatePackageKind AppUpdateService::packageForCurrentPlatform(bool installedWindows)
 {
 #ifdef Q_OS_WIN

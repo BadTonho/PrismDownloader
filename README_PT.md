@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>A suíte desktop mais completa, rápida e inteligente para download, recorte e conversão de mídias.</b><br>
-  Projetada com alta precisão em <b>C++17 Puro</b> e <b>Qt 6</b>, com aceleração nativa por placa de vídeo (GPU) e logs de telemetria avançados.
+  Projetada com alta precisão em <b>C++17 Puro</b> e <b>Qt 6</b>, com aceleração nativa por placa de vídeo (GPU) e logs operacionais avançados.
 </p>
 
 <p align="center">

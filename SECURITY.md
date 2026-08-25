@@ -12,8 +12,8 @@ Older versions are no longer maintained and will not receive fixes.
 
 | Version | Supported | Notes |
 | :--- | :---: | :--- |
-| **v1.1.x** (Latest) | ✅ Yes | Actively maintained. Security patches are released as hotfixes. |
-| **v1.0.x and earlier** | ❌ No | End-of-life. These were released under the legacy "NeoVDownloader" name. Upgrade to v1.1.x. |
+| **v2.0.x** (Latest) | ✅ Yes | Actively maintained. Security patches are released as hotfixes. |
+| **v1.x and earlier** | ❌ No | End-of-life. These were released under the legacy "NeoVDownloader" name. Upgrade to v2.0.x. |
 
 ---
 
@@ -61,9 +61,9 @@ The following are **not** considered security vulnerabilities for this project:
 Understanding the architecture helps scope valid reports:
 
 - **Language / Framework:** C++17 with Qt 6 (Widgets + Network)
-- **Platform:** Windows 10 / 11 (64-bit) only
-- **External engines:** [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) and [`FFmpeg`](https://ffmpeg.org/) are bundled as pre-compiled `.exe` binaries
-- **Process isolation:** Child processes are spawned via `QProcess` with `CREATE_NO_WINDOW` (`0x08000000`) and monitored via exit codes
+- **Platform:** Windows 10 / 11 and Linux (64-bit)
+- **External engines:** [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) and [`FFmpeg`](https://ffmpeg.org/) are resolved from the configured/bundled installation
+- **Process isolation:** Child processes are spawned via `QProcess` with Windows `CREATE_NO_WINDOW` (`0x08000000`) or a dedicated Linux session, and monitored via exit codes
 - **Network activity:** Limited to the GitHub Releases API for update checks (no telemetry or user data is collected or transmitted)
 - **License:** [MIT](LICENSE) — Copyright © 2026 Tonho Studios (BadTonho)
 
@@ -79,4 +79,4 @@ Once a fix is ready and released:
 
 ---
 
-*Thank you for helping keep Prism Downloader safe for all Windows users.*
+*Thank you for helping keep Prism Downloader safe for all Prism Downloader users.*

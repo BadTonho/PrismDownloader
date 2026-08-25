@@ -6,6 +6,7 @@
 #include <QQueue>
 #include <QProcess>
 #include <QString>
+#include <QStringList>
 #include <QUrl>
 
 #include "MediaItem.h"
@@ -71,6 +72,7 @@ private:
     void failToStart(DownloadId id, const QString &message);
     void cleanupJob(DownloadId id);
     void terminateProcessTree(Job *job);
+    void forceTerminateProcessTree(Job *job);
     void emitQueueState();
     QString normalizedUrl(const QUrl &url) const;
     QStringList buildArguments(const DownloadRequest &request) const;

@@ -26,6 +26,30 @@ std::string lowerCase(std::string value)
     return value;
 }
 
+bool ffmpegEncoderWorks(const QString &ffmpeg, const QString &encoder)
+{
+    if (ffmpeg.isEmpty() || !QFileInfo(ffmpeg).isFile()) {
+        return false;
+    }
+
+    QProcess probe;
+    probe.setProcessChannelMode(QProcess::MergedChannels);
+    probe.start(ffmpeg, {
+        QStringLiteral("-hide_banner"), QStringLiteral("-loglevel"), QStringLiteral("error"),
+        QStringLiteral("-f"), QStringLiteral("lavfi"), QStringLiteral("-i"),
+        QStringLiteral("color=size=128x128:rate=1"), QStringLiteral("-frames:v"), QStringLiteral("1"),
+        QStringLiteral("-c:v"), encoder, QStringLiteral("-f"), QStringLiteral("null"), QStringLiteral("-")
+    });
+    if (!probe.waitForStarted(1000) || !probe.waitForFinished(5000)) {
+        if (probe.state() != QProcess::NotRunning) {
+            probe.kill();
+            probe.waitForFinished(1000);
+        }
+        return false;
+    }
+    return probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0;
+}
+
 #ifdef Q_OS_LINUX
 struct DetectedHardware {
     QString encoder;
@@ -295,6 +319,40 @@ void GPUDetector::detect(bool verbose)
         totalDump += " ";
         ++deviceNumber;
     }
+    const std::string windowsHardware = lowerCase(totalDump);
+    const QString windowsFfmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
+    QString expectedEncoder;
+    GPUType expectedType = GPUType::CPU_ONLY;
+    if (windowsHardware.find("nvidia") != std::string::npos
+        || windowsHardware.find("geforce") != std::string::npos) {
+        expectedEncoder = QStringLiteral("h264_nvenc");
+        expectedType = GPUType::NVIDIA;
+    } else if (windowsHardware.find("radeon") != std::string::npos
+               || windowsHardware.find("amd") != std::string::npos) {
+        expectedEncoder = QStringLiteral("h264_amf");
+        expectedType = GPUType::AMD;
+    } else if (windowsHardware.find("intel") != std::string::npos) {
+        expectedEncoder = QStringLiteral("h264_qsv");
+        expectedType = GPUType::INTEL;
+    }
+
+    if (!expectedEncoder.isEmpty() && ffmpegEncoderWorks(windowsFfmpeg, expectedEncoder)) {
+        m_type = expectedType;
+        m_codec = expectedEncoder.toStdString();
+        m_name = expectedType == GPUType::NVIDIA
+            ? "NVIDIA (NVENC disponível no FFmpeg)"
+            : expectedType == GPUType::AMD
+                ? "AMD (AMF disponível no FFmpeg)"
+                : "Intel (Quick Sync disponível no FFmpeg)";
+        std::cout << "[GPUDetector] Encoder de hardware validado: "
+                  << expectedEncoder.toStdString() << "\n";
+    } else {
+        m_diagnostic = expectedEncoder.isEmpty()
+            ? "Nenhum adaptador NVIDIA, AMD ou Intel compatível foi identificado."
+            : "O adaptador foi identificado, mas o teste real do encoder FFmpeg falhou.";
+        std::cout << "[GPUDetector] Nenhum encoder de hardware passou no teste real.\n";
+    }
+    return;
 #elif defined(Q_OS_LINUX)
     const DetectedHardware detected = findUsableHardwareEncoder(verbose);
     totalDump = detected.encoder.toStdString();

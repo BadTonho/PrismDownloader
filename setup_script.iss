@@ -36,9 +36,9 @@ Source: "build\Release\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "build\Release\*"; DestDir: "{app}"; Excludes: "yt-dlp.exe,ffmpeg.exe,PrismDownloaderTests.exe,PrismMediaToolResolverTests.exe,PrismYtDlpUpdateServiceTests.exe,PrismAppUpdateServiceTests.exe,PrismPortableUpdateCommonTests.exe,PrismFakeMediaTool.exe,PrismQueueManagerTests.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppName}"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppName}"; Description: "Executar o {#MyAppName} agora"; Flags: nowait postinstall
+Filename: "{app}\{#MyAppExeName}"; Description: "Executar o {#MyAppName} agora"; Flags: nowait postinstall

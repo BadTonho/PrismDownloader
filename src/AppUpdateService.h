@@ -35,6 +35,7 @@ class AppUpdateService : public QObject {
 
 public:
     explicit AppUpdateService(AppUpdatePackageKind packageKind, QObject *parent = nullptr);
+    ~AppUpdateService() override;
 
     static AppUpdatePackageKind packageForCurrentPlatform(bool installedWindows);
     static QString expectedAssetName(const QString &version, AppUpdatePackageKind packageKind);
