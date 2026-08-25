@@ -24,7 +24,6 @@
 #include <QStandardPaths>
 #include <QDesktopServices>
 #include <QUrl>
-#include <QSettings>
 #include <QDir>
 #include <QFileInfo>
 #include <QDialog>
@@ -161,6 +160,7 @@ QString ytdlpCurrentDescription()
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
+      m_settings(AppSettings::load()),
       m_downloadManager(new DownloadManager(this)),
       m_conversionManager(new ConversionManager(this))
 {
@@ -466,14 +466,13 @@ MainWindow::MainWindow(QWidget *parent)
     refreshLibrary();
 
     // Carregar configurações do Auto-Updater e iniciar checagem silenciosa ao start (se habilitado)
-    QSettings settings("Tonho Studios", "PrismDownloader");
-    bool checkOnStart = settings.value("checkUpdatesOnStart", true).toBool(); // Por padrão ATIVADO
-    const int concurrency = qBound(1, settings.value("maxConcurrentDownloads", 2).toInt(), 5);
+    const bool checkOnStart = m_settings.checkUpdatesOnStart;
+    const int concurrency = m_settings.maxConcurrentDownloads;
     if (m_concurrencySpin) m_concurrencySpin->setValue(concurrency);
     m_downloadManager->setConcurrencyLimit(concurrency);
     if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
     if (m_autoDownloadUpdatesChk) {
-        m_autoDownloadUpdatesChk->setChecked(settings.value("autoDownloadUpdates", false).toBool());
+        m_autoDownloadUpdatesChk->setChecked(m_settings.autoDownloadUpdates);
         connect(m_autoDownloadUpdatesChk, &QCheckBox::toggled, this, [this](bool enabled) {
             logMessage(enabled
                 ? "[Updater] Download e instalação automáticos foram ativados pelo usuário."
@@ -561,14 +560,20 @@ void MainWindow::applyGpuProbeResult()
 
 MainWindow::~MainWindow()
 {
-    QSettings settings("Tonho Studios", "PrismDownloader");
-    settings.setValue("outputFolder", m_outputDirInput->text().trimmed());
-    settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
-    settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
-    settings.setValue("defaultTimeRange", m_timeRangeInput->text().trimmed());
-    if (m_checkUpdatesOnStartChk) settings.setValue("checkUpdatesOnStart", m_checkUpdatesOnStartChk->isChecked());
-    if (m_concurrencySpin) settings.setValue("maxConcurrentDownloads", m_concurrencySpin->value());
-    if (m_autoDownloadUpdatesChk) settings.setValue("autoDownloadUpdates", m_autoDownloadUpdatesChk->isChecked());
+    m_settings.outputFolder = m_outputDirInput->text().trimmed();
+    m_settings.showNotifications = m_notifyCheckBox->isChecked();
+    m_settings.selectedQualityIndex = m_qualityCombo->currentIndex();
+    m_settings.defaultTimeRange = m_timeRangeInput->text().trimmed();
+    if (m_checkUpdatesOnStartChk) {
+        m_settings.checkUpdatesOnStart = m_checkUpdatesOnStartChk->isChecked();
+    }
+    if (m_concurrencySpin) {
+        m_settings.maxConcurrentDownloads = m_concurrencySpin->value();
+    }
+    if (m_autoDownloadUpdatesChk) {
+        m_settings.autoDownloadUpdates = m_autoDownloadUpdatesChk->isChecked();
+    }
+    m_settings.save();
     if (m_logFile.isOpen()) {
         m_logFile.flush();
         m_logFile.close();
@@ -584,7 +589,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-    MainWindowUiBuilder::build(this, NEOV_VERSION_TAG, NEOV_VERSION_NUMBER);
+    MainWindowUiBuilder::build(this, NEOV_VERSION_TAG, NEOV_VERSION_NUMBER, m_settings);
 }
 
 void MainWindow::switchPage(int index)
@@ -732,11 +737,11 @@ void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
 
     m_currentDownloadDir = customOutputDir;
     const QString defaultOutputDir = m_outputDirInput->text().trimmed();
-    QSettings settings("Tonho Studios", "PrismDownloader");
-    settings.setValue("outputFolder", defaultOutputDir);
-    settings.setValue("showNotifications", m_notifyCheckBox->isChecked());
-    settings.setValue("selectedQuality", m_qualityCombo->currentIndex());
-    settings.setValue("defaultTimeRange", timeRange);
+    m_settings.outputFolder = defaultOutputDir;
+    m_settings.showNotifications = m_notifyCheckBox->isChecked();
+    m_settings.selectedQualityIndex = m_qualityCombo->currentIndex();
+    m_settings.defaultTimeRange = timeRange;
+    m_settings.save();
 
     if (!m_downloadQueueWorkflow) {
         QMessageBox::critical(this, "Fila indisponível",
@@ -938,8 +943,8 @@ void MainWindow::onBrowseClicked()
     if (!dir.isEmpty()) {
         m_outputDirInput->setText(dir);
         m_currentDownloadDir.clear();
-        QSettings settings("Tonho Studios", "PrismDownloader");
-        settings.setValue("outputFolder", dir);
+        m_settings.outputFolder = dir;
+        m_settings.save();
         logMessage("[System] Nova pasta de destino padrão salva: " + dir);
         refreshLibrary();
     }
@@ -1004,7 +1009,8 @@ void MainWindow::onCancelAllClicked()
 void MainWindow::onConcurrencyChanged(int value)
 {
     m_downloadManager->setConcurrencyLimit(value);
-    QSettings("Tonho Studios", "PrismDownloader").setValue("maxConcurrentDownloads", value);
+    m_settings.maxConcurrentDownloads = value;
+    m_settings.save();
 }
 
 int MainWindow::findDownloadRow(DownloadId id) const

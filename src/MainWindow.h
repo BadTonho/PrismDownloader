@@ -29,6 +29,7 @@
 #include <memory>
 #include "DownloadManager.h"
 #include "ConversionManager.h"
+#include "AppSettings.h"
 #include "GPUDetector.h"
 #include "MediaMetadata.h"
 #include "PlaylistItem.h"
@@ -240,6 +241,7 @@ private:
     void startGpuProbe();
     void applyGpuProbeResult();
 
+    AppSettings m_settings;
     DownloadManager *m_downloadManager;
     ConversionManager *m_conversionManager;
     std::unique_ptr<DownloadQueueWorkflow> m_downloadQueueWorkflow;

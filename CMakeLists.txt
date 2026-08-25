@@ -49,6 +49,8 @@ configure_file(src/PrismVersion.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/Pris
 
 set(PRISM_SOURCES
     src/main.cpp
+    src/AppSettings.h
+    src/AppSettings.cpp
     src/MainWindow.h
     src/MainWindow.cpp
     src/MediaItem.h

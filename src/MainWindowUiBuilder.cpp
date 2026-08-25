@@ -20,7 +20,6 @@
 #include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
-#include <QSettings>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardPaths>
@@ -34,7 +33,8 @@ constexpr int kMaximumLogEntries = 5000;
 
 void MainWindowUiBuilder::build(MainWindow *window,
                                 const QString &versionTag,
-                                const QString &versionNumber)
+                                const QString &versionNumber,
+                                const AppSettings &settings)
 {
     // These aliases keep the UI builder independent from the rest of the
     // window logic while preserving the existing widget ownership model.
@@ -227,6 +227,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     lblTime->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
     m_timeRangeInput = new QLineEdit(pageDownloads);
     m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Vazio = baixar completo)");
+    m_timeRangeInput->setText(settings.defaultTimeRange);
 
     QLabel *lblSave = new QLabel("Salvar downloads em:", pageDownloads);
     lblSave->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
@@ -241,15 +242,14 @@ void MainWindowUiBuilder::build(MainWindow *window,
     saveLayout->addWidget(m_outputDirInput, 1);
     saveLayout->addWidget(m_browseDirBtn, 0);
 
-    QSettings settings("Tonho Studios", "PrismDownloader");
-    QString savedFolder = settings.value("outputFolder", "").toString();
+    QString savedFolder = settings.outputFolder;
     if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
         savedFolder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
         if (savedFolder.isEmpty()) savedFolder = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     }
     m_outputDirInput->setText(savedFolder);
 
-    int savedQualityIndex = settings.value("selectedQuality", 1).toInt();
+    int savedQualityIndex = settings.selectedQualityIndex;
     if (savedQualityIndex >= 0 && savedQualityIndex < m_qualityCombo->count()) {
         m_qualityCombo->setCurrentIndex(savedQualityIndex);
     }
@@ -311,8 +311,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     m_concurrencySpin->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
 
     m_notifyCheckBox = new QCheckBox("Exibir resumo quando toda a fila terminar", centralPanel);
-    bool notifyPref = settings.value("showNotifications", false).toBool();
-    m_notifyCheckBox->setChecked(notifyPref);
+    m_notifyCheckBox->setChecked(settings.showNotifications);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
 
     actionBottomLayout->addWidget(m_notifyCheckBox);
