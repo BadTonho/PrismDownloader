@@ -276,15 +276,20 @@ void MainWindowUiBuilder::build(MainWindow *window,
     m_cancelAllBtn->setFixedWidth(160);
     m_cancelAllBtn->setEnabled(false);
 
-    QLabel *concurrencyLabel = new QLabel("Simultâneos:", centralPanel);
-    m_concurrencySpin = new QSpinBox(centralPanel);
-    m_concurrencySpin->setRange(1, 5);
-    m_concurrencySpin->setValue(2);
-    m_concurrencySpin->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
-
     m_notifyCheckBox = new QCheckBox("Exibir resumo quando toda a fila terminar", centralPanel);
     m_notifyCheckBox->setChecked(settings.showNotifications);
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
+
+    QLabel *concurrencyLabel = new QLabel("Downloads simultâneos:", centralPanel);
+    concurrencyLabel->setStyleSheet("color: #dedede; font-weight: bold; font-size: 13px; margin-left: 20px; margin-right: 4px;");
+
+    m_concurrencySpin = new QSpinBox(centralPanel);
+    m_concurrencySpin->setRange(1, 5);
+    m_concurrencySpin->setValue(settings.maxConcurrentDownloads > 0 ? settings.maxConcurrentDownloads : 2);
+    m_concurrencySpin->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
+    m_concurrencySpin->setFixedWidth(65);
+    m_concurrencySpin->setMinimumHeight(32);
+    m_concurrencySpin->setAlignment(Qt::AlignCenter);
 
     actionBottomLayout->addWidget(m_notifyCheckBox);
     actionBottomLayout->addWidget(concurrencyLabel);

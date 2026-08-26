@@ -113,6 +113,57 @@ QString mainWindow()
             selection-background-color: #10b981;
             selection-color: black;
         }
+        QSpinBox {
+            background-color: #242424;
+            border: 1px solid #3d3d3d;
+            border-radius: 6px;
+            padding: 4px 6px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QSpinBox:hover {
+            border: 1px solid #10b981;
+            background-color: #2a2a2a;
+        }
+        QSpinBox:focus {
+            border: 1px solid #10b981;
+            background-color: #2a2a2a;
+        }
+        QSpinBox::up-button {
+            subcontrol-origin: border;
+            subcontrol-position: top right;
+            width: 20px;
+            background-color: #303030;
+            border-left: 1px solid #3d3d3d;
+            border-bottom: 1px solid #3d3d3d;
+            border-top-right-radius: 5px;
+        }
+        QSpinBox::down-button {
+            subcontrol-origin: border;
+            subcontrol-position: bottom right;
+            width: 20px;
+            background-color: #303030;
+            border-left: 1px solid #3d3d3d;
+            border-bottom-right-radius: 5px;
+        }
+        QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+            background-color: #10b981;
+        }
+        QSpinBox::up-arrow {
+            width: 7px;
+            height: 5px;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 5px solid #ffffff;
+        }
+        QSpinBox::down-arrow {
+            width: 7px;
+            height: 5px;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid #ffffff;
+        }
         QCheckBox {
             font-size: 13px;
             color: #a3a3a3;
