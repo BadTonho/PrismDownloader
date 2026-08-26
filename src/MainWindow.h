@@ -67,7 +67,7 @@ private slots:
     void onCancelClicked();
     void onCancelAllClicked();
     void onQueueSelectionChanged();
-    void onConcurrencyChanged(int value);
+    void onConcurrencyChanged(int index);
     void onBrowseClicked();
     void onOpenFolderClicked();
     void switchPage(int index);
@@ -151,7 +151,7 @@ private:
     QPushButton *m_startBtn;
     QPushButton *m_cancelBtn;
     QPushButton *m_cancelAllBtn;
-    QSpinBox *m_concurrencySpin;
+    QComboBox *m_concurrencyCombo;
 
     // Indicadores e Monitoramento ao vivo
     QProgressBar *m_progressBar;

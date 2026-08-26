@@ -282,8 +282,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Carregar configurações do Auto-Updater e iniciar checagem silenciosa ao start (se habilitado)
     const bool checkOnStart = m_settings.checkUpdatesOnStart;
-    const int concurrency = m_settings.maxConcurrentDownloads;
-    if (m_concurrencySpin) m_concurrencySpin->setValue(concurrency);
+    const int concurrency = m_settings.maxConcurrentDownloads > 0 ? m_settings.maxConcurrentDownloads : 2;
+    if (m_concurrencyCombo) {
+        const int idx = m_concurrencyCombo->findData(concurrency);
+        if (idx >= 0) {
+            m_concurrencyCombo->setCurrentIndex(idx);
+        }
+    }
     m_downloadManager->setConcurrencyLimit(concurrency);
     if (m_checkUpdatesOnStartChk) m_checkUpdatesOnStartChk->setChecked(checkOnStart);
     if (m_autoDownloadUpdatesChk) {
@@ -382,8 +387,8 @@ MainWindow::~MainWindow()
     if (m_checkUpdatesOnStartChk) {
         m_settings.checkUpdatesOnStart = m_checkUpdatesOnStartChk->isChecked();
     }
-    if (m_concurrencySpin) {
-        m_settings.maxConcurrentDownloads = m_concurrencySpin->value();
+    if (m_concurrencyCombo) {
+        m_settings.maxConcurrentDownloads = m_concurrencyCombo->currentData().toInt();
     }
     if (m_autoDownloadUpdatesChk) {
         m_settings.autoDownloadUpdates = m_autoDownloadUpdatesChk->isChecked();
@@ -933,11 +938,19 @@ void MainWindow::onCancelAllClicked()
     m_conversionManager->cancelAllAutomatic();
 }
 
-void MainWindow::onConcurrencyChanged(int value)
+void MainWindow::onConcurrencyChanged(int index)
 {
-    m_downloadManager->setConcurrencyLimit(value);
-    m_settings.maxConcurrentDownloads = value;
-    m_settings.save();
+    Q_UNUSED(index);
+    if (!m_concurrencyCombo) {
+        return;
+    }
+    const int value = m_concurrencyCombo->currentData().toInt();
+    if (value > 0) {
+        m_downloadManager->setConcurrencyLimit(value);
+        m_settings.maxConcurrentDownloads = value;
+        m_settings.save();
+        logMessage(QStringLiteral("[Fila] Limite de downloads simultâneos ajustado para %1.").arg(value));
+    }
 }
 
 int MainWindow::findDownloadRow(DownloadId id) const

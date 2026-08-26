@@ -47,7 +47,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
 #define m_checkUpdateBtn window->m_checkUpdateBtn
 #define m_checkUpdatesOnStartChk window->m_checkUpdatesOnStartChk
 #define m_clearLogsBtn window->m_clearLogsBtn
-#define m_concurrencySpin window->m_concurrencySpin
+#define m_concurrencyCombo window->m_concurrencyCombo
 #define m_convertBrowseBtn window->m_convertBrowseBtn
 #define m_convertEngineLabel window->m_convertEngineLabel
 #define m_convertFormatCombo window->m_convertFormatCombo
@@ -283,17 +283,25 @@ void MainWindowUiBuilder::build(MainWindow *window,
     QLabel *concurrencyLabel = new QLabel("Downloads simultâneos:", centralPanel);
     concurrencyLabel->setStyleSheet("color: #dedede; font-weight: bold; font-size: 13px; margin-left: 20px; margin-right: 4px;");
 
-    m_concurrencySpin = new QSpinBox(centralPanel);
-    m_concurrencySpin->setRange(1, 5);
-    m_concurrencySpin->setValue(settings.maxConcurrentDownloads > 0 ? settings.maxConcurrentDownloads : 2);
-    m_concurrencySpin->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
-    m_concurrencySpin->setFixedWidth(65);
-    m_concurrencySpin->setMinimumHeight(32);
-    m_concurrencySpin->setAlignment(Qt::AlignCenter);
+    m_concurrencyCombo = new QComboBox(centralPanel);
+    m_concurrencyCombo->addItem("1", 1);
+    m_concurrencyCombo->addItem("2", 2);
+    m_concurrencyCombo->addItem("3", 3);
+    m_concurrencyCombo->addItem("4", 4);
+    m_concurrencyCombo->addItem("5", 5);
+    const int defaultConcurrency = settings.maxConcurrentDownloads > 0 ? settings.maxConcurrentDownloads : 2;
+    const int foundIdx = m_concurrencyCombo->findData(defaultConcurrency);
+    if (foundIdx >= 0) {
+        m_concurrencyCombo->setCurrentIndex(foundIdx);
+    }
+    m_concurrencyCombo->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
+    m_concurrencyCombo->setFixedWidth(64);
+    m_concurrencyCombo->setMinimumHeight(32);
+    m_concurrencyCombo->setCursor(Qt::PointingHandCursor);
 
     actionBottomLayout->addWidget(m_notifyCheckBox);
     actionBottomLayout->addWidget(concurrencyLabel);
-    actionBottomLayout->addWidget(m_concurrencySpin);
+    actionBottomLayout->addWidget(m_concurrencyCombo);
     actionBottomLayout->addStretch();
     actionBottomLayout->addWidget(m_cancelBtn);
     actionBottomLayout->addWidget(m_cancelAllBtn);
@@ -696,7 +704,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     QObject::connect(m_startBtn, &QPushButton::clicked, window, &MainWindow::onStartClicked);
     QObject::connect(m_cancelBtn, &QPushButton::clicked, window, &MainWindow::onCancelClicked);
     QObject::connect(m_cancelAllBtn, &QPushButton::clicked, window, &MainWindow::onCancelAllClicked);
-    QObject::connect(m_concurrencySpin, QOverload<int>::of(&QSpinBox::valueChanged), window, &MainWindow::onConcurrencyChanged);
+    QObject::connect(m_concurrencyCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), window, &MainWindow::onConcurrencyChanged);
     QObject::connect(m_browseDirBtn, &QPushButton::clicked, window, &MainWindow::onBrowseClicked);
     QObject::connect(m_openFolderBtn, &QPushButton::clicked, window, &MainWindow::onOpenFolderClicked);
 
@@ -709,7 +717,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
 #undef m_checkUpdateBtn
 #undef m_checkUpdatesOnStartChk
 #undef m_clearLogsBtn
-#undef m_concurrencySpin
+#undef m_concurrencyCombo
 #undef m_convertBrowseBtn
 #undef m_convertEngineLabel
 #undef m_convertFormatCombo
