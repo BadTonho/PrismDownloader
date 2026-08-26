@@ -41,7 +41,7 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
 find_package(OpenSSL 1.1.1 REQUIRED)
 
-set(PRISM_UPDATE_PUBLIC_KEY_BASE64 "" CACHE STRING
+set(PRISM_UPDATE_PUBLIC_KEY_BASE64 "+Wt6A5zU4NyPw+14juL1201CvUO1dgM4dKRiMCN60qg=" CACHE STRING
     "Chave pública Ed25519 (Base64) embutida em builds de release")
 configure_file(src/PrismUpdateKey.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/PrismUpdateKey.h" @ONLY)
 

@@ -30,3 +30,8 @@ dist/
 .agent/
 *.agents*
 *.agent*
+
+# Chaves privadas e certificados
+*.pem
+*.key
+*.sig.key
