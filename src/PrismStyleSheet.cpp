@@ -29,8 +29,9 @@ QString mainWindow()
             color: #909090;
             border: none;
             border-left: 3px solid transparent;
-            padding: 13px 18px;
-            text-align: left;
+            border-right: 3px solid transparent;
+            padding: 13px 12px;
+            text-align: center;
             font-size: 14px;
             font-weight: bold;
         }
@@ -42,6 +43,7 @@ QString mainWindow()
             background-color: #1f2a24;
             color: #10b981;
             border-left: 3px solid #10b981;
+            border-right: 3px solid transparent;
         }
         QPushButton#updateSideBtn {
             background-color: #1b2922;
