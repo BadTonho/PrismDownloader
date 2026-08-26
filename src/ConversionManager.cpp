@@ -12,6 +12,8 @@
 
 namespace {
 
+constexpr qsizetype kMaximumUnterminatedOutputBytes = 1024 * 1024;
+
 QString processErrorName(QProcess::ProcessError error)
 {
     switch (error) {
@@ -306,6 +308,10 @@ void ConversionManager::readActiveOutput(Job *job, bool flushRemainder)
         emit conversionLog(job->id, job->request.ownerDownloadId,
                            QString::fromUtf8(job->outputBuffer).trimmed());
         job->outputBuffer.clear();
+    } else if (job->outputBuffer.size() > kMaximumUnterminatedOutputBytes) {
+        emit conversionLog(job->id, job->request.ownerDownloadId,
+                           QString::fromUtf8(job->outputBuffer.left(kMaximumUnterminatedOutputBytes)).trimmed());
+        job->outputBuffer.clear();
     }
 }
 
@@ -482,9 +488,7 @@ void ConversionManager::prepareArguments(Job *job)
 
     job->outputFile = uniqueOutputPath(outputDirectory, stem, extension);
     hardwareArgs << job->outputFile;
-    if (cpuArgs != hardwareArgs) {
-        cpuArgs << job->outputFile;
-    }
+    cpuArgs << job->outputFile;
     job->hardwareArguments = hardwareArgs;
     job->cpuArguments = cpuArgs;
 }

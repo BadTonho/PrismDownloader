@@ -307,6 +307,32 @@ DetectedHardware findUsableHardwareEncoder(bool verbose)
             }
         }
         DetectedHardware unavailable;
+        const QStringList devices = vaapiRenderDevices();
+        if (verbose) {
+            std::cout << "[GPUDetector] Dispositivos VAAPI encontrados: "
+                      << devices.size() << "\n";
+            for (const QString &device : devices) {
+                std::cout << "  -> " << device.toStdString() << " (vendor "
+                          << gpuTypeName(vaapiTypeForDevice(device)) << ")\n";
+            }
+        }
+        if (devices.isEmpty()) {
+            DetectedHardware unavailable;
+            unavailable.diagnostic = QStringLiteral(
+                "h264_vaapi está listado, mas nenhum /dev/dri/renderD* acessível; "
+                "verifique mesa-va-drivers e os grupos render/video.");
+            return unavailable;
+        }
+        for (const QString &device : devices) {
+            if (encoderWorks(ffmpeg, QStringLiteral("h264_vaapi"), device, verbose)) {
+                DetectedHardware usable;
+                usable.encoder = QStringLiteral("h264_vaapi");
+                usable.device = device;
+                usable.type = vaapiTypeForDevice(device);
+                return usable;
+            }
+        }
+        DetectedHardware unavailable;
         unavailable.diagnostic = QStringLiteral(
             "h264_vaapi está listado, mas o driver não conseguiu inicializar nenhum "
             "dispositivo DRM acessível.");
@@ -316,7 +342,7 @@ DetectedHardware findUsableHardwareEncoder(bool verbose)
 }
 #endif
 
-}
+} // namespace
 
 void GPUDetector::detect(bool verbose)
 {
@@ -329,61 +355,72 @@ void GPUDetector::detect(bool verbose)
     m_diagnostic.clear();
 
     std::string totalDump;
-    QString diagnostic;
 #ifdef _WIN32
     static_cast<void>(verbose);
     DISPLAY_DEVICEA displayDevice{};
-    displayDevice.cb = sizeof(displayDevice);
     DWORD deviceNumber = 0;
-    while (EnumDisplayDevicesA(nullptr, deviceNumber, &displayDevice, 0)) {
+    while (true) {
+        ZeroMemory(&displayDevice, sizeof(displayDevice));
+        displayDevice.cb = sizeof(displayDevice);
+        if (!EnumDisplayDevicesA(nullptr, deviceNumber, &displayDevice, 0)) {
+            break;
+        }
         totalDump += displayDevice.DeviceString;
         totalDump += " ";
         ++deviceNumber;
     }
     const std::string windowsHardware = lowerCase(totalDump);
     const QString windowsFfmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
-    QString expectedEncoder;
-    GPUType expectedType = GPUType::CPU_ONLY;
+
+    struct WindowsCandidate {
+        QString encoder;
+        GPUType type;
+        const char *name;
+    };
+    QList<WindowsCandidate> candidates;
     if (windowsHardware.find("nvidia") != std::string::npos
         || windowsHardware.find("geforce") != std::string::npos) {
-        expectedEncoder = QStringLiteral("h264_nvenc");
-        expectedType = GPUType::NVIDIA;
-    } else if (windowsHardware.find("radeon") != std::string::npos
-               || windowsHardware.find("amd") != std::string::npos) {
-        expectedEncoder = QStringLiteral("h264_amf");
-        expectedType = GPUType::AMD;
-    } else if (windowsHardware.find("intel") != std::string::npos) {
-        expectedEncoder = QStringLiteral("h264_qsv");
-        expectedType = GPUType::INTEL;
+        candidates.append({QStringLiteral("h264_nvenc"), GPUType::NVIDIA, "NVIDIA (NVENC disponível no FFmpeg)"});
+    }
+    if (windowsHardware.find("radeon") != std::string::npos
+        || windowsHardware.find("amd") != std::string::npos) {
+        candidates.append({QStringLiteral("h264_amf"), GPUType::AMD, "AMD (AMF disponível no FFmpeg)"});
+    }
+    if (windowsHardware.find("intel") != std::string::npos) {
+        candidates.append({QStringLiteral("h264_qsv"), GPUType::INTEL, "Intel (Quick Sync disponível no FFmpeg)"});
     }
 
-    QString encoderFailure;
-    if (!expectedEncoder.isEmpty()
-        && ffmpegEncoderWorks(windowsFfmpeg, expectedEncoder, &encoderFailure)) {
-        m_type = expectedType;
-        m_codec = expectedEncoder.toStdString();
-        m_name = expectedType == GPUType::NVIDIA
-            ? "NVIDIA (NVENC disponível no FFmpeg)"
-            : expectedType == GPUType::AMD
-                ? "AMD (AMF disponível no FFmpeg)"
-                : "Intel (Quick Sync disponível no FFmpeg)";
-        std::cout << "[GPUDetector] Encoder de hardware validado: "
-                  << expectedEncoder.toStdString() << "\n";
-    } else {
-        if (expectedEncoder.isEmpty()) {
-            m_diagnostic = "Nenhum adaptador NVIDIA, AMD ou Intel compatível foi identificado.";
-        } else if (windowsFfmpeg.isEmpty() || !QFileInfo(windowsFfmpeg).isFile()) {
-            m_diagnostic = "O adaptador foi identificado, mas o FFmpeg não foi localizado.";
-        } else {
-            QString diagnosticText = QStringLiteral("O adaptador foi identificado, mas o teste real do encoder %1 falhou.")
-                .arg(expectedEncoder);
-            if (!encoderFailure.isEmpty()) {
-                diagnosticText += QStringLiteral(" Motivo do FFmpeg: %1").arg(encoderFailure);
-            }
-            m_diagnostic = diagnosticText.toStdString();
-        }
+    if (candidates.isEmpty()) {
+        m_diagnostic = "Nenhum adaptador NVIDIA, AMD ou Intel compatível foi identificado.";
         std::cout << "[GPUDetector] Nenhum encoder de hardware passou no teste real.\n";
+        return;
     }
+    if (windowsFfmpeg.isEmpty() || !QFileInfo(windowsFfmpeg).isFile()) {
+        m_diagnostic = "O adaptador foi identificado, mas o FFmpeg não foi localizado.";
+        std::cout << "[GPUDetector] Nenhum encoder de hardware passou no teste real.\n";
+        return;
+    }
+
+    QStringList failureReasons;
+    for (const WindowsCandidate &candidate : candidates) {
+        QString encoderFailure;
+        if (ffmpegEncoderWorks(windowsFfmpeg, candidate.encoder, &encoderFailure)) {
+            m_type = candidate.type;
+            m_codec = candidate.encoder.toStdString();
+            m_name = candidate.name;
+            std::cout << "[GPUDetector] Encoder de hardware validado: "
+                      << candidate.encoder.toStdString() << "\n";
+            return;
+        }
+        QString reason = QStringLiteral("Encoder %1 falhou").arg(candidate.encoder);
+        if (!encoderFailure.isEmpty()) {
+            reason += QStringLiteral(" (%1)").arg(encoderFailure);
+        }
+        failureReasons.append(reason);
+    }
+
+    m_diagnostic = failureReasons.join(QStringLiteral("; ")).toStdString();
+    std::cout << "[GPUDetector] Nenhum encoder de hardware passou no teste real.\n";
     return;
 #elif defined(Q_OS_LINUX)
     const DetectedHardware detected = findUsableHardwareEncoder(verbose);
@@ -424,11 +461,6 @@ void GPUDetector::detect(bool verbose)
         return;
     }
 #endif
-
-    std::cout << "[GPUDetector] Capacidades encontradas:\n  -> " << totalDump << "\n";
-    if (!diagnostic.isEmpty()) {
-        std::cout << "[GPUDetector] " << diagnostic.toStdString() << "\n";
-    }
 
     const std::string lower = lowerCase(totalDump);
     if (lower.find("h264_nvenc") != std::string::npos

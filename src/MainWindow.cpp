@@ -376,6 +376,7 @@ MainWindow::~MainWindow()
         m_logFile.close();
     }
     if (m_gpuProbeThread) {
+        m_gpuProbeThread->disconnect();
         m_gpuProbeThread->wait();
         delete m_gpuProbeThread;
         m_gpuProbeThread = nullptr;
