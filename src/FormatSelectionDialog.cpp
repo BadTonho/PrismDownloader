@@ -192,7 +192,7 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
             [this](const QString &value) { updateEstimates(value); });
 
     m_checkConversion = new QCheckBox(
-        QStringLiteral("Converter para outro formato após concluir o download"), this);
+        QStringLiteral("Converter para outro formato"), this);
     m_checkConversion->setStyleSheet(
         QStringLiteral("color: #38bdf8; font-weight: bold; font-size: 13px;"));
     m_checkConversion->setCursor(Qt::PointingHandCursor);
