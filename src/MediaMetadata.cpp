@@ -91,12 +91,12 @@ double formatBytesPerSecond(const ParsedMediaFormat &format, double durationSeco
     return bitrateKbps > 0.0 ? bitrateKbps * 1000.0 / 8.0 : 0.0;
 }
 
-int bestVideoFormat(const QList<ParsedMediaFormat> &formats, int maximumHeight)
+int bestVideoFormatForHeight(const QList<ParsedMediaFormat> &formats, int targetHeight)
 {
     int best = -1;
     for (int index = 0; index < formats.size(); ++index) {
         const ParsedMediaFormat &candidate = formats.at(index);
-        if (!hasVideo(candidate) || candidate.height > maximumHeight) {
+        if (!hasVideo(candidate) || candidate.height != targetHeight) {
             continue;
         }
         if (best < 0) {
@@ -104,10 +104,8 @@ int bestVideoFormat(const QList<ParsedMediaFormat> &formats, int maximumHeight)
             continue;
         }
         const ParsedMediaFormat &current = formats.at(best);
-        if (candidate.height > current.height
-            || (candidate.height == current.height && candidate.fps > current.fps)
-            || (candidate.height == current.height && candidate.fps == current.fps
-                && formatBitrateKbps(candidate) > formatBitrateKbps(current))) {
+        if (candidate.fps > current.fps
+            || (candidate.fps == current.fps && formatBitrateKbps(candidate) > formatBitrateKbps(current))) {
             best = index;
         }
     }
@@ -138,14 +136,13 @@ int bestAudioFormat(const QList<ParsedMediaFormat> &formats)
     return best;
 }
 
-MediaFormatOption makeVideoFormatOption(const QList<ParsedMediaFormat> &formats,
-                                        int maximumHeight, double durationSeconds)
+MediaFormatOption makeVideoFormatOptionForHeight(const QList<ParsedMediaFormat> &formats,
+                                                int height, double durationSeconds)
 {
     MediaFormatOption option;
-    const int videoIndex = bestVideoFormat(formats, maximumHeight);
+    const int videoIndex = bestVideoFormatForHeight(formats, height);
     if (videoIndex < 0) {
-        option.formatCodec = QStringLiteral("Não disponível neste vídeo");
-        option.resolutionMode = QStringLiteral("Nenhum formato até %1p").arg(maximumHeight);
+        option.available = false;
         return option;
     }
 
@@ -153,7 +150,10 @@ MediaFormatOption makeVideoFormatOption(const QList<ParsedMediaFormat> &formats,
     const int audioIndex = hasAudio(video) ? videoIndex : bestAudioFormat(formats);
     const ParsedMediaFormat *audio = audioIndex >= 0 ? &formats.at(audioIndex) : nullptr;
     option.available = true;
+    option.isAudio = false;
     option.actualHeight = video.height;
+    option.fps = video.fps;
+    option.qualityLabel = MediaMetadataParser::actualQualityLabel(video.height);
     option.formatCodec = QStringLiteral("%1/%2")
         .arg(video.ext.toUpper(), codecLabel(video.videoCodec, false));
     double bytesPerSecond = formatBytesPerSecond(video, durationSeconds);
@@ -180,6 +180,7 @@ MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats,
     MediaFormatOption option;
     const int audioIndex = bestAudioFormat(formats);
     if (audioIndex < 0) {
+        option.available = false;
         option.formatCodec = QStringLiteral("Áudio não disponível neste vídeo");
         option.resolutionMode = QStringLiteral("Somente vídeo");
         return option;
@@ -187,6 +188,9 @@ MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats,
 
     const ParsedMediaFormat &audio = formats.at(audioIndex);
     option.available = true;
+    option.isAudio = true;
+    option.actualHeight = 0;
+    option.qualityLabel = QStringLiteral("Áudio MP3 (320 kbps)");
     option.formatCodec = QStringLiteral("MP3 • origem %1/%2")
         .arg(audio.ext.toUpper(), codecLabel(audio.audioCodec, true));
     option.estimatedBytesPerSecond = formatBytesPerSecond(audio, durationSeconds);
@@ -206,17 +210,32 @@ namespace MediaMetadataParser {
 
 QString actualQualityLabel(int height)
 {
+    if (height >= 4320) {
+        return QStringLiteral("4320p / 8K Ultra HD");
+    }
     if (height >= 2160) {
-        return QStringLiteral("2160p / 4K");
+        return QStringLiteral("2160p / 4K Ultra HD");
     }
     if (height >= 1440) {
-        return QStringLiteral("1440p / QHD");
+        return QStringLiteral("1440p / 2K QHD");
     }
     if (height >= 1080) {
         return QStringLiteral("1080p / Full HD");
     }
     if (height >= 720) {
         return QStringLiteral("720p / HD");
+    }
+    if (height >= 480) {
+        return QStringLiteral("480p / SD");
+    }
+    if (height >= 360) {
+        return QStringLiteral("360p / Baixa Definição");
+    }
+    if (height >= 240) {
+        return QStringLiteral("240p / Econômico");
+    }
+    if (height >= 144) {
+        return QStringLiteral("144p / Mínimo");
     }
     return height > 0 ? QStringLiteral("%1p / Fonte").arg(height)
                       : QStringLiteral("Qualidade não informada");
@@ -278,6 +297,14 @@ MediaMetadata parse(const QByteArray &output)
 
     const QJsonObject root = document.object();
     metadata.title = root.value(QStringLiteral("title")).toString();
+    metadata.uploader = root.value(QStringLiteral("uploader")).toString();
+    if (metadata.uploader.isEmpty()) {
+        metadata.uploader = root.value(QStringLiteral("channel")).toString();
+    }
+    if (metadata.uploader.isEmpty()) {
+        metadata.uploader = root.value(QStringLiteral("uploader_id")).toString();
+    }
+    metadata.thumbnailUrl = root.value(QStringLiteral("thumbnail")).toString();
     metadata.durationSeconds = root.value(QStringLiteral("duration")).toDouble(0.0);
     metadata.durationText = root.value(QStringLiteral("duration_string")).toString();
     if (metadata.durationText.isEmpty() && metadata.durationSeconds > 0.0) {
@@ -313,10 +340,26 @@ MediaMetadata parse(const QByteArray &output)
         return metadata;
     }
 
-    metadata.options.append(makeVideoFormatOption(formats, 2160, metadata.durationSeconds));
-    metadata.options.append(makeVideoFormatOption(formats, 1080, metadata.durationSeconds));
-    metadata.options.append(makeVideoFormatOption(formats, 720, metadata.durationSeconds));
-    metadata.options.append(makeAudioFormatOption(formats, metadata.durationSeconds));
+    QList<int> distinctHeights;
+    for (const ParsedMediaFormat &fmt : formats) {
+        if (hasVideo(fmt) && fmt.height > 0 && !distinctHeights.contains(fmt.height)) {
+            distinctHeights.append(fmt.height);
+        }
+    }
+    std::sort(distinctHeights.begin(), distinctHeights.end(), std::greater<int>());
+
+    for (int height : distinctHeights) {
+        MediaFormatOption opt = makeVideoFormatOptionForHeight(formats, height, metadata.durationSeconds);
+        if (opt.available) {
+            metadata.options.append(opt);
+        }
+    }
+
+    MediaFormatOption audioOpt = makeAudioFormatOption(formats, metadata.durationSeconds);
+    if (audioOpt.available) {
+        metadata.options.append(audioOpt);
+    }
+
     return metadata;
 }
 

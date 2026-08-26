@@ -846,7 +846,13 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     }
 
     const FormatSelectionResult selection = dialog.result();
-    if (selection.qualityIndex >= 0) {
+    if (selection.qualityIndex >= 0 && selection.qualityIndex < metadata.options.size()) {
+        m_settings.selectedQualityIndex = selection.qualityIndex;
+        const MediaFormatOption &option = metadata.options.at(selection.qualityIndex);
+        outQuality = option.qualityLabel.isEmpty()
+            ? (option.isAudio ? QStringLiteral("Áudio MP3") : QStringLiteral("%1p").arg(option.actualHeight))
+            : option.qualityLabel;
+    } else if (selection.qualityIndex >= 0) {
         m_settings.selectedQualityIndex = selection.qualityIndex;
         outQuality = qualityTextForIndex(selection.qualityIndex);
     } else {

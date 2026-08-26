@@ -18,6 +18,8 @@ int main()
 {
     const QByteArray json = R"json({
         "title": "Teste de metadados",
+        "uploader": "Canal Oficial",
+        "thumbnail": "https://example.com/thumb.jpg",
         "duration": 10,
         "formats": [
             {"ext":"mp4", "vcodec":"avc1.640028", "acodec":"none",
@@ -31,12 +33,13 @@ int main()
     bool success = true;
     success = check(metadata.error.isEmpty(), "valid metadata has no error")
         && check(metadata.title == QStringLiteral("Teste de metadados"), "title is parsed")
+        && check(metadata.uploader == QStringLiteral("Canal Oficial"), "uploader is parsed")
+        && check(metadata.thumbnailUrl == QStringLiteral("https://example.com/thumb.jpg"), "thumbnail is parsed")
         && check(metadata.durationText == QStringLiteral("00:00:10"), "duration is formatted")
-        && check(metadata.options.size() == 4, "four format options are produced")
+        && check(metadata.options.size() == 2, "dynamic format options are produced")
         && check(metadata.options.at(0).actualHeight == 1080, "best video height is real")
-        && check(metadata.options.at(1).actualHeight == 1080, "1080 profile uses real source height")
-        && check(!metadata.options.at(2).available, "720 profile is unavailable when no 720 source exists")
-        && check(metadata.options.at(3).available, "audio option is detected")
+        && check(metadata.options.at(0).qualityLabel == QStringLiteral("1080p / Full HD"), "quality label matches height")
+        && check(metadata.options.at(1).isAudio, "audio option is detected")
         && check(MediaMetadataParser::actualQualityLabel(1080) == QStringLiteral("1080p / Full HD"),
                  "quality label reflects real height")
         && check(MediaMetadataParser::selectedDurationSeconds(

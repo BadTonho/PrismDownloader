@@ -3,15 +3,24 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFileDialog>
+#include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QPixmap>
+#include <QPointer>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QUrl>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
                                              int itemCount,
@@ -23,48 +32,106 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
                                              const QString &baseStyleSheet,
                                              QWidget *parent)
     : QDialog(parent),
-      m_metadata(metadata)
+      m_metadata(metadata),
+      m_networkManager(new QNetworkAccessManager(this))
 {
     setWindowTitle(QStringLiteral("Selecione o formato da fonte - Prism Studio Suite"));
-    resize(980, 650);
+    resize(1020, 680);
     setStyleSheet(baseStyleSheet + QStringLiteral("QDialog { background-color: #1a1a1a; }"));
 
     auto *dialogLayout = new QVBoxLayout(this);
-    dialogLayout->setSpacing(16);
-    dialogLayout->setContentsMargins(24, 24, 24, 24);
+    dialogLayout->setSpacing(14);
+    dialogLayout->setContentsMargins(22, 20, 22, 20);
 
     auto *titleLabel = new QLabel(
         QStringLiteral("Selecione o formato da fonte e opções do download:"), this);
     titleLabel->setStyleSheet(QStringLiteral(
-        "font-weight: bold; font-size: 18px; color: #ffffff;"));
+        "font-weight: bold; font-size: 17px; color: #ffffff;"));
     dialogLayout->addWidget(titleLabel);
 
-    auto *metadataLabel = new QLabel(this);
+    // ==========================================
+    // CARD DE CABEÇALHO COM PREVIEW DE MINIATURA
+    // ==========================================
+    auto *headerCard = new QFrame(this);
+    headerCard->setObjectName(QStringLiteral("headerCard"));
+    headerCard->setStyleSheet(QStringLiteral(
+        "QFrame#headerCard {"
+        "  background-color: #212121;"
+        "  border: 1px solid #333333;"
+        "  border-radius: 8px;"
+        "}"));
+    auto *cardLayout = new QHBoxLayout(headerCard);
+    cardLayout->setContentsMargins(12, 10, 12, 10);
+    cardLayout->setSpacing(16);
+
+    m_thumbnailLabel = new QLabel(headerCard);
+    m_thumbnailLabel->setFixedSize(176, 99);
+    m_thumbnailLabel->setAlignment(Qt::AlignCenter);
+    m_thumbnailLabel->setStyleSheet(QStringLiteral(
+        "background-color: #121212;"
+        "border: 1px solid #3a3a3a;"
+        "border-radius: 6px;"
+        "color: #777777;"
+        "font-size: 11px;"
+        "font-weight: bold;"));
+    m_thumbnailLabel->setText(QStringLiteral("Carregando\nminiatura..."));
+    cardLayout->addWidget(m_thumbnailLabel, 0);
+
+    auto *infoLayout = new QVBoxLayout();
+    infoLayout->setSpacing(6);
+    infoLayout->setContentsMargins(0, 2, 0, 2);
+
     const QString sourceTitle = m_metadata.title.isEmpty()
         ? QStringLiteral("Título não identificado") : m_metadata.title;
-    const QString sourceDuration = m_metadata.durationText.isEmpty()
-        ? QStringLiteral("duração não informada") : m_metadata.durationText;
-    QString metadataText = QStringLiteral("Fonte: %1  •  Duração: %2")
-        .arg(sourceTitle, sourceDuration);
-    if (itemCount > 1) {
-        metadataText += QStringLiteral("  •  Estimativas baseadas no primeiro de %1 itens")
-            .arg(itemCount);
-    }
-    if (!m_metadata.error.isEmpty()) {
-        metadataText += QStringLiteral("\nAviso: %1").arg(m_metadata.error);
-    }
-    metadataLabel->setText(metadataText);
-    metadataLabel->setWordWrap(true);
-    metadataLabel->setStyleSheet(m_metadata.error.isEmpty()
-                                      ? QStringLiteral("color: #a7f3d0; font-size: 12px;")
-                                      : QStringLiteral("color: #fcd34d; font-size: 12px;"));
-    dialogLayout->addWidget(metadataLabel);
+    auto *mediaTitleLabel = new QLabel(sourceTitle, headerCard);
+    mediaTitleLabel->setStyleSheet(QStringLiteral("font-weight: bold; font-size: 15px; color: #ffffff;"));
+    mediaTitleLabel->setWordWrap(true);
+    infoLayout->addWidget(mediaTitleLabel);
 
-    m_table = new QTableWidget(4, 4, this);
+    const QString sourceDuration = m_metadata.durationText.isEmpty()
+        ? QStringLiteral("desconhecida") : m_metadata.durationText;
+    const QString uploaderText = m_metadata.uploader.isEmpty()
+        ? QString() : QStringLiteral("Canal: %1  •  ").arg(m_metadata.uploader);
+
+    const int videoCount = static_cast<int>(std::count_if(
+        m_metadata.options.begin(), m_metadata.options.end(),
+        [](const MediaFormatOption &opt) { return !opt.isAudio; }));
+    const int audioCount = m_metadata.options.size() - videoCount;
+
+    QString details = QStringLiteral("%1⏱ Duração: %2  •  📊 %3 resolução(ões) de vídeo, %4 formato(s) de áudio")
+        .arg(uploaderText, sourceDuration)
+        .arg(videoCount)
+        .arg(audioCount);
+    if (itemCount > 1) {
+        details += QStringLiteral("  •  Lote: 1 de %1 itens").arg(itemCount);
+    }
+
+    auto *detailsLabel = new QLabel(details, headerCard);
+    detailsLabel->setStyleSheet(QStringLiteral("color: #10b981; font-size: 12px; font-weight: 500;"));
+    detailsLabel->setWordWrap(true);
+    infoLayout->addWidget(detailsLabel);
+
+    if (!m_metadata.error.isEmpty()) {
+        auto *warnLabel = new QLabel(QStringLiteral("⚠️ %1").arg(m_metadata.error), headerCard);
+        warnLabel->setStyleSheet(QStringLiteral("color: #fcd34d; font-size: 11px;"));
+        warnLabel->setWordWrap(true);
+        infoLayout->addWidget(warnLabel);
+    }
+    infoLayout->addStretch();
+    cardLayout->addLayout(infoLayout, 1);
+    dialogLayout->addWidget(headerCard);
+
+    loadThumbnailAsync(m_metadata.thumbnailUrl);
+
+    // ==========================================
+    // TABELA DE TODOS OS FORMATOS DISPONÍVEIS
+    // ==========================================
+    const int rowCount = qMax(1, m_metadata.options.size());
+    m_table = new QTableWidget(rowCount, 4, this);
     QStringList headers;
-    headers << QStringLiteral("Qualidade real")
+    headers << QStringLiteral("Qualidade / Resolução")
             << QStringLiteral("Formato da fonte / Codec")
-            << QStringLiteral("Resolução real / Modo")
+            << QStringLiteral("Resolução real / Taxa")
             << QStringLiteral("Estimativa");
     m_table->setHorizontalHeaderLabels(headers);
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
@@ -79,90 +146,34 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     m_table->setObjectName(QStringLiteral("libraryTable"));
     m_table->setMinimumHeight(210);
 
-    const QStringList fallbackQuality{
-        QStringLiteral("Melhor disponível"),
-        QStringLiteral("Full HD"),
-        QStringLiteral("HD"),
-        QStringLiteral("Áudio MP3")};
-    const QStringList fallbackFormat{
-        QStringLiteral("Formato de vídeo"),
-        QStringLiteral("Formato de vídeo"),
-        QStringLiteral("Formato de vídeo"),
-        QStringLiteral("Formato de áudio")};
-    const QStringList fallbackMode{
-        QStringLiteral("Maior qualidade encontrada"),
-        QStringLiteral("Até 1080p"),
-        QStringLiteral("Até 720p"),
-        QStringLiteral("Somente áudio")};
-
-    for (int i = 0; i < 4; ++i) {
-        m_table->setItem(i, 0, new QTableWidgetItem(fallbackQuality.at(i)));
-        m_table->setItem(i, 1, new QTableWidgetItem(fallbackFormat.at(i)));
-        m_table->setItem(i, 2, new QTableWidgetItem(fallbackMode.at(i)));
-        m_table->setItem(i, 3, new QTableWidgetItem(MediaMetadataParser::readableBytes(0)));
-    }
-
-    for (int i = 0; i < 4; ++i) {
-        const MediaFormatOption option = m_metadata.options.value(i);
-        if (option.available) {
-            const QString outputFormat = i == 3 ? QStringLiteral("MP3") : QStringLiteral("MP4");
-            const QString actualQuality = i == 3
-                ? QStringLiteral("Áudio")
-                : MediaMetadataParser::actualQualityLabel(option.actualHeight);
-            m_table->item(i, 0)->setText(actualQuality);
-            m_table->item(i, 0)->setToolTip(QStringLiteral(
-                "Qualidade real: %1\nFormato real encontrado: %2\nSaída final: %3")
-                .arg(actualQuality, option.formatCodec, outputFormat));
-            m_table->item(i, 1)->setText(option.formatCodec);
-            m_table->item(i, 2)->setText(option.resolutionMode);
-            m_table->item(i, 3)->setText(MediaMetadataParser::readableBytes(option.estimatedBytes));
-        } else if (!m_metadata.options.isEmpty()) {
-            m_table->item(i, 0)->setText(QStringLiteral("Qualidade indisponível"));
-            m_table->item(i, 0)->setToolTip(QStringLiteral(
-                "Este vídeo não possui uma fonte correspondente a este perfil."));
-            m_table->item(i, 1)->setText(option.formatCodec.isEmpty()
-                                             ? QStringLiteral("Não disponível neste vídeo")
-                                             : option.formatCodec);
-            m_table->item(i, 2)->setText(option.resolutionMode.isEmpty()
-                                             ? QStringLiteral("Não informado")
-                                             : option.resolutionMode);
-        } else if (!m_metadata.error.isEmpty()) {
-            m_table->item(i, 1)->setText(QStringLiteral("Metadados indisponíveis"));
-            m_table->item(i, 2)->setText(QStringLiteral("Não informado"));
-        }
-    }
-
-    if (!m_metadata.options.isEmpty()) {
-        for (int i = 0; i < 3; ++i) {
-            const MediaFormatOption option = m_metadata.options.value(i);
-            bool hideRow = !option.available;
-            int nextIndex = i + 1;
-            while (!hideRow && nextIndex < 3
-                   && !m_metadata.options.value(nextIndex).available) {
-                ++nextIndex;
-            }
-            if (!hideRow && nextIndex < 3
-                && option.actualHeight > 0
-                && option.actualHeight == m_metadata.options.value(nextIndex).actualHeight) {
-                hideRow = true;
-            }
-            m_table->setRowHidden(i, hideRow);
-        }
-    }
-
-    if (currentQualityIndex >= 0 && currentQualityIndex < 4
-        && !m_table->isRowHidden(currentQualityIndex)) {
-        m_table->selectRow(currentQualityIndex);
+    if (m_metadata.options.isEmpty()) {
+        m_table->setItem(0, 0, new QTableWidgetItem(QStringLiteral("Melhor disponível")));
+        m_table->setItem(0, 1, new QTableWidgetItem(QStringLiteral("Formato padrão do servidor")));
+        m_table->setItem(0, 2, new QTableWidgetItem(QStringLiteral("Automático")));
+        m_table->setItem(0, 3, new QTableWidgetItem(QStringLiteral("—")));
     } else {
-        for (int i = 0; i < m_table->rowCount(); ++i) {
-            if (!m_table->isRowHidden(i)) {
-                m_table->selectRow(i);
-                break;
-            }
+        for (int i = 0; i < m_metadata.options.size(); ++i) {
+            const MediaFormatOption &option = m_metadata.options.at(i);
+            const QString quality = option.qualityLabel.isEmpty()
+                ? (option.isAudio ? QStringLiteral("Áudio MP3") : MediaMetadataParser::actualQualityLabel(option.actualHeight))
+                : option.qualityLabel;
+            m_table->setItem(i, 0, new QTableWidgetItem(quality));
+            m_table->setItem(i, 1, new QTableWidgetItem(option.formatCodec));
+            m_table->setItem(i, 2, new QTableWidgetItem(option.resolutionMode));
+            m_table->setItem(i, 3, new QTableWidgetItem(MediaMetadataParser::readableBytes(option.estimatedBytes)));
         }
     }
-    dialogLayout->addWidget(m_table);
 
+    int selectedRow = 0;
+    if (currentQualityIndex >= 0 && currentQualityIndex < m_metadata.options.size()) {
+        selectedRow = currentQualityIndex;
+    }
+    m_table->selectRow(selectedRow);
+    dialogLayout->addWidget(m_table, 1);
+
+    // ==========================================
+    // OPÇÕES ADICIONAIS (RECORTE, CONVERSÃO, PASTA)
+    // ==========================================
     auto *optionsLayout = new QGridLayout();
     optionsLayout->setSpacing(12);
 
@@ -221,8 +232,10 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     optionsLayout->addLayout(folderLayout, 2, 1);
     optionsLayout->setColumnStretch(1, 1);
     dialogLayout->addLayout(optionsLayout);
-    dialogLayout->addStretch();
 
+    // ==========================================
+    // BOTÕES DE AÇÃO INFERIORES
+    // ==========================================
     auto *buttonsLayout = new QHBoxLayout();
     auto *okButton = new QPushButton(QStringLiteral("ADICIONAR À FILA"), this);
     okButton->setObjectName(QStringLiteral("startBtn"));
@@ -254,6 +267,38 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     dialogLayout->addLayout(buttonsLayout);
 
     updateEstimates(m_editTime->text());
+}
+
+void FormatSelectionDialog::loadThumbnailAsync(const QString &url)
+{
+    if (url.isEmpty()) {
+        if (m_thumbnailLabel) {
+            m_thumbnailLabel->setText(QStringLiteral("Sem\nminiatura"));
+        }
+        return;
+    }
+
+    const QUrl parsedUrl(url);
+    QNetworkRequest request(parsedUrl);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    QNetworkReply *reply = m_networkManager->get(request);
+    const QPointer<QLabel> labelGuard = m_thumbnailLabel;
+    connect(reply, &QNetworkReply::finished, this, [reply, labelGuard]() {
+        reply->deleteLater();
+        if (!labelGuard) {
+            return;
+        }
+        if (reply->error() == QNetworkReply::NoError) {
+            const QByteArray data = reply->readAll();
+            QPixmap pixmap;
+            if (pixmap.loadFromData(data)) {
+                labelGuard->setPixmap(pixmap.scaled(
+                    labelGuard->size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+                return;
+            }
+        }
+        labelGuard->setText(QStringLiteral("Miniatura\nindisponível"));
+    });
 }
 
 void FormatSelectionDialog::updateEstimates(const QString &timeRange)

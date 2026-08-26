@@ -8,7 +8,9 @@
 
 class QCheckBox;
 class QComboBox;
+class QLabel;
 class QLineEdit;
+class QNetworkAccessManager;
 class QTableWidget;
 
 struct FormatSelectionResult {
@@ -20,6 +22,8 @@ struct FormatSelectionResult {
 };
 
 class FormatSelectionDialog final : public QDialog {
+    Q_OBJECT
+
 public:
     FormatSelectionDialog(const MediaMetadata &metadata,
                           int itemCount,
@@ -34,14 +38,17 @@ public:
     FormatSelectionResult result() const;
 
 private:
+    void loadThumbnailAsync(const QString &url);
     void updateEstimates(const QString &timeRange);
 
     const MediaMetadata m_metadata;
+    QLabel *m_thumbnailLabel{nullptr};
     QTableWidget *m_table{nullptr};
     QLineEdit *m_editTime{nullptr};
     QCheckBox *m_checkConversion{nullptr};
     QComboBox *m_conversionFormat{nullptr};
     QLineEdit *m_customOutputDir{nullptr};
+    QNetworkAccessManager *m_networkManager{nullptr};
 };
 
 #endif // FORMAT_SELECTION_DIALOG_H

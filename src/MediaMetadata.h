@@ -6,17 +6,22 @@
 #include <QString>
 
 struct MediaFormatOption {
+    QString qualityLabel;
     QString formatCodec;
     QString resolutionMode;
     int actualHeight{0};
+    double fps{0.0};
     qint64 estimatedBytes{0};
     double estimatedBytesPerSecond{0.0};
-    bool available{false};
+    bool isAudio{false};
+    bool available{true};
 };
 
 struct MediaMetadata {
     QString title;
+    QString uploader;
     QString durationText;
+    QString thumbnailUrl;
     double durationSeconds{0.0};
     QList<MediaFormatOption> options;
     QString error;
