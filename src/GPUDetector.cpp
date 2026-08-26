@@ -26,6 +26,7 @@ std::string lowerCase(std::string value)
     return value;
 }
 
+#ifdef _WIN32
 bool ffmpegEncoderWorks(const QString &ffmpeg, const QString &encoder, QString *failure = nullptr)
 {
     if (ffmpeg.isEmpty() || !QFileInfo(ffmpeg).isFile()) {
@@ -71,6 +72,7 @@ bool ffmpegEncoderWorks(const QString &ffmpeg, const QString &encoder, QString *
     }
     return success;
 }
+#endif
 
 #ifdef Q_OS_LINUX
 struct DetectedHardware {
@@ -307,32 +309,6 @@ DetectedHardware findUsableHardwareEncoder(bool verbose)
             }
         }
         DetectedHardware unavailable;
-        const QStringList devices = vaapiRenderDevices();
-        if (verbose) {
-            std::cout << "[GPUDetector] Dispositivos VAAPI encontrados: "
-                      << devices.size() << "\n";
-            for (const QString &device : devices) {
-                std::cout << "  -> " << device.toStdString() << " (vendor "
-                          << gpuTypeName(vaapiTypeForDevice(device)) << ")\n";
-            }
-        }
-        if (devices.isEmpty()) {
-            DetectedHardware unavailable;
-            unavailable.diagnostic = QStringLiteral(
-                "h264_vaapi está listado, mas nenhum /dev/dri/renderD* acessível; "
-                "verifique mesa-va-drivers e os grupos render/video.");
-            return unavailable;
-        }
-        for (const QString &device : devices) {
-            if (encoderWorks(ffmpeg, QStringLiteral("h264_vaapi"), device, verbose)) {
-                DetectedHardware usable;
-                usable.encoder = QStringLiteral("h264_vaapi");
-                usable.device = device;
-                usable.type = vaapiTypeForDevice(device);
-                return usable;
-            }
-        }
-        DetectedHardware unavailable;
         unavailable.diagnostic = QStringLiteral(
             "h264_vaapi está listado, mas o driver não conseguiu inicializar nenhum "
             "dispositivo DRM acessível.");
@@ -425,8 +401,7 @@ void GPUDetector::detect(bool verbose)
 #elif defined(Q_OS_LINUX)
     const DetectedHardware detected = findUsableHardwareEncoder(verbose);
     totalDump = detected.encoder.toStdString();
-    diagnostic = detected.diagnostic;
-    m_diagnostic = diagnostic.toStdString();
+    m_diagnostic = detected.diagnostic.toStdString();
     if (!detected.encoder.isEmpty()) {
         m_type = detected.type;
         m_codec = detected.encoder.toStdString();

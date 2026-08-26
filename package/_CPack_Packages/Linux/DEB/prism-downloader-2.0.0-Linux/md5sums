@@ -1,0 +1,5 @@
+818f3a13f802fe579935900b06355d27  usr/bin/prism-downloader
+52a63a86744e4d9cee59731f406b1501  usr/lib/prism-downloader/yt-dlp
+debf4ecfa46f40a8d0caa546935b333b  usr/share/applications/prism-downloader.desktop
+b9d349b9098a997df38713501f55db68  usr/share/doc/prism-downloader/YT-DLP-NOTICE.md
+496eb75edf2d9897bd64a052618aca3b  usr/share/icons/hicolor/512x512/apps/prism-downloader.png
