@@ -113,6 +113,54 @@ QString mainWindow()
             selection-background-color: #10b981;
             selection-color: black;
         }
+        QComboBox#concurrencyCombo {
+            background-color: #222222;
+            border: 1px solid #3d3d3d;
+            border-radius: 5px;
+            padding: 2px 4px 2px 8px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        QComboBox#concurrencyCombo:hover {
+            border: 1px solid #10b981;
+            background-color: #282828;
+        }
+        QComboBox#concurrencyCombo::drop-down {
+            subcontrol-origin: padding;
+            subcontrol-position: center right;
+            width: 14px;
+            border: none;
+        }
+        QComboBox#concurrencyCombo::down-arrow {
+            width: 6px;
+            height: 4px;
+            border-left: 3px solid transparent;
+            border-right: 3px solid transparent;
+            border-top: 4px solid #a3a3a3;
+            margin-right: 4px;
+        }
+        QComboBox#concurrencyCombo::down-arrow:hover {
+            border-top: 4px solid #10b981;
+        }
+        QComboBox#concurrencyCombo QAbstractItemView {
+            background-color: #222222;
+            border: 1px solid #3d3d3d;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+            selection-background-color: #10b981;
+            selection-color: #000000;
+            outline: none;
+            padding: 1px;
+            min-width: 48px;
+        }
+        QComboBox#concurrencyCombo QAbstractItemView::item {
+            min-height: 22px;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
         QSpinBox {
             background-color: #242424;
             border: 1px solid #3d3d3d;

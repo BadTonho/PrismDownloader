@@ -284,6 +284,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     concurrencyLabel->setStyleSheet("color: #dedede; font-weight: bold; font-size: 13px; margin-left: 20px; margin-right: 4px;");
 
     m_concurrencyCombo = new QComboBox(centralPanel);
+    m_concurrencyCombo->setObjectName("concurrencyCombo");
     m_concurrencyCombo->addItem("1", 1);
     m_concurrencyCombo->addItem("2", 2);
     m_concurrencyCombo->addItem("3", 3);
@@ -295,8 +296,8 @@ void MainWindowUiBuilder::build(MainWindow *window,
         m_concurrencyCombo->setCurrentIndex(foundIdx);
     }
     m_concurrencyCombo->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
-    m_concurrencyCombo->setFixedWidth(64);
-    m_concurrencyCombo->setMinimumHeight(32);
+    m_concurrencyCombo->setFixedWidth(52);
+    m_concurrencyCombo->setMinimumHeight(30);
     m_concurrencyCombo->setCursor(Qt::PointingHandCursor);
 
     actionBottomLayout->addWidget(m_notifyCheckBox);
