@@ -168,7 +168,7 @@ MainWindow::MainWindow(QWidget *parent)
       m_conversionManager(new ConversionManager(this))
 {
     setWindowTitle("Prism Downloader - Studio Suite");
-    resize(1180, 740);
+    resize(1380, 740);
     setMinimumSize(960, 600);
 
     setupUI();
