@@ -72,7 +72,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
                     : QString("Release %1 é mais antiga e foi ignorada.").arg(release.version));
             }
             if (m_window->m_sidebarUpdateNotification) {
-                m_window->m_sidebarUpdateNotification->setText("✅ " + m_versionTag + " (Em Dia)");
+                m_window->m_sidebarUpdateNotification->setText(m_versionTag + " (Em Dia)");
                 m_window->m_sidebarUpdateNotification->setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
             }
             if (!m_appUpdateCheckSilent) {
@@ -84,13 +84,13 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
 
         if (m_window->m_updateStatusLabel) {
             m_window->m_updateStatusLabel->setText(
-                QString("🚀 Nova versão v%1 disponível e autenticada.").arg(release.version));
+                QString("Nova versão v%1 disponível e autenticada.").arg(release.version));
             m_window->m_updateStatusLabel->setStyleSheet(
                 "color: #10b981; font-weight: bold; font-size: 14px;");
         }
         if (m_window->m_sidebarUpdateNotification) {
             m_window->m_sidebarUpdateNotification->setText(
-                QString("🔔 Nova Versão v%1!").arg(release.version));
+                QString("Nova Versão v%1!").arg(release.version));
             m_window->m_sidebarUpdateNotification->setStyleSheet(
                 "color: #f59e0b; background-color: #2a1f0c; border: 1px solid #f59e0b; "
                 "border-radius: 4px; padding: 4px; font-size: 12px; font-weight: bold; "
@@ -122,7 +122,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
         }
         if (m_window->m_sidebarUpdateNotification) {
             m_window->m_sidebarUpdateNotification->setText(
-                "🛡️ " + m_versionTag + " (Não validado)");
+                m_versionTag + " (Não validado)");
             m_window->m_sidebarUpdateNotification->setStyleSheet(
                 "color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
         }

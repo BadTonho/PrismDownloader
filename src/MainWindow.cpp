@@ -743,7 +743,7 @@ void MainWindow::showQueueContextMenu(const QPoint &pos)
 
     if (job.status == DownloadStatus::Completed && !job.filePath.isEmpty() && QFile::exists(job.filePath)) {
         const QString path = job.filePath;
-        QAction *openFileAction = menu.addAction(QStringLiteral("🎬 Reproduzir Mídia"));
+        QAction *openFileAction = menu.addAction(QStringLiteral("Reproduzir Mídia"));
         connect(openFileAction, &QAction::triggered, this, [this, path]() {
             openLibraryFile(path);
         });
@@ -751,7 +751,7 @@ void MainWindow::showQueueContextMenu(const QPoint &pos)
 
     const QString targetPath = (!job.filePath.isEmpty() && QFile::exists(job.filePath))
         ? job.filePath : job.request.outputDirectory;
-    QAction *openFolderAction = menu.addAction(QStringLiteral("📂 Abrir Pasta de Destino"));
+    QAction *openFolderAction = menu.addAction(QStringLiteral("Abrir Pasta de Destino"));
     connect(openFolderAction, &QAction::triggered, this, [targetPath]() {
         if (!targetPath.isEmpty()) {
             const QFileInfo fi(targetPath);
@@ -762,7 +762,7 @@ void MainWindow::showQueueContextMenu(const QPoint &pos)
     menu.addSeparator();
 
     const QString urlString = job.request.url.toString();
-    QAction *copyUrlAction = menu.addAction(QStringLiteral("📋 Copiar URL"));
+    QAction *copyUrlAction = menu.addAction(QStringLiteral("Copiar URL"));
     connect(copyUrlAction, &QAction::triggered, this, [urlString]() {
         QGuiApplication::clipboard()->setText(urlString);
     });
@@ -771,7 +771,7 @@ void MainWindow::showQueueContextMenu(const QPoint &pos)
         const DownloadRequest request = job.request;
         const bool autoConvert = job.autoConvert;
         const QString conversionFormat = job.conversionFormat;
-        QAction *retryAction = menu.addAction(QStringLiteral("🔄 Tentar Novamente"));
+        QAction *retryAction = menu.addAction(QStringLiteral("Tentar Novamente"));
         connect(retryAction, &QAction::triggered, this, [this, request, autoConvert, conversionFormat]() {
             const EnqueueResult result = m_downloadManager->enqueueDownload(request);
             if (result.accepted) {
@@ -787,7 +787,7 @@ void MainWindow::showQueueContextMenu(const QPoint &pos)
     }
 
     if (!job.terminal) {
-        QAction *cancelAction = menu.addAction(QStringLiteral("⏹ Cancelar Download"));
+        QAction *cancelAction = menu.addAction(QStringLiteral("Cancelar Download"));
         connect(cancelAction, &QAction::triggered, this, [this, id]() {
             m_downloadManager->cancelDownload(id);
             m_conversionManager->cancelByDownloadId(id);
@@ -801,31 +801,25 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
     if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
         event->acceptProposedAction();
-    } else {
-        event->ignore();
     }
 }
 
 void MainWindow::dropEvent(QDropEvent *event)
 {
-    QString droppedText;
     if (event->mimeData()->hasUrls()) {
         const QList<QUrl> urls = event->mimeData()->urls();
         if (!urls.isEmpty()) {
-            droppedText = urls.first().toString();
+            m_urlInput->setText(urls.first().toString());
+            event->acceptProposedAction();
+            logMessage(QStringLiteral("[Interface] URL inserida via Drag & Drop."));
         }
-    }
-    if (droppedText.isEmpty() && event->mimeData()->hasText()) {
-        droppedText = event->mimeData()->text().trimmed();
-    }
-    if (!droppedText.isEmpty()) {
-        event->acceptProposedAction();
-        showDownloadsPage();
-        if (m_urlInput) {
-            m_urlInput->setText(droppedText);
-            m_urlInput->setFocus();
+    } else if (event->mimeData()->hasText()) {
+        const QString text = event->mimeData()->text().trimmed();
+        if (!text.isEmpty()) {
+            m_urlInput->setText(text);
+            event->acceptProposedAction();
+            logMessage(QStringLiteral("[Interface] URL inserida via Drag & Drop."));
         }
-        logMessage(QStringLiteral("[Interface] Link inserido via Arrastar e Soltar: %1").arg(droppedText));
     }
 }
 
@@ -840,7 +834,8 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     FormatSelectionDialog dialog(
         metadata, itemCount, m_settings.selectedQualityIndex, m_settings.defaultTimeRange,
         m_outputDirInput->text(), m_gpuDetector.hasHardwareAcceleration(),
-        QString::fromStdString(m_gpuDetector.getRecommendedCodec()), styleSheet(), this);
+        QString::fromStdString(m_gpuDetector.getRecommendedCodec()), styleSheet(),
+        m_thumbnailNetwork, this);
     if (dialog.exec() != QDialog::Accepted) {
         return false;
     }

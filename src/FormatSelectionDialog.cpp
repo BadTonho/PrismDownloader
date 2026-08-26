@@ -30,10 +30,12 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
                                              bool hardwareAcceleration,
                                              const QString &hardwareCodec,
                                              const QString &baseStyleSheet,
+                                             QNetworkAccessManager *network,
                                              QWidget *parent)
     : QDialog(parent),
       m_metadata(metadata),
-      m_networkManager(new QNetworkAccessManager(this))
+      m_networkManager(network ? network : new QNetworkAccessManager(this)),
+      m_ownsNetworkManager(network == nullptr)
 {
     setWindowTitle(QStringLiteral("Selecione o formato da fonte - Prism Studio Suite"));
     resize(1020, 680);
@@ -98,7 +100,7 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
         [](const MediaFormatOption &opt) { return !opt.isAudio; }));
     const int audioCount = m_metadata.options.size() - videoCount;
 
-    QString details = QStringLiteral("%1⏱ Duração: %2  •  📊 %3 resolução(ões) de vídeo, %4 formato(s) de áudio")
+    QString details = QStringLiteral("%1Duração: %2  •  %3 resolução(ões) de vídeo, %4 formato(s) de áudio")
         .arg(uploaderText, sourceDuration)
         .arg(videoCount)
         .arg(audioCount);
@@ -112,7 +114,7 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     infoLayout->addWidget(detailsLabel);
 
     if (!m_metadata.error.isEmpty()) {
-        auto *warnLabel = new QLabel(QStringLiteral("⚠️ %1").arg(m_metadata.error), headerCard);
+        auto *warnLabel = new QLabel(QStringLiteral("Aviso: %1").arg(m_metadata.error), headerCard);
         warnLabel->setStyleSheet(QStringLiteral("color: #fcd34d; font-size: 11px;"));
         warnLabel->setWordWrap(true);
         infoLayout->addWidget(warnLabel);
@@ -121,7 +123,10 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     cardLayout->addLayout(infoLayout, 1);
     dialogLayout->addWidget(headerCard);
 
-    loadThumbnailAsync(m_metadata.thumbnailUrl);
+    const QStringList candidateUrls = m_metadata.thumbnailCandidates.isEmpty()
+        ? QStringList{m_metadata.thumbnailUrl}
+        : m_metadata.thumbnailCandidates;
+    loadThumbnailAsync(candidateUrls, 0);
 
     // ==========================================
     // TABELA DE TODOS OS FORMATOS DISPONÍVEIS
@@ -253,8 +258,8 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
     const QString accelerationStatus = hardwareAcceleration
-        ? QStringLiteral("⚡ Aceleração disponível: ") + hardwareCodec.toUpper()
-        : QStringLiteral("ℹ️ Conversão será feita pela CPU");
+        ? QStringLiteral("Aceleração disponível: ") + hardwareCodec.toUpper()
+        : QStringLiteral("Conversão será feita pela CPU");
     auto *accelerationLabel = new QLabel(accelerationStatus, this);
     accelerationLabel->setStyleSheet(hardwareAcceleration
         ? QStringLiteral("color: #10b981; font-weight: bold; font-size: 13px;")
@@ -269,35 +274,62 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     updateEstimates(m_editTime->text());
 }
 
-void FormatSelectionDialog::loadThumbnailAsync(const QString &url)
+void FormatSelectionDialog::loadThumbnailAsync(const QStringList &candidateUrls, int candidateIndex)
 {
-    if (url.isEmpty()) {
+    if (candidateIndex >= candidateUrls.size()) {
         if (m_thumbnailLabel) {
             m_thumbnailLabel->setText(QStringLiteral("Sem\nminiatura"));
         }
         return;
     }
 
+    const QString url = candidateUrls.at(candidateIndex).trimmed();
+    if (url.isEmpty()) {
+        loadThumbnailAsync(candidateUrls, candidateIndex + 1);
+        return;
+    }
+
     const QUrl parsedUrl(url);
+    if (!parsedUrl.isValid() || parsedUrl.host().isEmpty()) {
+        loadThumbnailAsync(candidateUrls, candidateIndex + 1);
+        return;
+    }
+
     QNetworkRequest request(parsedUrl);
+    request.setHeader(QNetworkRequest::UserAgentHeader,
+                      QStringLiteral("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"));
+    request.setRawHeader("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    auto imageData = std::make_shared<QByteArray>();
     QNetworkReply *reply = m_networkManager->get(request);
     const QPointer<QLabel> labelGuard = m_thumbnailLabel;
-    connect(reply, &QNetworkReply::finished, this, [reply, labelGuard]() {
+    const QStringList urls = candidateUrls;
+
+    connect(reply, &QIODevice::readyRead, reply, [reply, imageData]() {
+        constexpr qsizetype kMaximumThumbnailBytes = 8 * 1024 * 1024;
+        const QByteArray chunk = reply->readAll();
+        if (imageData->size() + chunk.size() > kMaximumThumbnailBytes) {
+            reply->abort();
+            return;
+        }
+        imageData->append(chunk);
+    });
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, imageData, labelGuard, urls, candidateIndex]() {
         reply->deleteLater();
         if (!labelGuard) {
             return;
         }
-        if (reply->error() == QNetworkReply::NoError) {
-            const QByteArray data = reply->readAll();
+        if (reply->error() == QNetworkReply::NoError && !imageData->isEmpty()) {
             QPixmap pixmap;
-            if (pixmap.loadFromData(data)) {
+            if (pixmap.loadFromData(*imageData)) {
                 labelGuard->setPixmap(pixmap.scaled(
                     labelGuard->size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
                 return;
             }
         }
-        labelGuard->setText(QStringLiteral("Miniatura\nindisponível"));
+        loadThumbnailAsync(urls, candidateIndex + 1);
     });
 }
 

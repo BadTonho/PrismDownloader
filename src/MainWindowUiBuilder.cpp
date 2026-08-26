@@ -160,7 +160,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
 
-    m_sidebarUpdateNotification = new QLabel("🛡️ " + versionTag + " (Em Dia)", sidebar);
+    m_sidebarUpdateNotification = new QLabel(versionTag + " (Em Dia)", sidebar);
     m_sidebarUpdateNotification->setAlignment(Qt::AlignCenter);
     m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
     sidebarLayout->addWidget(m_sidebarUpdateNotification);
@@ -442,12 +442,12 @@ void MainWindowUiBuilder::build(MainWindow *window,
     QHBoxLayout *logFilterLayout = new QHBoxLayout();
     logFilterLayout->setSpacing(8);
 
-    m_filterAllBtn = new QPushButton("🌐 Todos os Logs", pageLogs);
-    m_filterProcessesBtn = new QPushButton("⚙️ Apenas Processos", pageLogs);
-    m_filterErrorsBtn = new QPushButton("⚠️ Erros e Alertas", pageLogs);
-    m_filterGeneralBtn = new QPushButton("📌 Sistema & Gerais", pageLogs);
-    m_copyLogsBtn = new QPushButton("📋 Copiar visíveis", pageLogs);
-    m_clearLogsBtn = new QPushButton("🧹 Limpar Terminal", pageLogs);
+    m_filterAllBtn = new QPushButton("Todos os Logs", pageLogs);
+    m_filterProcessesBtn = new QPushButton("Apenas Processos", pageLogs);
+    m_filterErrorsBtn = new QPushButton("Erros e Alertas", pageLogs);
+    m_filterGeneralBtn = new QPushButton("Sistema & Gerais", pageLogs);
+    m_copyLogsBtn = new QPushButton("Copiar visíveis", pageLogs);
+    m_clearLogsBtn = new QPushButton("Limpar Terminal", pageLogs);
 
     m_filterAllBtn->setCursor(Qt::PointingHandCursor);
     m_filterProcessesBtn->setCursor(Qt::PointingHandCursor);

@@ -6,6 +6,7 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QRegularExpression>
+#include <QSet>
 
 namespace {
 
@@ -304,7 +305,44 @@ MediaMetadata parse(const QByteArray &output)
     if (metadata.uploader.isEmpty()) {
         metadata.uploader = root.value(QStringLiteral("uploader_id")).toString();
     }
-    metadata.thumbnailUrl = root.value(QStringLiteral("thumbnail")).toString();
+    metadata.thumbnailUrl = root.value(QStringLiteral("thumbnail")).toString().trimmed();
+    QSet<QString> candidateSet;
+    if (!metadata.thumbnailUrl.isEmpty()) {
+        metadata.thumbnailCandidates.append(metadata.thumbnailUrl);
+        candidateSet.insert(metadata.thumbnailUrl);
+    }
+
+    const QJsonArray thumbs = root.value(QStringLiteral("thumbnails")).toArray();
+    for (int i = thumbs.size() - 1; i >= 0; --i) {
+        const QJsonObject thumbObj = thumbs.at(i).toObject();
+        const QString tUrl = thumbObj.value(QStringLiteral("url")).toString().trimmed();
+        if (!tUrl.isEmpty() && !candidateSet.contains(tUrl)) {
+            metadata.thumbnailCandidates.append(tUrl);
+            candidateSet.insert(tUrl);
+        }
+    }
+
+    static const QRegularExpression ytPattern(QStringLiteral(R"(i\.ytimg\.com/vi(?:_webp)?/([^/?#]+))"));
+    for (const QString &url : metadata.thumbnailCandidates) {
+        const QRegularExpressionMatch m = ytPattern.match(url);
+        if (m.hasMatch()) {
+            const QString videoId = m.captured(1);
+            const QStringList ytDefaults = {
+                QStringLiteral("https://i.ytimg.com/vi/%1/hqdefault.jpg").arg(videoId),
+                QStringLiteral("https://i.ytimg.com/vi/%1/mqdefault.jpg").arg(videoId),
+                QStringLiteral("https://i.ytimg.com/vi/%1/sddefault.jpg").arg(videoId),
+                QStringLiteral("https://i.ytimg.com/vi/%1/default.jpg").arg(videoId)
+            };
+            for (const QString &defUrl : ytDefaults) {
+                if (!candidateSet.contains(defUrl)) {
+                    metadata.thumbnailCandidates.append(defUrl);
+                    candidateSet.insert(defUrl);
+                }
+            }
+            break;
+        }
+    }
+
     metadata.durationSeconds = root.value(QStringLiteral("duration")).toDouble(0.0);
     metadata.durationText = root.value(QStringLiteral("duration_string")).toString();
     if (metadata.durationText.isEmpty() && metadata.durationSeconds > 0.0) {

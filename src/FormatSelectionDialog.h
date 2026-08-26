@@ -33,12 +33,13 @@ public:
                           bool hardwareAcceleration,
                           const QString &hardwareCodec,
                           const QString &baseStyleSheet,
+                          QNetworkAccessManager *network = nullptr,
                           QWidget *parent = nullptr);
 
     FormatSelectionResult result() const;
 
 private:
-    void loadThumbnailAsync(const QString &url);
+    void loadThumbnailAsync(const QStringList &candidateUrls, int candidateIndex = 0);
     void updateEstimates(const QString &timeRange);
 
     const MediaMetadata m_metadata;
@@ -49,6 +50,7 @@ private:
     QComboBox *m_conversionFormat{nullptr};
     QLineEdit *m_customOutputDir{nullptr};
     QNetworkAccessManager *m_networkManager{nullptr};
+    bool m_ownsNetworkManager{false};
 };
 
 #endif // FORMAT_SELECTION_DIALOG_H

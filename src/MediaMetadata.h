@@ -4,6 +4,7 @@
 #include <QByteArray>
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 struct MediaFormatOption {
     QString qualityLabel;
@@ -22,6 +23,7 @@ struct MediaMetadata {
     QString uploader;
     QString durationText;
     QString thumbnailUrl;
+    QStringList thumbnailCandidates;
     double durationSeconds{0.0};
     QList<MediaFormatOption> options;
     QString error;
