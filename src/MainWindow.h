@@ -143,8 +143,6 @@ private:
 
     // Componentes da Tela de Downloads (popup principal)
     QLineEdit *m_urlInput;
-    QComboBox *m_qualityCombo;
-    QLineEdit *m_timeRangeInput;
     QLineEdit *m_outputDirInput;
     QPushButton *m_browseDirBtn;
     QCheckBox *m_notifyCheckBox;

@@ -148,6 +148,17 @@ bool isValidTimeRange(const QString &timeRange)
     return match.hasMatch() && toSeconds(match, 1, 2, 3) < toSeconds(match, 4, 5, 6);
 }
 
+QString qualityTextForIndex(int index)
+{
+    switch (index) {
+    case 0: return QStringLiteral("4K / Melhor Disponível no Servidor (Original)");
+    case 1: return QStringLiteral("1080p Full HD (Vídeo MP4 Alta Definição)");
+    case 2: return QStringLiteral("720p HD (Vídeo MP4 Qualidade Padrão)");
+    case 3: return QStringLiteral("Áudio MP3 (Obter apenas o áudio 320 kbps)");
+    default: return QStringLiteral("1080p Full HD (Vídeo MP4 Alta Definição)");
+    }
+}
+
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -367,8 +378,6 @@ MainWindow::~MainWindow()
 {
     m_settings.outputFolder = m_outputDirInput->text().trimmed();
     m_settings.showNotifications = m_notifyCheckBox->isChecked();
-    m_settings.selectedQualityIndex = m_qualityCombo->currentIndex();
-    m_settings.defaultTimeRange = m_timeRangeInput->text().trimmed();
     if (m_checkUpdatesOnStartChk) {
         m_settings.checkUpdatesOnStart = m_checkUpdatesOnStartChk->isChecked();
     }
@@ -545,7 +554,6 @@ void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
     const QString defaultOutputDir = m_outputDirInput->text().trimmed();
     m_settings.outputFolder = defaultOutputDir;
     m_settings.showNotifications = m_notifyCheckBox->isChecked();
-    m_settings.selectedQualityIndex = m_qualityCombo->currentIndex();
     m_settings.defaultTimeRange = timeRange;
     m_settings.save();
 
@@ -829,7 +837,7 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
                                            QString &outCustomOutputDir)
 {
     FormatSelectionDialog dialog(
-        metadata, itemCount, m_qualityCombo->currentIndex(), m_timeRangeInput->text(),
+        metadata, itemCount, m_settings.selectedQualityIndex, m_settings.defaultTimeRange,
         m_outputDirInput->text(), m_gpuDetector.hasHardwareAcceleration(),
         QString::fromStdString(m_gpuDetector.getRecommendedCodec()), styleSheet(), this);
     if (dialog.exec() != QDialog::Accepted) {
@@ -837,14 +845,14 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     }
 
     const FormatSelectionResult selection = dialog.result();
-    if (selection.qualityIndex >= 0 && selection.qualityIndex < m_qualityCombo->count()) {
-        m_qualityCombo->setCurrentIndex(selection.qualityIndex);
-        outQuality = m_qualityCombo->currentText();
+    if (selection.qualityIndex >= 0) {
+        m_settings.selectedQualityIndex = selection.qualityIndex;
+        outQuality = qualityTextForIndex(selection.qualityIndex);
     } else {
-        outQuality = m_qualityCombo->currentText();
+        outQuality = qualityTextForIndex(m_settings.selectedQualityIndex);
     }
     outTimeRange = selection.timeRange;
-    m_timeRangeInput->setText(outTimeRange);
+    m_settings.defaultTimeRange = outTimeRange;
     outDoConvert = selection.doConvert;
     outConvertFormat = selection.convertFormat;
     outCustomOutputDir = selection.customOutputDir;

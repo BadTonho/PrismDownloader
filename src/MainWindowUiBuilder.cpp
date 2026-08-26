@@ -77,7 +77,6 @@ void MainWindowUiBuilder::build(MainWindow *window,
 #define m_openFolderBtn window->m_openFolderBtn
 #define m_outputDirInput window->m_outputDirInput
 #define m_progressBar window->m_progressBar
-#define m_qualityCombo window->m_qualityCombo
 #define m_sidebarUpdateBtn window->m_sidebarUpdateBtn
 #define m_sidebarUpdateNotification window->m_sidebarUpdateNotification
 #define m_speedLabel window->m_speedLabel
@@ -85,7 +84,6 @@ void MainWindowUiBuilder::build(MainWindow *window,
 #define m_startBtn window->m_startBtn
 #define m_startConvertBtn window->m_startConvertBtn
 #define m_statusLabel window->m_statusLabel
-#define m_timeRangeInput window->m_timeRangeInput
 #define m_updateAppBtn window->m_updateAppBtn
 #define m_updateProgressBar window->m_updateProgressBar
 #define m_updateStatusLabel window->m_updateStatusLabel
@@ -210,37 +208,20 @@ void MainWindowUiBuilder::build(MainWindow *window,
     topInputLayout->addWidget(m_startBtn, 0);
     downloadsLayout->addLayout(topInputLayout);
 
-    // LINHA SECUNDÁRIA: PERFIL DE SAÍDA E PASTA
-    QGridLayout *paramLayout = new QGridLayout();
-    paramLayout->setSpacing(12);
-    paramLayout->setContentsMargins(0, 0, 0, 8);
-
-    QLabel *lblProfile = new QLabel("Perfil de saída padrão:", pageDownloads);
-    lblProfile->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
-    m_qualityCombo = new QComboBox(pageDownloads);
-    m_qualityCombo->addItem("4K / Melhor Disponível no Servidor (Original)");
-    m_qualityCombo->addItem("1080p Full HD (Vídeo MP4 Alta Definição)");
-    m_qualityCombo->addItem("720p HD (Vídeo MP4 Qualidade Padrão)");
-    m_qualityCombo->addItem("Áudio MP3 (Obter apenas o áudio 320 kbps)");
-
-    QLabel *lblTime = new QLabel("Recorte de tempo (opcional):", pageDownloads);
-    lblTime->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
-    m_timeRangeInput = new QLineEdit(pageDownloads);
-    m_timeRangeInput->setPlaceholderText("Ex: 00:01:15-00:03:00 (Vazio = baixar completo)");
-    m_timeRangeInput->setText(settings.defaultTimeRange);
+    // LINHA SECUNDÁRIA: PASTA DE DESTINO DOS DOWNLOADS
+    QHBoxLayout *saveLayout = new QHBoxLayout();
+    saveLayout->setSpacing(12);
+    saveLayout->setContentsMargins(0, 0, 0, 8);
 
     QLabel *lblSave = new QLabel("Salvar downloads em:", pageDownloads);
     lblSave->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
 
-    QHBoxLayout *saveLayout = new QHBoxLayout();
     m_outputDirInput = new QLineEdit(pageDownloads);
     m_outputDirInput->setReadOnly(false);
     m_browseDirBtn = new QPushButton("Alterar...", pageDownloads);
     m_browseDirBtn->setObjectName("browseBtn");
     m_browseDirBtn->setCursor(Qt::PointingHandCursor);
     m_browseDirBtn->setMinimumHeight(32);
-    saveLayout->addWidget(m_outputDirInput, 1);
-    saveLayout->addWidget(m_browseDirBtn, 0);
 
     QString savedFolder = settings.outputFolder;
     if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
@@ -249,20 +230,11 @@ void MainWindowUiBuilder::build(MainWindow *window,
     }
     m_outputDirInput->setText(savedFolder);
 
-    int savedQualityIndex = settings.selectedQualityIndex;
-    if (savedQualityIndex >= 0 && savedQualityIndex < m_qualityCombo->count()) {
-        m_qualityCombo->setCurrentIndex(savedQualityIndex);
-    }
+    saveLayout->addWidget(lblSave);
+    saveLayout->addWidget(m_outputDirInput, 1);
+    saveLayout->addWidget(m_browseDirBtn, 0);
 
-    paramLayout->addWidget(lblProfile, 0, 0);
-    paramLayout->addWidget(m_qualityCombo, 0, 1);
-    paramLayout->addWidget(lblTime, 1, 0);
-    paramLayout->addWidget(m_timeRangeInput, 1, 1);
-    paramLayout->addWidget(lblSave, 2, 0);
-    paramLayout->addLayout(saveLayout, 2, 1);
-    paramLayout->setColumnStretch(1, 1);
-
-    downloadsLayout->addLayout(paramLayout);
+    downloadsLayout->addLayout(saveLayout);
 
     // PAINEL CENTRAL DE PROCESSAMENTO E MONITORAMENTO AO VIVO
     QGroupBox *centralPanel = new QGroupBox("Área de Processamento e Monitoramento de Download", pageDownloads);
@@ -770,7 +742,6 @@ void MainWindowUiBuilder::build(MainWindow *window,
 #undef m_startBtn
 #undef m_startConvertBtn
 #undef m_statusLabel
-#undef m_timeRangeInput
 #undef m_updateAppBtn
 #undef m_updateProgressBar
 #undef m_updateStatusLabel
