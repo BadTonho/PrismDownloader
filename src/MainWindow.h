@@ -52,12 +52,15 @@ class MainWindow : public QMainWindow {
     friend class MainWindowUiBuilder;
     friend class MainWindowUpdateCoordinator;
 
+
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private slots:
     void onStartClicked();
@@ -68,12 +71,11 @@ private slots:
     void onBrowseClicked();
     void onOpenFolderClicked();
     void switchPage(int index);
+    void showQueueContextMenu(const QPoint &pos);
     
     // Slots da Biblioteca de Mídia
     void refreshLibrary();
     void onDownloadQueueDoubleClicked(int row, int column);
-
-    // Slots do Conversor de Mídia
     void onConvertBrowseClicked();
     void onStartConvertClicked();
     void onCancelConvertClicked();

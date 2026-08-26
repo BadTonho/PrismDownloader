@@ -2,6 +2,8 @@
 #define YTDLP_METADATA_SERVICE_H
 
 #include <QByteArray>
+#include <QDateTime>
+#include <QHash>
 #include <QList>
 #include <QObject>
 
@@ -11,6 +13,11 @@
 class QProcess;
 class QProgressDialog;
 class QWidget;
+
+struct CachedMediaMetadata {
+    MediaMetadata metadata;
+    qint64 timestampMs{0};
+};
 
 class YtDlpMetadataService final : public QObject {
     Q_OBJECT
@@ -38,6 +45,7 @@ private:
     QByteArray m_output;
     QByteArray m_errorOutput;
     QList<PlaylistItem> m_pendingItems;
+    QHash<QString, CachedMediaMetadata> m_metadataCache;
 };
 
 #endif // YTDLP_METADATA_SERVICE_H

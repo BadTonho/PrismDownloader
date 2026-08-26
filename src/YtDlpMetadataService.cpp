@@ -66,6 +66,20 @@ bool YtDlpMetadataService::start(const QList<PlaylistItem> &items, QWidget *prog
         return true;
     }
 
+    const QString cacheKey = item.url.toString(QUrl::FullyEncoded);
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (m_metadataCache.contains(cacheKey)) {
+        const CachedMediaMetadata cached = m_metadataCache.value(cacheKey);
+        if (now - cached.timestampMs < 300000) {
+            emit logMessage(QStringLiteral("[Metadados] Utilizando metadados em cache para %1.")
+                                .arg(item.title.isEmpty() ? item.url.toString() : item.title));
+            QMetaObject::invokeMethod(this, [this, items, metadata = cached.metadata]() {
+                emit metadataReady(items, metadata);
+            }, Qt::QueuedConnection);
+            return true;
+        }
+    }
+
     m_pendingItems = items;
     m_output.clear();
     m_errorOutput.clear();
@@ -168,6 +182,13 @@ void YtDlpMetadataService::completeWithMetadata(MediaMetadata metadata)
     const QString errorOutput = QString::fromUtf8(m_errorOutput).trimmed();
     if (!metadata.error.isEmpty() && !errorOutput.isEmpty()) {
         metadata.error += QStringLiteral(" Detalhe: %1").arg(errorOutput.left(400));
+    }
+    if (metadata.error.isEmpty() && !items.isEmpty() && items.first().url.isValid()) {
+        const QString cacheKey = items.first().url.toString(QUrl::FullyEncoded);
+        if (m_metadataCache.size() >= 32) {
+            m_metadataCache.erase(m_metadataCache.begin());
+        }
+        m_metadataCache.insert(cacheKey, {metadata, QDateTime::currentMSecsSinceEpoch()});
     }
     finishProcess();
     m_pendingItems.clear();

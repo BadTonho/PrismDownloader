@@ -337,6 +337,8 @@ void MainWindowUiBuilder::build(MainWindow *window,
     m_downloadsQueueTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_downloadsQueueTable->setAlternatingRowColors(true);
     m_downloadsQueueTable->setObjectName("libraryTable");
+    m_downloadsQueueTable->setContextMenuPolicy(Qt::CustomContextMenu);
+    QObject::connect(m_downloadsQueueTable, &QTableWidget::customContextMenuRequested, window, &MainWindow::showQueueContextMenu);
     QObject::connect(m_downloadsQueueTable, &QTableWidget::cellDoubleClicked, window, &MainWindow::onDownloadQueueDoubleClicked);
     QObject::connect(m_downloadsQueueTable, &QTableWidget::itemSelectionChanged, window, &MainWindow::onQueueSelectionChanged);
 

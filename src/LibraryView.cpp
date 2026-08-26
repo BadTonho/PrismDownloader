@@ -5,6 +5,7 @@
 #include <QAbstractItemView>
 #include <QAbstractSlider>
 #include <QButtonGroup>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QEvent>
 #include <QFile>
@@ -22,6 +23,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 #include <QStackedWidget>
+#include <QStandardPaths>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTimer>
@@ -32,6 +34,18 @@
 namespace {
 constexpr qsizetype kMaximumThumbnailBytes = 3 * 1024 * 1024;
 constexpr int kMaximumConcurrentThumbnails = 3;
+
+QString thumbnailDiskCachePath(const QFileInfo &fileInfo)
+{
+    const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
+        + QStringLiteral("/thumbnails");
+    QDir().mkpath(cacheDir);
+    const QString key = fileInfo.absoluteFilePath() + QLatin1Char('_')
+        + QString::number(fileInfo.lastModified().toMSecsSinceEpoch());
+    const QString hash = QString::fromUtf8(
+        QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Sha256).toHex());
+    return cacheDir + QLatin1Char('/') + hash + QStringLiteral(".jpg");
+}
 }
 
 LibraryView::LibraryView(QWidget *parent)
@@ -351,6 +365,20 @@ void LibraryView::loadThumbnail(const QFileInfo &fileInfo, QLabel *thumbnailLabe
         return;
     }
 
+    const QString diskCache = thumbnailDiskCachePath(fileInfo);
+    if (QFile::exists(diskCache)) {
+        QPixmap image;
+        if (image.load(diskCache)) {
+            if (m_thumbnailCache.size() >= 64) {
+                m_thumbnailCache.erase(m_thumbnailCache.begin());
+            }
+            m_thumbnailCache.insert(path, image);
+            thumbnailLabel->setPixmap(image.scaled(
+                thumbnailLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            return;
+        }
+    }
+
     const QString ffmpeg = MediaToolResolver::resolve(MediaTool::Ffmpeg);
     if (ffmpeg.isEmpty() || !QFileInfo(ffmpeg).isFile()) {
         thumbnailLabel->setText(QStringLiteral("Miniatura indisponível\n(FFmpeg não encontrado)"));
@@ -374,12 +402,13 @@ void LibraryView::loadThumbnail(const QFileInfo &fileInfo, QLabel *thumbnailLabe
         process->readAllStandardError();
     });
     connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
-            [this, process, output, labelGuard, path](int exitCode, QProcess::ExitStatus status) {
+            [this, process, output, labelGuard, path, diskCache](int exitCode, QProcess::ExitStatus status) {
         m_thumbnailProcesses.remove(process);
         scheduleThumbnailLoading();
         if (labelGuard && status == QProcess::NormalExit && exitCode == 0) {
             QPixmap image;
             if (image.loadFromData(*output)) {
+                image.save(diskCache, "JPG", 85);
                 if (m_thumbnailCache.size() >= 64) {
                     m_thumbnailCache.erase(m_thumbnailCache.begin());
                 }

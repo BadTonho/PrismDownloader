@@ -10,45 +10,52 @@
 #include "PrismStyleSheet.h"
 #include "PrismVersion.h"
 #include "YtDlpMetadataService.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
+#include <QAction>
+#include <QApplication>
+#include <QClipboard>
+#include <QCloseEvent>
 #include <QColor>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QWidget>
-#include <QMetaObject>
-#include <QMessageBox>
-#include <QFileDialog>
-#include <QStandardPaths>
+#include <QDateTime>
 #include <QDesktopServices>
-#include <QUrl>
-#include <QDir>
-#include <QFileInfo>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QGuiApplication>
+#include <QHBoxLayout>
 #include <QHeaderView>
+#include <QLabel>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <QProgressDialog>
-#include <QPixmap>
-#include <QTableWidgetItem>
-#include <QThread>
+#include <QMenu>
+#include <QMetaObject>
+#include <QMessageBox>
+#include <QMimeData>
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QApplication>
-#include <QClipboard>
-#include <QDateTime>
-#include <QCloseEvent>
-#include <QEvent>
-#include <QRegularExpression>
+#include <QPixmap>
 #include <QPointer>
+#include <QProgressDialog>
+#include <QRegularExpression>
 #include <QScrollBar>
+#include <QStandardPaths>
 #include <QSyntaxHighlighter>
+#include <QTableWidgetItem>
 #include <QTextCharFormat>
+#include <QThread>
+#include <QUrl>
 #include <QUrlQuery>
 #include <QUuid>
+#include <QVBoxLayout>
+#include <QWidget>
 
 #include <memory>
 #include <utility>
@@ -153,6 +160,7 @@ MainWindow::MainWindow(QWidget *parent)
     resize(980, 620);
 
     setupUI();
+    setAcceptDrops(true);
     setupStyles();
     m_downloadQueueWorkflow = std::make_unique<DownloadQueueWorkflow>(m_downloadManager);
 
@@ -698,6 +706,117 @@ void MainWindow::onDownloadQueueDoubleClicked(int row, int /*column*/)
         logMessage("[Fila de Downloads] Abrindo vídeo no player padrão do sistema: " + fileName);
     } else {
         QMessageBox::information(this, "Aguarde", "Este item ainda não possui um arquivo final disponível.");
+    }
+}
+
+void MainWindow::showQueueContextMenu(const QPoint &pos)
+{
+    if (!m_downloadsQueueTable) {
+        return;
+    }
+    const int row = m_downloadsQueueTable->rowAt(pos.y());
+    if (row < 0) {
+        return;
+    }
+    const QTableWidgetItem *item = m_downloadsQueueTable->item(row, 0);
+    if (!item) {
+        return;
+    }
+    const DownloadId id = item->data(Qt::UserRole).toULongLong();
+    const auto jobIt = m_downloadJobs.constFind(id);
+    if (jobIt == m_downloadJobs.cend()) {
+        return;
+    }
+    const UiDownloadJob &job = jobIt.value();
+
+    QMenu menu(this);
+    menu.setStyleSheet(styleSheet());
+
+    if (job.status == DownloadStatus::Completed && !job.filePath.isEmpty() && QFile::exists(job.filePath)) {
+        const QString path = job.filePath;
+        QAction *openFileAction = menu.addAction(QStringLiteral("🎬 Reproduzir Mídia"));
+        connect(openFileAction, &QAction::triggered, this, [this, path]() {
+            openLibraryFile(path);
+        });
+    }
+
+    const QString targetPath = (!job.filePath.isEmpty() && QFile::exists(job.filePath))
+        ? job.filePath : job.request.outputDirectory;
+    QAction *openFolderAction = menu.addAction(QStringLiteral("📂 Abrir Pasta de Destino"));
+    connect(openFolderAction, &QAction::triggered, this, [targetPath]() {
+        if (!targetPath.isEmpty()) {
+            const QFileInfo fi(targetPath);
+            QDesktopServices::openUrl(QUrl::fromLocalFile(fi.isDir() ? fi.absoluteFilePath() : fi.absolutePath()));
+        }
+    });
+
+    menu.addSeparator();
+
+    const QString urlString = job.request.url.toString();
+    QAction *copyUrlAction = menu.addAction(QStringLiteral("📋 Copiar URL"));
+    connect(copyUrlAction, &QAction::triggered, this, [urlString]() {
+        QGuiApplication::clipboard()->setText(urlString);
+    });
+
+    if (job.status == DownloadStatus::Error || job.status == DownloadStatus::Cancelled) {
+        const DownloadRequest request = job.request;
+        const bool autoConvert = job.autoConvert;
+        const QString conversionFormat = job.conversionFormat;
+        QAction *retryAction = menu.addAction(QStringLiteral("🔄 Tentar Novamente"));
+        connect(retryAction, &QAction::triggered, this, [this, request, autoConvert, conversionFormat]() {
+            const EnqueueResult result = m_downloadManager->enqueueDownload(request);
+            if (result.accepted) {
+                UiDownloadJob newJob;
+                newJob.request = request;
+                newJob.autoConvert = autoConvert;
+                newJob.conversionFormat = conversionFormat;
+                newJob.statusText = QStringLiteral("Aguardando");
+                m_downloadJobs.insert(result.id, newJob);
+                logMessage(QStringLiteral("[Fila de Downloads] Reiniciando download: %1").arg(request.url.toString()));
+            }
+        });
+    }
+
+    if (!job.terminal) {
+        QAction *cancelAction = menu.addAction(QStringLiteral("⏹ Cancelar Download"));
+        connect(cancelAction, &QAction::triggered, this, [this, id]() {
+            m_downloadManager->cancelDownload(id);
+            m_conversionManager->cancelByDownloadId(id);
+        });
+    }
+
+    menu.exec(m_downloadsQueueTable->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
+        event->acceptProposedAction();
+    } else {
+        event->ignore();
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    QString droppedText;
+    if (event->mimeData()->hasUrls()) {
+        const QList<QUrl> urls = event->mimeData()->urls();
+        if (!urls.isEmpty()) {
+            droppedText = urls.first().toString();
+        }
+    }
+    if (droppedText.isEmpty() && event->mimeData()->hasText()) {
+        droppedText = event->mimeData()->text().trimmed();
+    }
+    if (!droppedText.isEmpty()) {
+        event->acceptProposedAction();
+        showDownloadsPage();
+        if (m_urlInput) {
+            m_urlInput->setText(droppedText);
+            m_urlInput->setFocus();
+        }
+        logMessage(QStringLiteral("[Interface] Link inserido via Arrastar e Soltar: %1").arg(droppedText));
     }
 }
 

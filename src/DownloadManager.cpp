@@ -498,7 +498,9 @@ QStringList DownloadManager::buildArguments(const DownloadRequest &request) cons
 {
     QStringList arguments;
     arguments << "--progress" << "--progress-delta" << "0.25"
-              << "--newline" << "--no-mtime";
+              << "--newline" << "--no-mtime"
+              << "--concurrent-fragments" << "4"
+              << "--retries" << "10" << "--fragment-retries" << "10";
 #ifdef Q_OS_WIN
     arguments << "--windows-filenames";
 #endif
