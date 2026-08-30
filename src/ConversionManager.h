@@ -17,6 +17,7 @@ struct ConversionRequest {
     QString inputFile;
     QString format;
     QString outputDirectory;
+    bool removeInputOnSuccess{false};
     GPUType gpuType{GPUType::CPU_ONLY};
     // Optional details from the Linux hardware probe. Older callers can keep
     // using gpuType and the manager will select the legacy encoder mapping.

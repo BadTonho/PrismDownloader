@@ -1068,6 +1068,7 @@ void MainWindow::onDownloadCompleted(DownloadId id, const QString &filePath)
         request.inputFile = filePath;
         request.format = job.conversionFormat;
         request.outputDirectory = job.request.outputDirectory;
+        request.removeInputOnSuccess = true;
         request.gpuType = m_gpuDetector.getGPUType();
         if (m_gpuDetector.hasHardwareAcceleration()) {
             request.gpuCodec = QString::fromStdString(m_gpuDetector.getRecommendedCodec());

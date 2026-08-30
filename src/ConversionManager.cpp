@@ -353,6 +353,23 @@ void ConversionManager::finishActiveSuccess()
 {
     Job *completed = m_active;
     m_active = nullptr;
+
+    if (completed->request.removeInputOnSuccess) {
+        const QFileInfo inputInfo(completed->request.inputFile);
+        const QFileInfo outputInfo(completed->outputFile);
+        const QString inputPath = inputInfo.canonicalFilePath();
+        const QString outputPath = outputInfo.canonicalFilePath();
+        if (!inputPath.isEmpty() && !outputPath.isEmpty() && inputPath != outputPath) {
+            if (QFile::remove(inputPath)) {
+                emit conversionLog(completed->id, completed->request.ownerDownloadId,
+                                   QStringLiteral("Arquivo original removido apos a conversao bem-sucedida."));
+            } else {
+                emit conversionLog(completed->id, completed->request.ownerDownloadId,
+                                   QStringLiteral("Nao foi possivel remover o arquivo original apos a conversao."));
+            }
+        }
+    }
+
     emit conversionProgress(completed->id, completed->request.ownerDownloadId, 100.0);
     emit conversionCompleted(completed->id, completed->request.ownerDownloadId, completed->outputFile);
     emit conversionLog(completed->id, completed->request.ownerDownloadId, "Conversão concluída.");

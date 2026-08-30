@@ -270,6 +270,38 @@ bool testConversionQueue(const QString &toolPath)
         && check(automaticCancelled == 1, "automatic conversion was cancelled");
 }
 
+bool testAutomaticConversionRemovesInput(const QString &toolPath)
+{
+    QTemporaryDir output;
+    if (!check(output.isValid(), "temporary automatic cleanup directory")) return false;
+
+    const QString input = output.filePath("cleanup-input.mp4");
+    QFile inputFile(input);
+    if (!check(inputFile.open(QIODevice::WriteOnly), "create automatic cleanup input")) return false;
+    inputFile.write("input");
+    inputFile.close();
+
+    ConversionRequest request = conversionFor(input, output.path(), 301);
+    request.removeInputOnSuccess = true;
+
+    ConversionManager manager(nullptr, toolPath);
+    bool completed = false;
+    QObject::connect(&manager, &ConversionManager::conversionCompleted,
+                     [&completed](ConversionId, DownloadId, const QString &) {
+        completed = true;
+    });
+
+    if (!check(manager.enqueueConversion(request).accepted,
+               "automatic cleanup conversion accepted")) return false;
+    if (!check(waitUntil([&manager]() { return !manager.hasWork(); }),
+               "automatic cleanup conversion completes")) return false;
+
+    const QString expectedOutput = output.filePath("cleanup-input_convertido.mp4");
+    return check(completed, "automatic cleanup conversion reports success")
+        && check(QFile::exists(expectedOutput), "converted output remains available")
+        && check(!QFile::exists(input), "automatic conversion removes the original input");
+}
+
 }
 
 int main(int argc, char *argv[])
@@ -284,6 +316,7 @@ int main(int argc, char *argv[])
         && testDownloadScheduling(toolPath)
         && testReportedOutputPathVariants(toolPath)
         && testDuplicateCancellationAndLimit(toolPath)
-        && testConversionQueue(toolPath);
+        && testConversionQueue(toolPath)
+        && testAutomaticConversionRemovesInput(toolPath);
     return success ? 0 : 1;
 }
