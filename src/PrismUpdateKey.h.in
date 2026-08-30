@@ -1,7 +1,0 @@
-#ifndef PRISMUPDATEKEY_H
-#define PRISMUPDATEKEY_H
-
-// This is the raw 32-byte Ed25519 public key encoded as Base64.
-#define PRISM_UPDATE_PUBLIC_KEY_BASE64 "+Wt6A5zU4NyPw+14juL1201CvUO1dgM4dKRiMCN60qg="
-
-#endif // PRISMUPDATEKEY_H

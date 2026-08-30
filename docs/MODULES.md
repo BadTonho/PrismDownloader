@@ -17,7 +17,7 @@ This document provides complete technical specifications for all classes, data s
 3. [Transcoding & Muxing Engine (`ConversionManager`)](#3-transcoding--muxing-engine-conversionmanager)
 4. [Hardware & GPU Probing (`GPUDetector`)](#4-hardware--gpu-probing-gpudetector)
 5. [Dynamic Tool Resolver (`MediaToolResolver`)](#5-dynamic-tool-resolver-mediatoolresolver)
-6. [App Update Service & Crypto (`AppUpdateService` & `Ed25519Verifier`)](#6-app-update-service--crypto-appupdateservice--ed25519verifier)
+6. [App Update Service (`AppUpdateService`)](#6-app-update-service-appupdateservice)
 7. [Engine Update Service (`YtDlpUpdateService`)](#7-engine-update-service-ytdlpupdateservice)
 8. [Portable Staging Helper (`PortableUpdateHelper` & `PortableUpdateCommon`)](#8-portable-staging-helper-portableupdatehelper--portableupdatecommon)
 9. [Main Application Controller (`MainWindow`)](#9-main-application-controller-mainwindow)
@@ -169,13 +169,13 @@ Discovers, verifies, and prioritizes `yt-dlp` and `FFmpeg` binaries.
 
 ---
 
-## 6. App Update Service & Crypto (`AppUpdateService` & `Ed25519Verifier`)
+## 6. App Update Service (`AppUpdateService`)
 
-**Header & Implementation:** `src/AppUpdateService.h`, `src/AppUpdateService.cpp`, `src/Ed25519Verifier.h`, `src/Ed25519Verifier.cpp`
+**Header & Implementation:** `src/AppUpdateService.h`, `src/AppUpdateService.cpp`
 
-Provides zero-trust application update checking, signature validation, and streaming download hashing.
+Provides application update checking, manifest validation, and streaming download hashing.
 
-* `parseVerifiedRelease(...)`: Parses GitHub release JSON, downloads manifest and signature, and cryptographically checks the Ed25519 signature against the embedded public key (`PrismUpdateKey.h`).
+* `parseRelease(...)`: Parses GitHub release JSON, validates the release manifest, and selects the package for the current platform.
 * `checkLatestRelease()`: Asynchronously checks for new published releases.
 * `downloadLatestRelease()`: Streams package download while calculating SHA-256 in real time.
 * `hasValidChecksum(...)`: Validates computed payload SHA-256 against the verified manifest entry.

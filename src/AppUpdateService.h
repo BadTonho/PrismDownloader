@@ -39,14 +39,11 @@ public:
 
     static AppUpdatePackageKind packageForCurrentPlatform(bool installedWindows);
     static QString expectedAssetName(const QString &version, AppUpdatePackageKind packageKind);
-    static bool hasConfiguredPublicKey();
     static bool hasValidChecksum(const QByteArray &binary, const QString &expectedSha256);
-    static AppUpdateReleaseInfo parseVerifiedRelease(const QByteArray &releasePayload,
-                                                     const QByteArray &manifest,
-                                                     const QByteArray &signature,
-                                                     const QByteArray &publicKey,
-                                                     AppUpdatePackageKind packageKind,
-                                                     QString *errorMessage = nullptr);
+    static AppUpdateReleaseInfo parseRelease(const QByteArray &releasePayload,
+                                             const QByteArray &manifest,
+                                             AppUpdatePackageKind packageKind,
+                                             QString *errorMessage = nullptr);
 
     bool hasLatestRelease() const;
     const AppUpdateReleaseInfo &latestRelease() const;
@@ -68,7 +65,6 @@ private:
     QByteArray m_releasePayload;
     QByteArray m_manifest;
     QUrl m_manifestUrl;
-    QUrl m_signatureUrl;
     std::unique_ptr<QTemporaryFile> m_downloadFile;
     QCryptographicHash m_downloadHasher{QCryptographicHash::Sha256};
     qint64 m_downloadedBytes{0};
@@ -77,7 +73,6 @@ private:
     bool m_downloading{false};
 
     void downloadManifest();
-    void downloadSignature();
     void finishDownloadFailure(const QString &message);
 };
 

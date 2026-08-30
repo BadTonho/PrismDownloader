@@ -1,8 +1,5 @@
 #include "AppUpdateService.h"
 
-#include "Ed25519Verifier.h"
-#include "PrismUpdateKey.h"
-
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -63,12 +60,6 @@ bool validSha256(const QString &value)
 {
     static const QRegularExpression hashPattern(QStringLiteral("^[A-Fa-f0-9]{64}$"));
     return hashPattern.match(value).hasMatch();
-}
-
-QByteArray configuredPublicKey()
-{
-    const QByteArray key = QByteArray::fromBase64(QByteArray(PRISM_UPDATE_PUBLIC_KEY_BASE64));
-    return key.size() == 32 ? key : QByteArray();
 }
 
 QString failMessage(const QString &message)
@@ -134,11 +125,6 @@ QString AppUpdateService::expectedAssetName(const QString &version, AppUpdatePac
     return {};
 }
 
-bool AppUpdateService::hasConfiguredPublicKey()
-{
-    return configuredPublicKey().size() == 32;
-}
-
 bool AppUpdateService::hasValidChecksum(const QByteArray &binary, const QString &expectedSha256)
 {
     if (!validSha256(expectedSha256)) {
@@ -148,12 +134,10 @@ bool AppUpdateService::hasValidChecksum(const QByteArray &binary, const QString 
     return actual.compare(expectedSha256.toLatin1(), Qt::CaseInsensitive) == 0;
 }
 
-AppUpdateReleaseInfo AppUpdateService::parseVerifiedRelease(const QByteArray &releasePayload,
-                                                            const QByteArray &manifest,
-                                                            const QByteArray &signature,
-                                                            const QByteArray &publicKey,
-                                                            AppUpdatePackageKind packageKind,
-                                                            QString *errorMessage)
+AppUpdateReleaseInfo AppUpdateService::parseRelease(const QByteArray &releasePayload,
+                                                    const QByteArray &manifest,
+                                                    AppUpdatePackageKind packageKind,
+                                                    QString *errorMessage)
 {
     const auto fail = [errorMessage](const QString &message) {
         if (errorMessage) {
@@ -161,9 +145,8 @@ AppUpdateReleaseInfo AppUpdateService::parseVerifiedRelease(const QByteArray &re
         }
         return AppUpdateReleaseInfo{};
     };
-    if (manifest.isEmpty() || manifest.size() > kMaximumManifestBytes || signature.size() != 64
-        || publicKey.size() != 32 || !Ed25519Verifier::verify(manifest, signature, publicKey)) {
-        return fail(QStringLiteral("manifesto ou assinatura Ed25519 inválidos."));
+    if (manifest.isEmpty() || manifest.size() > kMaximumManifestBytes) {
+        return fail(QStringLiteral("manifesto vazio ou grande demais."));
     }
 
     QJsonParseError releaseError;
@@ -180,7 +163,7 @@ AppUpdateReleaseInfo AppUpdateService::parseVerifiedRelease(const QByteArray &re
     QJsonParseError manifestError;
     const QJsonDocument manifestDocument = QJsonDocument::fromJson(manifest, &manifestError);
     if (manifestError.error != QJsonParseError::NoError || !manifestDocument.isObject()) {
-        return fail(QStringLiteral("manifesto assinado não contém JSON válido."));
+        return fail(QStringLiteral("manifesto não contém JSON válido."));
     }
     const QJsonObject manifestObject = manifestDocument.object();
     if (manifestObject.value(QStringLiteral("schema")).toInt(-1) != 1
@@ -245,11 +228,6 @@ void AppUpdateService::checkLatestRelease()
     if (isBusy()) {
         return;
     }
-    if (!hasConfiguredPublicKey()) {
-        emit checkFailed(QStringLiteral("esta compilação não contém a chave pública de atualização."));
-        return;
-    }
-
     m_checking = true;
     m_latestRelease = {};
     QNetworkReply *reply = m_networkManager->get(githubRequest(kLatestReleaseApi));
@@ -280,8 +258,7 @@ void AppUpdateService::checkLatestRelease()
         const QJsonArray assets = document.object().value(QStringLiteral("assets")).toArray();
         QString error;
         m_manifestUrl = namedOfficialAssetUrl(assets, QStringLiteral("prism-update-manifest.json"), &error);
-        m_signatureUrl = namedOfficialAssetUrl(assets, QStringLiteral("prism-update-manifest.sig"), &error);
-        if (!m_manifestUrl.isValid() || !m_signatureUrl.isValid()) {
+        if (!m_manifestUrl.isValid()) {
             m_checking = false;
             emit checkFailed(failMessage(error));
             return;
@@ -308,31 +285,8 @@ void AppUpdateService::downloadManifest()
             emit checkFailed(failMessage(QStringLiteral("manifesto com tamanho inválido.")));
             return;
         }
-        downloadSignature();
-    });
-}
-
-void AppUpdateService::downloadSignature()
-{
-    QNetworkReply *reply = m_networkManager->get(githubRequest(m_signatureUrl));
-    armReplyTimeout(reply, 30000);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            m_checking = false;
-            emit checkFailed(failMessage(QStringLiteral("não foi possível baixar a assinatura: ")
-                                         + reply->errorString()));
-            return;
-        }
-        if (reply->bytesAvailable() > 64) {
-            m_checking = false;
-            emit checkFailed(failMessage(QStringLiteral("assinatura excede o tamanho esperado.")));
-            return;
-        }
-        const QByteArray signature = reply->readAll();
         QString error;
-        m_latestRelease = parseVerifiedRelease(m_releasePayload, m_manifest, signature,
-                                               configuredPublicKey(), m_packageKind, &error);
+        m_latestRelease = parseRelease(m_releasePayload, m_manifest, m_packageKind, &error);
         m_checking = false;
         if (!m_latestRelease.isValid()) {
             emit checkFailed(failMessage(error));
@@ -348,7 +302,7 @@ void AppUpdateService::downloadLatestRelease()
         return;
     }
     if (!m_latestRelease.isValid()) {
-        emit updateFailed(QStringLiteral("verifique uma release assinada antes de baixar a atualização."));
+        emit updateFailed(QStringLiteral("verifique uma release antes de baixar a atualização."));
         return;
     }
 

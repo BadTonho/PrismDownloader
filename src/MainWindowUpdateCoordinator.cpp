@@ -68,7 +68,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
             }
             if (m_window->m_updateStatusLabel) {
                 m_window->m_updateStatusLabel->setText(comparison == 0
-                    ? QString("Versão %1 está atualizada e validada por assinatura.").arg(m_versionTag)
+                    ? QString("Versão %1 está atualizada.").arg(m_versionTag)
                     : QString("Release %1 é mais antiga e foi ignorada.").arg(release.version));
             }
             if (m_window->m_sidebarUpdateNotification) {
@@ -84,7 +84,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
 
         if (m_window->m_updateStatusLabel) {
             m_window->m_updateStatusLabel->setText(
-                QString("Nova versão v%1 disponível e autenticada.").arg(release.version));
+                QString("Nova versão v%1 disponível.").arg(release.version));
             m_window->m_updateStatusLabel->setStyleSheet(
                 "color: #10b981; font-weight: bold; font-size: 14px;");
         }
@@ -102,7 +102,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
             m_window->m_updateAppBtn->setText(
                 QString("BAIXAR E ATUALIZAR PARA v%1").arg(release.version));
         }
-        m_window->logMessage(QString("[Updater] Release v%1 autenticada; pacote %2 selecionado.")
+        m_window->logMessage(QString("[Updater] Release v%1 encontrada; pacote %2 selecionado.")
                                  .arg(release.version, release.assetName));
         if (m_window->m_autoDownloadUpdatesChk
             && m_window->m_autoDownloadUpdatesChk->isChecked()) {
@@ -122,7 +122,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
         }
         if (m_window->m_sidebarUpdateNotification) {
             m_window->m_sidebarUpdateNotification->setText(
-                m_versionTag + " (Não validado)");
+                m_versionTag + " (Não verificado)");
             m_window->m_sidebarUpdateNotification->setStyleSheet(
                 "color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
         }
@@ -278,7 +278,7 @@ void MainWindowUpdateCoordinator::checkForUpdates(bool silent)
         m_window->m_updateAppBtn->setEnabled(false);
     }
     if (m_window->m_updateStatusLabel) {
-        m_window->m_updateStatusLabel->setText("Consultando a release assinada no GitHub...");
+        m_window->m_updateStatusLabel->setText("Consultando a release no GitHub...");
     }
     if (m_window->m_sidebarUpdateNotification) {
         m_window->m_sidebarUpdateNotification->setText("🔄 Checando...");
@@ -289,7 +289,7 @@ void MainWindowUpdateCoordinator::checkForUpdates(bool silent)
         m_window->m_checkUpdateBtn->setEnabled(false);
         m_window->m_checkUpdateBtn->setText("VERIFICANDO RELEASE...");
     }
-    m_window->logMessage("[Updater] Consultando release e manifesto assinado no GitHub.");
+    m_window->logMessage("[Updater] Consultando release e manifesto no GitHub.");
     m_appUpdateService->checkLatestRelease();
 }
 
@@ -326,7 +326,7 @@ void MainWindowUpdateCoordinator::tryStartPendingAppUpdate()
     if (!canInstallAppUpdate()) {
         if (m_window->m_updateStatusLabel) {
             m_window->m_updateStatusLabel->setText(
-                "Atualização autenticada aguardando downloads, conversões ou prévia terminarem.");
+                "Atualização aguardando downloads, conversões ou prévia terminarem.");
         }
         return;
     }
@@ -334,14 +334,14 @@ void MainWindowUpdateCoordinator::tryStartPendingAppUpdate()
     m_appUpdatePending = false;
     if (m_window->m_updateStatusLabel) {
         m_window->m_updateStatusLabel->setText(
-            "Baixando pacote autenticado; validando SHA-256...");
+            "Baixando pacote; validando SHA-256...");
     }
     if (m_window->m_updateAppBtn) {
         m_window->m_updateAppBtn->setEnabled(false);
         m_window->m_updateAppBtn->setText("BAIXANDO ATUALIZAÇÃO...");
     }
     m_window->logMessage(
-        "[Updater] A fila está ociosa; iniciando download do pacote autenticado.");
+        "[Updater] A fila está ociosa; iniciando download do pacote.");
     m_appUpdateService->downloadLatestRelease();
 }
 
@@ -369,7 +369,7 @@ void MainWindowUpdateCoordinator::installVerifiedAppPackage(const QString &versi
         if (m_window->m_updateStatusLabel) {
             m_window->m_updateStatusLabel->setText(
                 "Pacote v" + version
-                + " validado; instalação aguardando a fila ficar ociosa.");
+                + " verificado por SHA-256; instalação aguardando a fila ficar ociosa.");
         }
         return;
     }

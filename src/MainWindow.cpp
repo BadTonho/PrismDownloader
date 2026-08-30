@@ -1249,7 +1249,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (m_updateCoordinator && m_updateCoordinator->isInstallingAppUpdate()) {
         QMessageBox::information(this, "Atualização em andamento",
-                                 "A atualização autenticada está sendo instalada. Aguarde a conclusão.");
+                                 "A atualização está sendo instalada. Aguarde a conclusão.");
         event->ignore();
         return;
     }

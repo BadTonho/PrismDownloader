@@ -28,7 +28,7 @@ flowchart TD
         CM["ConversionManager\n(Strict FIFO Single-Job Queue)"]
         GD["GPUDetector\n(Universal Hardware Probing)"]
         MTR["MediaToolResolver\n(Dynamic Binary Resolution)"]
-        AUS["AppUpdateService\n(Ed25519 & SHA-256 Validation)"]
+        AUS["AppUpdateService\n(SHA-256 Validation)"]
         YUS["YtDlpUpdateService\n(Autonomous Nightly Updater)"]
     end
 

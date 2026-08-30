@@ -17,7 +17,7 @@ Este documento contém a especificação técnica detalhada de todas as classes,
 3. [Gerenciador de Conversões (`ConversionManager`)](#3-gerenciador-de-conversões-conversionmanager)
 4. [Detector de Hardware & GPU (`GPUDetector`)](#4-detector-de-hardware--gpu-gpudetector)
 5. [Resolvedor de Ferramentas de Mídia (`MediaToolResolver`)](#5-resolvedor-de-ferramentas-de-mídia-mediatoolresolver)
-6. [Serviço de Atualização do App (`AppUpdateService` & `Ed25519Verifier`)](#6-serviço-de-atualização-do-app-appupdateservice--ed25519verifier)
+6. [Serviço de Atualização do App (`AppUpdateService`)](#6-serviço-de-atualização-do-app-appupdateservice)
 7. [Serviço de Atualização do yt-dlp (`YtDlpUpdateService`)](#7-serviço-de-atualização-do-yt-dlp-ytdlpupdateservice)
 8. [Auxiliar de Atualização Portátil (`PortableUpdateHelper` & `PortableUpdateCommon`)](#8-auxiliar-de-atualização-portátil-portableupdatehelper--portableupdatecommon)
 9. [Interface Principal (`MainWindow`)](#9-interface-principal-mainwindow)
@@ -179,16 +179,16 @@ Localiza e prioriza os executáveis do `yt-dlp` e `FFmpeg` no sistema operaciona
 
 ---
 
-## 6. Serviço de Atualização do App (`AppUpdateService` & `Ed25519Verifier`)
+## 6. Serviço de Atualização do App (`AppUpdateService`)
 
-**Arquivos:** `src/AppUpdateService.h`, `src/AppUpdateService.cpp`, `src/Ed25519Verifier.h` e `src/Ed25519Verifier.cpp`
+**Arquivos:** `src/AppUpdateService.h` e `src/AppUpdateService.cpp`
 
 Implementa a verificação, download e validação criptográfica de atualizações do Prism Downloader via GitHub Releases.
 
 ### Características e Métodos
 * `enum class AppUpdatePackageKind { WindowsSetup, WindowsPortable, LinuxDeb };`
 * `struct AppUpdateReleaseInfo`: Versão da release, nome do arquivo de pacote esperado, hash SHA-256 e URL de download.
-* `static AppUpdateReleaseInfo parseVerifiedRelease(...)`: Analisa a resposta da API do GitHub, baixa o `prism-update-manifest.json` e o `prism-update-manifest.sig`, e valida a assinatura digital contra a chave pública Ed25519 embutida em tempo de compilação (`PrismUpdateKey.h`).
+* `static AppUpdateReleaseInfo parseRelease(...)`: Analisa a resposta da API do GitHub, valida o manifesto e seleciona o pacote da plataforma atual.
 * `void checkLatestRelease()`: Inicia verificação assíncrona na nuvem via `QNetworkAccessManager`.
 * `void downloadLatestRelease()`: Realiza o download do instalador/pacote com cálculo contínuo de hash SHA-256 em streaming (`QCryptographicHash`).
 

@@ -39,12 +39,6 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
-find_package(OpenSSL 1.1.1 REQUIRED)
-
-set(PRISM_UPDATE_PUBLIC_KEY_BASE64 "+Wt6A5zU4NyPw+14juL1201CvUO1dgM4dKRiMCN60qg=" CACHE STRING
-    "Chave pública Ed25519 (Base64) embutida em builds de release")
-configure_file(src/PrismUpdateKey.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/PrismUpdateKey.h" @ONLY)
-
 configure_file(src/PrismVersion.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/PrismVersion.h" @ONLY)
 
 set(PRISM_SOURCES
@@ -86,8 +80,6 @@ set(PRISM_SOURCES
     src/DownloadProfile.h
     src/MediaToolResolver.h
     src/MediaToolResolver.cpp
-    src/Ed25519Verifier.h
-    src/Ed25519Verifier.cpp
     src/AppUpdateService.h
     src/AppUpdateService.cpp
     src/YtDlpUpdateService.h
@@ -112,7 +104,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network OpenSSL::Crypto)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network)
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /utf-8)
@@ -149,38 +141,6 @@ if(MSVC)
         "${PRISM_QT_BIN_DIR}/../plugins/platforms/qwindows.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms/"
     )
-    get_target_property(PRISM_OPENSSL_RUNTIME OpenSSL::Crypto IMPORTED_LOCATION_RELEASE)
-    if(NOT PRISM_OPENSSL_RUNTIME)
-        get_target_property(PRISM_OPENSSL_RUNTIME OpenSSL::Crypto IMPORTED_LOCATION)
-    endif()
-    if(PRISM_OPENSSL_RUNTIME MATCHES "\\.lib$")
-        set(PRISM_OPENSSL_RUNTIME "")
-    endif()
-    if(NOT PRISM_OPENSSL_RUNTIME AND OPENSSL_ROOT_DIR)
-        file(GLOB PRISM_OPENSSL_RUNTIME_CANDIDATES
-            "${OPENSSL_ROOT_DIR}/bin/libcrypto*.dll")
-        list(LENGTH PRISM_OPENSSL_RUNTIME_CANDIDATES PRISM_OPENSSL_RUNTIME_COUNT)
-        if(PRISM_OPENSSL_RUNTIME_COUNT GREATER 0)
-            list(GET PRISM_OPENSSL_RUNTIME_CANDIDATES 0 PRISM_OPENSSL_RUNTIME)
-        endif()
-    endif()
-    if(NOT PRISM_OPENSSL_RUNTIME AND OPENSSL_CRYPTO_LIBRARY)
-        get_filename_component(PRISM_OPENSSL_LIB_DIR "${OPENSSL_CRYPTO_LIBRARY}" DIRECTORY)
-        file(GLOB PRISM_OPENSSL_RUNTIME_CANDIDATES
-            "${PRISM_OPENSSL_LIB_DIR}/../bin/libcrypto*.dll"
-            "${PRISM_OPENSSL_LIB_DIR}/../bin/crypto*.dll")
-        list(LENGTH PRISM_OPENSSL_RUNTIME_CANDIDATES PRISM_OPENSSL_RUNTIME_COUNT)
-        if(PRISM_OPENSSL_RUNTIME_COUNT GREATER 0)
-            list(GET PRISM_OPENSSL_RUNTIME_CANDIDATES 0 PRISM_OPENSSL_RUNTIME)
-        endif()
-    endif()
-    if(PRISM_OPENSSL_RUNTIME AND EXISTS "${PRISM_OPENSSL_RUNTIME}")
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PRISM_OPENSSL_RUNTIME}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        )
-    endif()
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
@@ -239,11 +199,9 @@ if(BUILD_TESTING)
         tests/AppUpdateServiceTests.cpp
         src/AppUpdateService.h
         src/AppUpdateService.cpp
-        src/Ed25519Verifier.h
-        src/Ed25519Verifier.cpp
     )
-    target_include_directories(PrismAppUpdateServiceTests PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
-    target_link_libraries(PrismAppUpdateServiceTests PRIVATE Qt6::Core Qt6::Network OpenSSL::Crypto)
+    target_include_directories(PrismAppUpdateServiceTests PRIVATE src)
+    target_link_libraries(PrismAppUpdateServiceTests PRIVATE Qt6::Core Qt6::Network)
     target_compile_features(PrismAppUpdateServiceTests PRIVATE cxx_std_17)
 
     add_executable(PrismPortableUpdateCommonTests
@@ -284,13 +242,6 @@ if(BUILD_TESTING)
                 "${PRISM_QT_BIN_DIR}/Qt6Network.dll"
                 $<TARGET_FILE_DIR:${target}>
             )
-            if(PRISM_OPENSSL_RUNTIME AND EXISTS "${PRISM_OPENSSL_RUNTIME}")
-                add_custom_command(TARGET ${target} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${PRISM_OPENSSL_RUNTIME}"
-                    $<TARGET_FILE_DIR:${target}>
-                )
-            endif()
         else()
             target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
         endif()

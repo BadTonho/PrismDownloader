@@ -650,7 +650,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     m_checkUpdatesOnStartChk = new QCheckBox("Verificar novas atualizações automaticamente ao iniciar o aplicativo", updateGroup);
     m_checkUpdatesOnStartChk->setCursor(Qt::PointingHandCursor);
 
-    m_autoDownloadUpdatesChk = new QCheckBox("Baixar, validar por assinatura e instalar automaticamente atualizações do aplicativo", updateGroup);
+    m_autoDownloadUpdatesChk = new QCheckBox("Baixar, validar SHA-256 e instalar automaticamente atualizações do aplicativo", updateGroup);
     m_autoDownloadUpdatesChk->setCursor(Qt::PointingHandCursor);
     m_autoDownloadUpdatesChk->setStyleSheet("color: #f59e0b; font-weight: bold;");
 

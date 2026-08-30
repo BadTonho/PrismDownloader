@@ -17,20 +17,13 @@ jobs:
         with:
           path: build/third_party/yt-dlp
           key: ytdlp-${{ runner.os }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
-      - run: sudo apt-get update && sudo apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools libssl-dev openssl ffmpeg dpkg-dev
-      - name: Configure signed release build
+      - run: sudo apt-get update && sudo apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
+      - name: Configure release build
         shell: bash
-        env:
-          PRISM_UPDATE_ED25519_PRIVATE_KEY: ${{ secrets.PRISM_UPDATE_ED25519_PRIVATE_KEY }}
         run: |
           version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
           test "v$version" = "$GITHUB_REF_NAME"
-          test -n "$PRISM_UPDATE_ED25519_PRIVATE_KEY"
-          key="$RUNNER_TEMP/prism-update-ed25519.pem"
-          printf '%s' "$PRISM_UPDATE_ED25519_PRIVATE_KEY" | base64 --decode > "$key"
-          public_key=$(openssl pkey -in "$key" -pubout -outform DER | tail -c 32 | base64 --wrap=0)
-          rm -f "$key"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DPRISM_UPDATE_PUBLIC_KEY_BASE64="$public_key"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - run: cmake --build build --parallel && ctest --test-dir build --output-on-failure
       - name: Package and smoke test DEB
         shell: bash
@@ -65,24 +58,13 @@ jobs:
           version: 6.7.2
           arch: win64_msvc2019_64
       - shell: pwsh
-        run: choco install openssl innosetup ffmpeg --yes --no-progress
-      - name: Configure signed release build
+        run: choco install innosetup ffmpeg --yes --no-progress
+      - name: Configure release build
         shell: pwsh
-        env:
-          PRISM_UPDATE_ED25519_PRIVATE_KEY: ${{ secrets.PRISM_UPDATE_ED25519_PRIVATE_KEY }}
         run: |
           $version = (Select-String -Path version.iss -Pattern '^#define PRISM_VERSION "([0-9.]+)"$').Matches[0].Groups[1].Value
           if ("v$version" -ne $env:GITHUB_REF_NAME) { throw 'Tag does not match version.iss.' }
-          if ([string]::IsNullOrWhiteSpace($env:PRISM_UPDATE_ED25519_PRIVATE_KEY)) { throw 'Missing update-signing secret.' }
-          $key = Join-Path $env:RUNNER_TEMP 'prism-update-ed25519.pem'
-          $derPath = Join-Path $env:RUNNER_TEMP 'prism-update-ed25519-public.der'
-          [IO.File]::WriteAllBytes($key, [Convert]::FromBase64String($env:PRISM_UPDATE_ED25519_PRIVATE_KEY))
-          & openssl pkey -in $key -pubout -outform DER -out $derPath
-          if ($LASTEXITCODE -ne 0) { throw 'Could not derive Ed25519 public key.' }
-          $der = [IO.File]::ReadAllBytes($derPath)
-          $public = [Convert]::ToBase64String($der[($der.Length - 32)..($der.Length - 1)])
-          Remove-Item -LiteralPath $key,$derPath -Force
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOPENSSL_ROOT_DIR="C:\Program Files\OpenSSL-Win64" -DPRISM_UPDATE_PUBLIC_KEY_BASE64="$public"
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - shell: pwsh
         run: |
           cmake --build build --config Release --parallel
@@ -97,7 +79,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed.' }
           New-Item -ItemType Directory -Path release-assets,portable-staging -Force | Out-Null
           Copy-Item -Path build/Release/* -Destination portable-staging -Recurse -Force
-          @('PrismDownloaderTests.exe','PrismMediaToolResolverTests.exe','PrismYtDlpUpdateServiceTests.exe','PrismAppUpdateServiceTests.exe','PrismPortableUpdateCommonTests.exe','PrismFakeMediaTool.exe','PrismQueueManagerTests.exe') | ForEach-Object { Remove-Item -LiteralPath (Join-Path portable-staging $_) -Force -ErrorAction SilentlyContinue }
+          @('PrismDownloaderTests.exe','PrismMediaMetadataTests.exe','PrismMediaToolResolverTests.exe','PrismYtDlpUpdateServiceTests.exe','PrismAppUpdateServiceTests.exe','PrismPortableUpdateCommonTests.exe','PrismFakeMediaTool.exe','PrismQueueManagerTests.exe') | ForEach-Object { Remove-Item -LiteralPath (Join-Path portable-staging $_) -Force -ErrorAction SilentlyContinue }
           Compress-Archive -Path portable-staging/* -DestinationPath "release-assets/PrismDownloader_v$($version)_Portable.zip" -Force
           Copy-Item -LiteralPath "dist/PrismDownloader_v$($version)_Setup.exe" -Destination release-assets
           if (-not (Test-Path "release-assets/PrismDownloader_v$($version)_Setup.exe") -or -not (Test-Path "release-assets/PrismDownloader_v$($version)_Portable.zip")) { throw 'Windows release assets are incomplete.' }
@@ -116,24 +98,14 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
-      - name: Create and verify signed manifest
+      - name: Create release manifest
         shell: bash
-        env:
-          PRISM_UPDATE_ED25519_PRIVATE_KEY: ${{ secrets.PRISM_UPDATE_ED25519_PRIVATE_KEY }}
         run: |
           version="${GITHUB_REF_NAME#v}"
-          key="$RUNNER_TEMP/prism-update-ed25519.pem"
-          test -n "$PRISM_UPDATE_ED25519_PRIVATE_KEY"
-          printf '%s' "$PRISM_UPDATE_ED25519_PRIVATE_KEY" | base64 --decode > "$key"
           python3 scripts/create_update_manifest.py --version "$version" --output release-assets/prism-update-manifest.json \
             --asset "PrismDownloader_v${version}_Setup.exe=release-assets/PrismDownloader_v${version}_Setup.exe" \
             --asset "PrismDownloader_v${version}_Portable.zip=release-assets/PrismDownloader_v${version}_Portable.zip" \
             --asset "prism-downloader_${version}_amd64.deb=release-assets/prism-downloader_${version}_amd64.deb"
-          openssl pkeyutl -sign -rawin -inkey "$key" -in release-assets/prism-update-manifest.json -out release-assets/prism-update-manifest.sig
-          openssl pkey -in "$key" -pubout -out "$RUNNER_TEMP/prism-update-public.pem"
-          openssl pkeyutl -verify -rawin -pubin -inkey "$RUNNER_TEMP/prism-update-public.pem" -in release-assets/prism-update-manifest.json -sigfile release-assets/prism-update-manifest.sig
-          test "$(wc -c < release-assets/prism-update-manifest.sig)" -eq 64
-          rm -f "$key" "$RUNNER_TEMP/prism-update-public.pem"
       - name: Publish release assets
         shell: bash
         env:

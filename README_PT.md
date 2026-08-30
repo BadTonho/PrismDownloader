@@ -60,7 +60,7 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** oferece um fluxo de 
 
 ### ☁️ 5. Central de Atualizações Tonho Studios
 * **Sincronização com GitHub Releases:** Verificação assíncrona de novas versões na inicialização com suporte a checagem em segundo plano.
-* **Auto-atualização segura para Windows e Linux:** Cada release publica um manifesto assinado com criptografia Ed25519 contendo os hashes SHA-256 dos pacotes Setup, Portátil e DEB. O Prism rejeita atualizações sem assinatura válida ou adulteradas.
+* **Auto-atualização para Windows e Linux:** Cada release publica um manifesto contendo os hashes SHA-256 dos pacotes Setup, Portátil e DEB. O Prism rejeita releases incompletas e preserva a instalação quando o hash do pacote baixado não corresponde.
 * **Motor yt-dlp atualizável autonomamente:** O aplicativo traz o canal Nightly do `yt-dlp` e permite atualizá-lo com validação SHA-256 diretamente na pasta do usuário, sem necessidade de permissões de administrador.
 
 ---
@@ -85,7 +85,7 @@ Instale os requisitos de desenvolvimento e compile:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools libssl-dev ffmpeg dpkg-dev
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
@@ -101,7 +101,6 @@ Para compilar nativamente no Windows:
 * **Windows 10 ou 11 (64-bit)**
 * **Visual Studio 2019 / 2022** (com suporte ao compilador MSVC C++ x64)
 * **Qt 6.7+** (componentes `Widgets` e `Network`)
-* **OpenSSL 1.1.1+** (headers e bibliotecas de desenvolvimento `libcrypto`)
 * **CMake 3.16+**
 * **Inno Setup 6+** (opcional, para compilar o instalador `.exe`)
 
@@ -131,7 +130,7 @@ Para detalhes aprofundados sobre arquitetura, especificação de módulos, acele
 * 🏗️ [**Arquitetura do Sistema & Concorrência**](docs/pt/ARQUITETURA.md) — Fluxo de dados, concorrência e isolamento de processos.
 * 🧩 [**Referência de Módulos & Código**](docs/pt/MODULOS.md) — Classes, métodos públicos, sinais/slots e structs.
 * ⚡ [**Aceleração por Hardware & GPU**](docs/pt/HARDWARE_GPU.md) — Matriz de hardware, sondagem e diagnóstico por CLI.
-* 🛡️ [**Sistema de Atualização Segura**](docs/pt/AUTO_UPDATE.md) — Criptografia Ed25519, hashes SHA-256 e auto-update.
+* 🛡️ [**Atualizações Automáticas**](docs/pt/AUTO_UPDATE.md) — Hashes SHA-256, seleção de pacotes e auto-update.
 * 🎨 [**Guia de Interface (UI/UX)**](docs/pt/INTERFACE_UI.md) — Interface Dark Tech, playlists, biblioteca e telemetria de logs.
 * 📦 [**Guia de Compilação & Empacotamento**](docs/pt/BUILD_PACKAGING.md) — Pré-requisitos, testes CTest e criação de pacotes.
 

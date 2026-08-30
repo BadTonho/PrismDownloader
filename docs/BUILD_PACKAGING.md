@@ -14,7 +14,6 @@ This guide outlines setup requirements, compilation steps, unit testing procedur
 * **C++ Compiler:** Microsoft Visual C++ (MSVC) 2019 or 2022 (via *Visual Studio Community* with "Desktop development with C++" workload).
 * **CMake:** Version 3.16 or higher.
 * **Qt 6:** Version 6.7+ (`Widgets` and `Network` components, e.g., in `C:/Qt/6.7.2/msvc2019_64`).
-* **OpenSSL:** Version 1.1.1+ or 3.x (headers and `libcrypto` libraries).
 * **Inno Setup 6:** Required to compile the official setup installer (`setup_script.iss`).
 
 ### 1.2. Configuration & Build via CMake
@@ -53,12 +52,12 @@ The resulting executable is generated at `dist/PrismDownloader_vX.Y.Z_Setup.exe`
 ## 🐧 2. Linux Environment (Mint 22 / Ubuntu 24.04 amd64)
 
 ### 2.1. System Package Requirements
-Install required build tools, Qt 6, OpenSSL, and FFmpeg via APT:
+Install required build tools, Qt 6, and FFmpeg via APT:
 
 ```bash
 sudo apt update
 sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools \
-                 libssl-dev ffmpeg dpkg-dev
+                 ffmpeg dpkg-dev
 ```
 
 ### 2.2. Configuration & Build
@@ -95,7 +94,7 @@ The repository integrates a comprehensive unit test suite managed through CTest:
 | Test Suite | Implementation File | Verification Scope |
 | :--- | :--- | :--- |
 | `QueueManagerTests` | `tests/QueueManagerTests.cpp` | Validates download enqueuing, concurrency boundaries (1-5), cancellation, and queue state transitions. |
-| `AppUpdateServiceTests` | `tests/AppUpdateServiceTests.cpp` | Verifies manifest parsing, SHA-256 stream hashing, and Ed25519 cryptographic signature checks. |
+| `AppUpdateServiceTests` | `tests/AppUpdateServiceTests.cpp` | Verifies manifest parsing, required package assets, and SHA-256 stream hashing. |
 | `YtDlpUpdateServiceTests` | `tests/YtDlpUpdateServiceTests.cpp` | Validates yt-dlp release parsing and checksum file validation. |
 | `MediaToolResolverTests` | `tests/MediaToolResolverTests.cpp` | Tests priority candidate selection (User Update vs. Bundle vs. PATH) and semantic version comparisons. |
 | `PortableUpdateCommonTests` | `tests/PortableUpdateCommonTests.cpp` | Validates extraction scripts and arguments for the portable helper. |
@@ -108,5 +107,5 @@ The repository integrates a comprehensive unit test suite managed through CTest:
 The GitHub Actions workflow (`.github/workflows/release-linux.yml`):
 1. Builds the Linux `.deb` package in an Ubuntu 24.04 runner.
 2. Runs the full `ctest` test suite.
-3. Signs `prism-update-manifest.json` using the repository secret Ed25519 private key.
-4. Publishes validated assets directly to GitHub Releases.
+3. Generates `prism-update-manifest.json` with the SHA-256 hashes of the release assets.
+4. Publishes the manifest and package assets directly to GitHub Releases.

@@ -14,7 +14,6 @@ Este guia fornece instruções detalhadas para configurar o ambiente de desenvol
 * **Compilador C++:** Microsoft Visual C++ (MSVC) 2019 ou 2022 (instalado via *Visual Studio Community* com carga de trabalho "Desenvolvimento para Desktop com C++").
 * **CMake:** Versão 3.16 ou superior.
 * **Qt 6:** Versão 6.7.x ou superior (componentes `Widgets` e `Network`, ex: em `C:/Qt/6.7.2/msvc2019_64`).
-* **OpenSSL:** Versão 1.1.1 ou 3.x (incluindo headers e `libcrypto`).
 * **Inno Setup 6:** Necessário para compilar o instalador oficial (`setup_script.iss`).
 
 ### 1.2. Configuração e Compilação com CMake
@@ -53,12 +52,12 @@ O arquivo resultante será gravado em `dist/PrismDownloader_vX.Y.Z_Setup.exe`.
 ## 🐧 2. Ambiente Linux (Mint 22 / Ubuntu 24.04 amd64)
 
 ### 2.1. Instalação das Dependências do Sistema
-No terminal do Linux, instale as ferramentas de compilação, Qt 6 e OpenSSL:
+No terminal do Linux, instale as ferramentas de compilação, Qt 6 e FFmpeg:
 
 ```bash
 sudo apt update
 sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools \
-                 libssl-dev ffmpeg dpkg-dev
+                 ffmpeg dpkg-dev
 ```
 
 ### 2.2. Configuração e Compilação
@@ -95,7 +94,7 @@ O projeto inclui uma bateria completa de testes unitários integrados ao CTest:
 | Teste | Arquivo | Responsabilidade |
 | :--- | :--- | :--- |
 | `QueueManagerTests` | `tests/QueueManagerTests.cpp` | Valida enfileiramento, limites de concorrência (1 a 5), cancelamentos atômicos e estados da fila. |
-| `AppUpdateServiceTests` | `tests/AppUpdateServiceTests.cpp` | Testa verificação de manifestos, cálculo de hash SHA-256 e validação de assinaturas Ed25519. |
+| `AppUpdateServiceTests` | `tests/AppUpdateServiceTests.cpp` | Testa parsing do manifesto, assets obrigatórios e cálculo de hash SHA-256. |
 | `YtDlpUpdateServiceTests` | `tests/YtDlpUpdateServiceTests.cpp` | Valida parsing de releases do yt-dlp e verificação de integridade de checksums. |
 | `MediaToolResolverTests` | `tests/MediaToolResolverTests.cpp` | Testa resolução de prioridade de binários (User Update vs. Bundle vs. PATH) e comparação de versões. |
 | `PortableUpdateCommonTests` | `tests/PortableUpdateCommonTests.cpp` | Valida comandos de extração e argumentos do assistente portátil. |
@@ -108,5 +107,5 @@ O projeto inclui uma bateria completa de testes unitários integrados ao CTest:
 O repositório possui uma action automatizada no GitHub (`.github/workflows/release-linux.yml`) que:
 1. Constrói o pacote Linux `.deb` em ambiente limpo Ubuntu 24.04.
 2. Compila a suíte de testes e executa o `ctest`.
-3. Assina o manifesto de release `prism-update-manifest.json` com a chave privada Ed25519 armazenada nos segredos do repositório.
-4. Publica os artefatos diretamente na aba de Releases do GitHub.
+3. Gera `prism-update-manifest.json` com os hashes SHA-256 dos artefatos da release.
+4. Publica o manifesto e os artefatos diretamente na aba de Releases do GitHub.

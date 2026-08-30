@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the exact JSON bytes that are signed for a Prism release."""
+"""Create the release manifest containing SHA-256 hashes for each package."""
 
 import argparse
 import hashlib
