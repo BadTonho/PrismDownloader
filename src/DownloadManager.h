@@ -69,6 +69,7 @@ private:
     void startJob(Job *job);
     void readProcessOutput(DownloadId id, bool flushRemainder = false);
     void parseOutputLine(Job *job, const QString &line);
+    QString resolveCompletedFilePath(Job *job) const;
     void finishJob(DownloadId id, int exitCode, QProcess::ExitStatus exitStatus);
     void failToStart(DownloadId id, const QString &message);
     void cleanupJob(DownloadId id);

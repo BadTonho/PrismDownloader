@@ -5,6 +5,8 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
+#include <QFileInfo>
+#include <QStringList>
 #include <QSet>
 #include <QTemporaryDir>
 #include <QThread>
@@ -82,6 +84,45 @@ bool testDownloadScheduling(const QString &toolPath)
     }
     for (auto iterator = progressEvents.cbegin(); iterator != progressEvents.cend(); ++iterator) {
         if (!check(iterator.value() >= 2, "each download received only its identified progress events")) return false;
+    }
+    return true;
+}
+
+bool testReportedOutputPathVariants(const QString &toolPath)
+{
+    const QStringList variants{"relative", "json", "stale"};
+    for (const QString &variant : variants) {
+        QTemporaryDir output;
+        if (!check(output.isValid(), "temporary output-identity directory")) return false;
+
+        DownloadManager manager(nullptr, toolPath);
+        QString completedPath;
+        int errors = 0;
+        QObject::connect(&manager, &DownloadManager::jobCompleted,
+                         [&completedPath](DownloadId, const QString &path) {
+            completedPath = path;
+        });
+        QObject::connect(&manager, &DownloadManager::jobStatus,
+                         [&errors](DownloadId, DownloadStatus status, const QString &) {
+            if (status == DownloadStatus::Error) ++errors;
+        });
+
+        DownloadRequest request;
+        request.url = QUrl(QString("https://example.test/video/%1").arg(variant));
+        request.quality = "1080p Full HD";
+        request.outputDirectory = output.path();
+        if (!check(manager.enqueueDownload(request).accepted,
+                   "enqueue output-identity download")) return false;
+        if (!check(waitUntil([&manager]() { return !manager.hasWork(); }),
+                   "output-identity download completes")) return false;
+
+        const QString expectedPath = output.filePath("Fake [" + variant + "].mp4");
+        if (!check(errors == 0, "output-identity path is not reported as an error")
+            || !check(completedPath == QFileInfo(expectedPath).absoluteFilePath(),
+                      "reported output path resolves to the file on disk")
+            || !check(QFile::exists(completedPath), "resolved output file exists")) {
+            return false;
+        }
     }
     return true;
 }
@@ -241,6 +282,7 @@ int main(int argc, char *argv[])
     const QString toolPath = QString::fromLocal8Bit(argv[1]);
     const bool success = testMissingToolsAreReported()
         && testDownloadScheduling(toolPath)
+        && testReportedOutputPathVariants(toolPath)
         && testDuplicateCancellationAndLimit(toolPath)
         && testConversionQueue(toolPath);
     return success ? 0 : 1;

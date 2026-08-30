@@ -4,11 +4,17 @@
 #include "MediaToolResolver.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QSet>
 #include <QTimer>
 
 #ifdef _WIN32
@@ -37,6 +43,55 @@ QString processErrorName(QProcess::ProcessError error)
     }
     return QStringLiteral("erro não identificado");
 }
+
+QString unquotePath(const QString &value)
+{
+    QString path = value.trimmed();
+    if (path.size() >= 2
+        && ((path.startsWith(QLatin1Char('\"')) && path.endsWith(QLatin1Char('\"')))
+            || (path.startsWith(QLatin1Char('\'')) && path.endsWith(QLatin1Char('\''))))) {
+        path = path.mid(1, path.size() - 2).trimmed();
+    }
+    return path;
+}
+
+QString decodePrintedPath(const QString &value)
+{
+    const QString encoded = value.trimmed();
+    if (encoded.isEmpty()) {
+        return {};
+    }
+
+    // %(filepath)j is a JSON string. Wrapping it in an array lets Qt parse a
+    // scalar JSON value on Qt versions where QJsonDocument accepts only
+    // object/array roots.
+    if (encoded.startsWith(QLatin1Char('\"')) && encoded.endsWith(QLatin1Char('\"'))) {
+        QJsonParseError error;
+        const QJsonDocument document = QJsonDocument::fromJson(
+            (QStringLiteral("[") + encoded + QLatin1Char(']')).toUtf8(), &error);
+        if (error.error == QJsonParseError::NoError && document.isArray()
+            && document.array().size() == 1 && document.array().first().isString()) {
+            return document.array().first().toString().trimmed();
+        }
+    }
+    return unquotePath(encoded);
+}
+
+bool isMediaFile(const QFileInfo &fileInfo)
+{
+    if (!fileInfo.isFile() || fileInfo.size() <= 0) {
+        return false;
+    }
+    static const QSet<QString> extensions{
+        QStringLiteral("aac"), QStringLiteral("avi"), QStringLiteral("flac"),
+        QStringLiteral("flv"),
+        QStringLiteral("m4a"), QStringLiteral("mkv"), QStringLiteral("mov"),
+        QStringLiteral("mp3"), QStringLiteral("mp4"), QStringLiteral("ogg"),
+        QStringLiteral("opus"), QStringLiteral("wav"), QStringLiteral("webm")
+    };
+    return extensions.contains(fileInfo.suffix().toLower());
+}
+
 }
 
 struct DownloadManager::Job {
@@ -46,6 +101,10 @@ struct DownloadManager::Job {
     QProcess *process{nullptr};
     QByteArray outputBuffer;
     QString completedFilePath;
+    QStringList observedFilePaths;
+    QStringList postProcessFilePaths;
+    QSet<QString> outputFilesAtStart;
+    QDateTime startedAt;
     bool cancelRequested{false};
     bool terminal{false};
     void *nativeJobHandle{nullptr};
@@ -101,6 +160,10 @@ EnqueueResult DownloadManager::enqueueDownload(const DownloadRequest &request)
     auto *job = new Job;
     job->id = m_nextId++;
     job->request = request;
+    // Keep one absolute directory for yt-dlp, completion detection and the
+    // automatic converter. A relative --path makes %(filepath)s relative to
+    // the process working directory, not necessarily to the chosen folder.
+    job->request.outputDirectory = QDir(request.outputDirectory).absolutePath();
     job->normalizedUrl = canonicalUrl;
     m_jobs.insert(job->id, job);
     m_urlOwners.insert(canonicalUrl, job->id);
@@ -223,6 +286,14 @@ void DownloadManager::startJob(Job *job)
         return;
     }
 
+    job->startedAt = QDateTime::currentDateTime();
+    const QDir outputDirectory(job->request.outputDirectory);
+    const QFileInfoList existingFiles = outputDirectory.entryInfoList(
+        QDir::Files | QDir::NoSymLinks, QDir::Name);
+    for (const QFileInfo &fileInfo : existingFiles) {
+        job->outputFilesAtStart.insert(fileInfo.absoluteFilePath());
+    }
+
     auto *process = new QProcess(this);
     job->process = process;
     process->setWorkingDirectory(QCoreApplication::applicationDirPath());
@@ -343,9 +414,37 @@ void DownloadManager::parseOutputLine(Job *job, const QString &line)
         return;
     }
     if (line.startsWith(kCompletedFilePrefix)) {
-        job->completedFilePath = line.mid(QString(kCompletedFilePrefix).size()).trimmed();
+        job->completedFilePath = decodePrintedPath(
+            line.mid(QString(kCompletedFilePrefix).size()));
+        if (!job->completedFilePath.isEmpty()) {
+            job->observedFilePaths.append(job->completedFilePath);
+        }
         emit jobLog(job->id, "Arquivo final identificado pelo yt-dlp.");
         return;
+    }
+
+    // These lines are useful as a fallback for yt-dlp versions that print a
+    // stale after_move:filepath after a merge or audio extraction.
+    static const QStringList outputMarkers{
+        QStringLiteral("Destination:"),
+        QStringLiteral("Merging formats into:")
+    };
+    for (const QString &marker : outputMarkers) {
+        const int markerIndex = line.indexOf(marker, 0, Qt::CaseInsensitive);
+        if (markerIndex < 0) {
+            continue;
+        }
+        const QString reportedPath = decodePrintedPath(line.mid(markerIndex + marker.size()));
+        if (!reportedPath.isEmpty()) {
+            job->observedFilePaths.append(reportedPath);
+            if (marker.compare(QStringLiteral("Merging formats into:"), Qt::CaseInsensitive) == 0
+                || line.contains(QStringLiteral("[ExtractAudio]"), Qt::CaseInsensitive)
+                || line.contains(QStringLiteral("[FFmpegExtractAudio]"), Qt::CaseInsensitive)
+                || line.contains(QStringLiteral("[VideoConvertor]"), Qt::CaseInsensitive)) {
+                job->postProcessFilePaths.append(reportedPath);
+            }
+        }
+        break;
     }
     if (line.contains("ERROR:", Qt::CaseInsensitive)
         || line.contains("HTTP Error", Qt::CaseInsensitive)
@@ -377,6 +476,78 @@ void DownloadManager::parseOutputLine(Job *job, const QString &line)
     }
 }
 
+QString DownloadManager::resolveCompletedFilePath(Job *job) const
+{
+    if (!job) {
+        return {};
+    }
+
+    const QDir outputDirectory(job->request.outputDirectory);
+    const auto absolutePath = [&outputDirectory](const QString &reportedPath) {
+        const QString path = decodePrintedPath(reportedPath);
+        if (path.isEmpty()) {
+            return QString();
+        }
+        const QFileInfo fileInfo(path);
+        return fileInfo.isAbsolute()
+            ? fileInfo.absoluteFilePath()
+            : outputDirectory.absoluteFilePath(path);
+    };
+    const auto existingMediaPath = [](const QString &path) {
+        const QFileInfo fileInfo(path);
+        return isMediaFile(fileInfo) ? fileInfo.absoluteFilePath() : QString();
+    };
+
+    // Prefer paths explicitly emitted by a postprocessor. Some yt-dlp
+    // versions can leave an older intermediate path in after_move:filepath
+    // even though the merged/extracted file already exists beside it.
+    for (auto iterator = job->postProcessFilePaths.crbegin();
+         iterator != job->postProcessFilePaths.crend(); ++iterator) {
+        if (const QString path = existingMediaPath(absolutePath(*iterator));
+            !path.isEmpty()) {
+            return path;
+        }
+    }
+
+    // Next prefer the explicit after_move result. It normally knows the final
+    // extension after audio extraction or format merging.
+    if (const QString path = existingMediaPath(absolutePath(job->completedFilePath));
+        !path.isEmpty()) {
+        return path;
+    }
+
+    // If after_move:filepath is stale, yt-dlp's Destination/Merger messages
+    // still normally contain the path that was physically written.
+    for (auto iterator = job->observedFilePaths.crbegin();
+         iterator != job->observedFilePaths.crend(); ++iterator) {
+        if (const QString path = existingMediaPath(absolutePath(*iterator));
+            !path.isEmpty()) {
+            return path;
+        }
+    }
+
+    // Last resort: associate a newly-created media file in the selected
+    // directory with this job. Existing files are excluded so an unrelated
+    // library item is never selected just because it is the newest file.
+    QFileInfo newestFile;
+    const QFileInfoList files = outputDirectory.entryInfoList(
+        QDir::Files | QDir::NoSymLinks, QDir::Time);
+    for (const QFileInfo &fileInfo : files) {
+        if (!isMediaFile(fileInfo)
+            || job->outputFilesAtStart.contains(fileInfo.absoluteFilePath())) {
+            continue;
+        }
+        if (job->startedAt.isValid()
+            && fileInfo.lastModified() < job->startedAt.addSecs(-2)) {
+            continue;
+        }
+        if (newestFile.filePath().isEmpty() || fileInfo.lastModified() > newestFile.lastModified()) {
+            newestFile = fileInfo;
+        }
+    }
+    return newestFile.filePath().isEmpty() ? QString() : newestFile.absoluteFilePath();
+}
+
 void DownloadManager::finishJob(DownloadId id, int exitCode, QProcess::ExitStatus exitStatus)
 {
     Job *job = m_jobs.value(id, nullptr);
@@ -385,6 +556,13 @@ void DownloadManager::finishJob(DownloadId id, int exitCode, QProcess::ExitStatu
     }
     readProcessOutput(id, true);
     job->terminal = true;
+    const QString resolvedFilePath = resolveCompletedFilePath(job);
+    if (!resolvedFilePath.isEmpty()) {
+        if (resolvedFilePath != job->completedFilePath) {
+            emit jobLog(id, "Arquivo final localizado em: " + resolvedFilePath);
+        }
+        job->completedFilePath = resolvedFilePath;
+    }
 
     if (job->cancelRequested) {
         emit jobStatus(id, DownloadStatus::Cancelled, "Download cancelado.");
@@ -504,7 +682,7 @@ QStringList DownloadManager::buildArguments(const DownloadRequest &request) cons
 #ifdef Q_OS_WIN
     arguments << "--windows-filenames";
 #endif
-    arguments << "--print" << "after_move:__PRISM_OUTPUT__%(filepath)s"
+    arguments << "--print" << "after_move:__PRISM_OUTPUT__%(filepath)j"
               << "-P" << QDir::toNativeSeparators(request.outputDirectory)
               << "-o" << "%(title).180B [%(id)s].%(ext)s";
 

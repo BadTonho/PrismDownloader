@@ -2,6 +2,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QTextStream>
 #include <QThread>
 #include <QUrl>
@@ -41,11 +43,30 @@ int main(int argc, char *argv[])
         if (identifier.isEmpty()) identifier = "media";
         const QString result = QDir(arguments.at(destinationIndex + 1))
                                    .absoluteFilePath("Fake [" + identifier + "].mp4");
+        const bool relativePath = identifier == "relative";
+        const bool jsonPath = identifier == "json";
+        const bool stalePath = identifier == "stale";
         output << "[download] 10.0% of 1.00MiB at 1.00MiB/s ETA 00:01" << Qt::endl;
         QThread::msleep(300);
         if (!createFile(result)) return 3;
         output << "[download] 100.0% of 1.00MiB at 1.00MiB/s ETA 00:00" << Qt::endl;
-        output << "__PRISM_OUTPUT__" << QDir::toNativeSeparators(result) << Qt::endl;
+        if (stalePath) {
+            output << "[Merger] Merging formats into: "
+                   << QDir::toNativeSeparators(result) << Qt::endl;
+            output << "__PRISM_OUTPUT__"
+                   << QDir::toNativeSeparators(QDir(arguments.at(destinationIndex + 1))
+                                                   .absoluteFilePath("not-the-file.mp4"))
+                   << Qt::endl;
+        } else if (relativePath) {
+            output << "__PRISM_OUTPUT__" << QFileInfo(result).fileName() << Qt::endl;
+        } else if (jsonPath) {
+            const QByteArray encoded = QJsonDocument(QJsonArray{result})
+                                           .toJson(QJsonDocument::Compact);
+            output << "__PRISM_OUTPUT__"
+                   << QString::fromUtf8(encoded.mid(1, encoded.size() - 2)) << Qt::endl;
+        } else {
+            output << "__PRISM_OUTPUT__" << QDir::toNativeSeparators(result) << Qt::endl;
+        }
         return 0;
     }
 
