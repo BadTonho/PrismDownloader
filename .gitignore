@@ -1,6 +1,8 @@
 # Diretório de Build e binários compilados
 build/
+build-linux/
 dist/
+dist-linux/
 *.exe
 *.dll
 *.obj
