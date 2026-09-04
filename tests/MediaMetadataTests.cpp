@@ -22,9 +22,9 @@ int main()
         "thumbnail": "https://example.com/thumb.jpg",
         "duration": 10,
         "formats": [
-            {"ext":"mp4", "vcodec":"avc1.640028", "acodec":"none",
+            {"format_id":"video1080", "ext":"mp4", "vcodec":"avc1.640028", "acodec":"none",
              "width":1080, "height":1080, "fps":25, "tbr":1200, "filesize":1500000},
-            {"ext":"m4a", "vcodec":"none", "acodec":"mp4a.40.2",
+            {"format_id":"audio128", "ext":"m4a", "vcodec":"none", "acodec":"mp4a.40.2",
              "abr":128, "filesize":160000}
         ]
     })json";
@@ -40,7 +40,11 @@ int main()
         && check(metadata.options.size() == 2, "dynamic format options are produced")
         && check(metadata.options.at(0).actualHeight == 1080, "best video height is real")
         && check(metadata.options.at(0).qualityLabel == QStringLiteral("1080p / Full HD"), "quality label matches height")
+        && check(metadata.options.at(0).formatSelector == QStringLiteral("video1080+audio128"),
+                 "video option preserves exact source format selector")
         && check(metadata.options.at(1).isAudio, "audio option is detected")
+        && check(metadata.options.at(1).formatSelector == QStringLiteral("audio128"),
+                 "audio option preserves exact source format selector")
         && check(MediaMetadataParser::actualQualityLabel(1080) == QStringLiteral("1080p / Full HD"),
                  "quality label reflects real height")
         && check(MediaMetadataParser::selectedDurationSeconds(

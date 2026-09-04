@@ -15,6 +15,7 @@ class QTableWidget;
 
 struct FormatSelectionResult {
     int qualityIndex{-1};
+    QString formatSelector;
     QString timeRange;
     bool doConvert{false};
     QString convertFormat;

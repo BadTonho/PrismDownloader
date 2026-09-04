@@ -16,6 +16,9 @@ using DownloadId = quint64;
 struct DownloadRequest {
     QUrl url;
     QString quality;
+    // When present, this is the exact selector chosen from the metadata
+    // dialog. It takes precedence over the resolution-based fallback.
+    QString formatSelector;
     QString timeRange;
     QString outputDirectory;
 };

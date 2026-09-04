@@ -692,10 +692,16 @@ QStringList DownloadManager::buildArguments(const DownloadRequest &request) cons
 
     const MediaItem item{"", "", request.quality.toStdString(), "", "", 0.0, DownloadStatus::Queued};
     if (item.isAudioOnly()) {
+        if (!request.formatSelector.isEmpty()) {
+            arguments << "-f" << request.formatSelector;
+        }
         arguments << "-x" << "--audio-format" << "mp3" << "--audio-quality" << "0";
     } else {
-        arguments << "-f" << QString::fromStdString(
-            DownloadProfile::formatSelectorForQuality(request.quality.toStdString()))
+        const QString formatSelector = request.formatSelector.isEmpty()
+            ? QString::fromStdString(
+                DownloadProfile::formatSelectorForQuality(request.quality.toStdString()))
+            : request.formatSelector;
+        arguments << "-f" << formatSelector
                   << "--merge-output-format" << "mp4";
     }
     arguments << "--" << request.url.toString(QUrl::FullyEncoded);

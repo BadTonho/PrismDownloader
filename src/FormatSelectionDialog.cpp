@@ -358,6 +358,9 @@ FormatSelectionResult FormatSelectionDialog::result() const
 {
     FormatSelectionResult selection;
     selection.qualityIndex = m_table ? m_table->currentRow() : -1;
+    if (selection.qualityIndex >= 0 && selection.qualityIndex < m_metadata.options.size()) {
+        selection.formatSelector = m_metadata.options.at(selection.qualityIndex).formatSelector;
+    }
     selection.timeRange = m_editTime ? m_editTime->text().trimmed() : QString();
     selection.doConvert = m_checkConversion && m_checkConversion->isChecked();
     selection.convertFormat = m_conversionFormat ? m_conversionFormat->currentText() : QString();

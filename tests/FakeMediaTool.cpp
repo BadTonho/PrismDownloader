@@ -39,10 +39,17 @@ int main(int argc, char *argv[])
         if (destinationIndex < 0 || destinationIndex + 1 >= arguments.size()) {
             return 2;
         }
-        QString identifier = QUrl(arguments.constLast()).path().section('/', -1);
-        if (identifier.isEmpty()) identifier = "media";
-        const QString result = QDir(arguments.at(destinationIndex + 1))
-                                   .absoluteFilePath("Fake [" + identifier + "].mp4");
+    QString identifier = QUrl(arguments.constLast()).path().section('/', -1);
+    if (identifier.isEmpty()) identifier = "media";
+    if (identifier == "format-selector") {
+        const int formatIndex = arguments.indexOf("-f");
+        if (formatIndex < 0 || formatIndex + 1 >= arguments.size()
+            || arguments.at(formatIndex + 1) != "video137+audio140") {
+            return 7;
+        }
+    }
+    const QString result = QDir(arguments.at(destinationIndex + 1))
+                               .absoluteFilePath("Fake [" + identifier + "].mp4");
         const bool relativePath = identifier == "relative";
         const bool jsonPath = identifier == "json";
         const bool stalePath = identifier == "stale";

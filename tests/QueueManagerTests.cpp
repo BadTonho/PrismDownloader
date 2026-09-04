@@ -88,6 +88,35 @@ bool testDownloadScheduling(const QString &toolPath)
     return true;
 }
 
+bool testExactFormatSelector(const QString &toolPath)
+{
+    QTemporaryDir output;
+    if (!check(output.isValid(), "temporary exact-format directory")) return false;
+
+    DownloadManager manager(nullptr, toolPath);
+    int errors = 0;
+    int completions = 0;
+    QObject::connect(&manager, &DownloadManager::jobStatus,
+                     [&errors](DownloadId, DownloadStatus status, const QString &) {
+        if (status == DownloadStatus::Error) ++errors;
+    });
+    QObject::connect(&manager, &DownloadManager::jobCompleted,
+                     [&completions](DownloadId, const QString &) { ++completions; });
+
+    DownloadRequest request;
+    request.url = QUrl("https://example.test/video/format-selector");
+    request.quality = "1080p Full HD";
+    request.formatSelector = "video137+audio140";
+    request.outputDirectory = output.path();
+    if (!check(manager.enqueueDownload(request).accepted,
+               "enqueue download with exact format selector")) return false;
+    if (!check(waitUntil([&manager]() { return !manager.hasWork(); }),
+               "exact-format download completes")) return false;
+
+    return check(errors == 0, "exact format selector is accepted by yt-dlp")
+        && check(completions == 1, "exact-format download emits completion");
+}
+
 bool testReportedOutputPathVariants(const QString &toolPath)
 {
     const QStringList variants{"relative", "json", "stale"};
@@ -314,6 +343,7 @@ int main(int argc, char *argv[])
     const QString toolPath = QString::fromLocal8Bit(argv[1]);
     const bool success = testMissingToolsAreReported()
         && testDownloadScheduling(toolPath)
+        && testExactFormatSelector(toolPath)
         && testReportedOutputPathVariants(toolPath)
         && testDuplicateCancellationAndLimit(toolPath)
         && testConversionQueue(toolPath)

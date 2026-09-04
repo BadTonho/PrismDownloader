@@ -107,7 +107,8 @@ private:
     bool shouldShowLogLine(const QString &line) const;
     bool showFormatSelectionDialog(const MediaMetadata &metadata, int itemCount,
                                    QString &outQuality, QString &outTimeRange,
-                                   bool &outDoConvert, QString &outConvertFormat,
+                                   QString &outFormatSelector, bool &outDoConvert,
+                                   QString &outConvertFormat,
                                    QString &outCustomOutputDir);
     int findDownloadRow(DownloadId id) const;
     DownloadId selectedDownloadId() const;

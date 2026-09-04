@@ -9,6 +9,7 @@
 
 struct DownloadBatchOptions {
     QString quality;
+    QString formatSelector;
     QString timeRange;
     QString outputDirectory;
 };

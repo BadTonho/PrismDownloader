@@ -11,6 +11,7 @@
 namespace {
 
 struct ParsedMediaFormat {
+    QString formatId;
     QString ext;
     QString videoCodec;
     QString audioCodec;
@@ -157,10 +158,14 @@ MediaFormatOption makeVideoFormatOptionForHeight(const QList<ParsedMediaFormat> 
     option.qualityLabel = MediaMetadataParser::actualQualityLabel(video.height);
     option.formatCodec = QStringLiteral("%1/%2")
         .arg(video.ext.toUpper(), codecLabel(video.videoCodec, false));
+    option.formatSelector = video.formatId;
     double bytesPerSecond = formatBytesPerSecond(video, durationSeconds);
     if (audio && audioIndex != videoIndex) {
         option.formatCodec += QStringLiteral(" + %1/%2")
             .arg(audio->ext.toUpper(), codecLabel(audio->audioCodec, true));
+        if (!option.formatSelector.isEmpty() && !audio->formatId.isEmpty()) {
+            option.formatSelector += QStringLiteral("+") + audio->formatId;
+        }
         bytesPerSecond += formatBytesPerSecond(*audio, durationSeconds);
     } else if (audio && hasAudio(video)) {
         option.formatCodec += QStringLiteral(" + %1")
@@ -194,6 +199,7 @@ MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats,
     option.qualityLabel = QStringLiteral("Áudio MP3 (320 kbps)");
     option.formatCodec = QStringLiteral("MP3 • origem %1/%2")
         .arg(audio.ext.toUpper(), codecLabel(audio.audioCodec, true));
+    option.formatSelector = audio.formatId;
     option.estimatedBytesPerSecond = formatBytesPerSecond(audio, durationSeconds);
     option.estimatedBytes = durationSeconds > 0.0
         ? qRound64(option.estimatedBytesPerSecond * durationSeconds)
@@ -358,6 +364,7 @@ MediaMetadata parse(const QByteArray &output)
     for (const QJsonValue &value : formatArray) {
         const QJsonObject object = value.toObject();
         ParsedMediaFormat format;
+        format.formatId = object.value(QStringLiteral("format_id")).toString();
         format.ext = object.value(QStringLiteral("ext")).toString();
         format.videoCodec = object.value(QStringLiteral("vcodec")).toString();
         format.audioCodec = object.value(QStringLiteral("acodec")).toString();

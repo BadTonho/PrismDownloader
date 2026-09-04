@@ -537,10 +537,11 @@ void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
         return;
     }
 
-    QString selectedQuality, timeRange, convertFormat, customOutputDir;
+    QString selectedQuality, selectedFormatSelector, timeRange, convertFormat, customOutputDir;
     bool doConvert = false;
     if (!showFormatSelectionDialog(metadata, items.size(), selectedQuality, timeRange,
-                                   doConvert, convertFormat, customOutputDir)) {
+                                   selectedFormatSelector, doConvert, convertFormat,
+                                   customOutputDir)) {
         logMessage("[Operação] Seleção de formato cancelada pelo usuário.");
         return;
     }
@@ -569,7 +570,14 @@ void MainWindow::continueDownloadWithMetadata(const QList<PlaylistItem> &items,
         return;
     }
 
-    const DownloadBatchOptions batchOptions{selectedQuality, timeRange, customOutputDir};
+    DownloadBatchOptions batchOptions;
+    batchOptions.quality = selectedQuality;
+    // A format ID belongs to the item whose metadata was inspected. For a
+    // playlist/batch, keep the resolution fallback so each item can resolve
+    // its own valid stream IDs.
+    batchOptions.formatSelector = items.size() == 1 ? selectedFormatSelector : QString();
+    batchOptions.timeRange = timeRange;
+    batchOptions.outputDirectory = customOutputDir;
     const DownloadBatchResult batch = m_downloadQueueWorkflow->enqueue(items, batchOptions);
     for (const QString &rejected : batch.rejected) {
         logMessage("[Fila] Item recusado: " + rejected);
@@ -833,7 +841,8 @@ void MainWindow::dropEvent(QDropEvent *event)
 // ==========================================
 bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int itemCount,
                                            QString &outQuality, QString &outTimeRange,
-                                           bool &outDoConvert, QString &outConvertFormat,
+                                           QString &outFormatSelector, bool &outDoConvert,
+                                           QString &outConvertFormat,
                                            QString &outCustomOutputDir)
 {
     FormatSelectionDialog dialog(
@@ -846,9 +855,13 @@ bool MainWindow::showFormatSelectionDialog(const MediaMetadata &metadata, int it
     }
 
     const FormatSelectionResult selection = dialog.result();
+    outFormatSelector.clear();
     if (selection.qualityIndex >= 0 && selection.qualityIndex < metadata.options.size()) {
         m_settings.selectedQualityIndex = selection.qualityIndex;
         const MediaFormatOption &option = metadata.options.at(selection.qualityIndex);
+        if (itemCount == 1) {
+            outFormatSelector = selection.formatSelector;
+        }
         outQuality = option.qualityLabel.isEmpty()
             ? (option.isAudio ? QStringLiteral("Áudio MP3") : QStringLiteral("%1p").arg(option.actualHeight))
             : option.qualityLabel;

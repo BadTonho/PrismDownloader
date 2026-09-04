@@ -9,6 +9,10 @@
 struct MediaFormatOption {
     QString qualityLabel;
     QString formatCodec;
+    // Exact yt-dlp format selector represented by this option. Keeping the
+    // selected stream IDs prevents the download from choosing a different
+    // stream than the one used for the estimate shown in the dialog.
+    QString formatSelector;
     QString resolutionMode;
     int actualHeight{0};
     double fps{0.0};
