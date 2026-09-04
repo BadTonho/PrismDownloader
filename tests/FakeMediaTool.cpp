@@ -48,6 +48,11 @@ int main(int argc, char *argv[])
             return 7;
         }
     }
+    const int fragmentsIndex = arguments.indexOf("--concurrent-fragments");
+    if (fragmentsIndex < 0 || fragmentsIndex + 1 >= arguments.size()
+        || arguments.at(fragmentsIndex + 1) != "8") {
+        return 8;
+    }
     const QString result = QDir(arguments.at(destinationIndex + 1))
                                .absoluteFilePath("Fake [" + identifier + "].mp4");
         const bool relativePath = identifier == "relative";

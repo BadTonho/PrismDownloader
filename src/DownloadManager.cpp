@@ -30,6 +30,11 @@
 namespace {
 constexpr auto kCompletedFilePrefix = "__PRISM_OUTPUT__";
 constexpr qsizetype kMaximumUnterminatedOutputBytes = 1024 * 1024;
+// YouTube serves DASH media in fragments and may throttle a single request.
+// Eight concurrent fragments improves throughput while remaining moderate
+// when several downloads are active at the same time.
+constexpr auto kConcurrentFragments = "8";
+constexpr auto kThrottledRate = "100K";
 
 QString processErrorName(QProcess::ProcessError error)
 {
@@ -677,7 +682,8 @@ QStringList DownloadManager::buildArguments(const DownloadRequest &request) cons
     QStringList arguments;
     arguments << "--progress" << "--progress-delta" << "0.25"
               << "--newline" << "--no-mtime"
-              << "--concurrent-fragments" << "4"
+              << "--concurrent-fragments" << kConcurrentFragments
+              << "--throttled-rate" << kThrottledRate
               << "--retries" << "10" << "--fragment-retries" << "10";
 #ifdef Q_OS_WIN
     arguments << "--windows-filenames";
