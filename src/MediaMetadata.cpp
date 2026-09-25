@@ -15,8 +15,12 @@ struct ParsedMediaFormat {
     QString ext;
     QString videoCodec;
     QString audioCodec;
+    QString language;
+    QString formatNote;
     int width{0};
     int height{0};
+    int languagePreference{-1};
+    int sourcePreference{0};
     double fps{0.0};
     double tbr{0.0};
     double vbr{0.0};
@@ -28,6 +32,11 @@ bool hasVideo(const ParsedMediaFormat &format)
 {
     return !format.videoCodec.isEmpty() && format.videoCodec != QStringLiteral("none")
         && format.height > 0;
+}
+
+bool hasVideoStream(const ParsedMediaFormat &format)
+{
+    return !format.videoCodec.isEmpty() && format.videoCodec != QStringLiteral("none");
 }
 
 bool hasAudio(const ParsedMediaFormat &format)
@@ -93,6 +102,14 @@ double formatBytesPerSecond(const ParsedMediaFormat &format, double durationSeco
     return bitrateKbps > 0.0 ? bitrateKbps * 1000.0 / 8.0 : 0.0;
 }
 
+double audioBytesPerSecond(const MediaAudioTrack &track, double durationSeconds)
+{
+    if (track.estimatedBytes > 0 && durationSeconds > 0.0) {
+        return static_cast<double>(track.estimatedBytes) / durationSeconds;
+    }
+    return track.bitrateKbps > 0.0 ? track.bitrateKbps * 1000.0 / 8.0 : 0.0;
+}
+
 int bestVideoFormatForHeight(const QList<ParsedMediaFormat> &formats, int targetHeight)
 {
     int best = -1;
@@ -106,39 +123,63 @@ int bestVideoFormatForHeight(const QList<ParsedMediaFormat> &formats, int target
             continue;
         }
         const ParsedMediaFormat &current = formats.at(best);
-        if (candidate.fps > current.fps
-            || (candidate.fps == current.fps && formatBitrateKbps(candidate) > formatBitrateKbps(current))) {
+        const bool candidateVideoOnly = !hasAudio(candidate);
+        const bool currentVideoOnly = !hasAudio(current);
+        if ((candidateVideoOnly && !currentVideoOnly)
+            || (candidateVideoOnly == currentVideoOnly
+                && (candidate.fps > current.fps
+                    || (candidate.fps == current.fps
+                        && formatBitrateKbps(candidate) > formatBitrateKbps(current))))) {
             best = index;
         }
     }
     return best;
 }
 
-int bestAudioFormat(const QList<ParsedMediaFormat> &formats)
+int preferredAudioTrackIndex(const QList<MediaAudioTrack> &tracks)
 {
     int best = -1;
-    for (int index = 0; index < formats.size(); ++index) {
-        const ParsedMediaFormat &candidate = formats.at(index);
-        if (!hasAudio(candidate)) {
-            continue;
-        }
+    for (int index = 0; index < tracks.size(); ++index) {
+        const MediaAudioTrack &candidate = tracks.at(index);
         if (best < 0) {
             best = index;
             continue;
         }
-        const ParsedMediaFormat &current = formats.at(best);
-        const bool candidateAudioOnly = !hasVideo(candidate);
-        const bool currentAudioOnly = !hasVideo(current);
-        if ((candidateAudioOnly && !currentAudioOnly)
-            || (candidateAudioOnly == currentAudioOnly
-                && formatBitrateKbps(candidate) > formatBitrateKbps(current))) {
+        const MediaAudioTrack &current = tracks.at(best);
+        if (candidate.languagePreference > current.languagePreference
+            || (candidate.languagePreference == current.languagePreference
+                && (candidate.sourcePreference > current.sourcePreference
+                    || (candidate.sourcePreference == current.sourcePreference
+                        && candidate.bitrateKbps > current.bitrateKbps)))) {
             best = index;
         }
     }
     return best;
 }
 
+MediaAudioTrack makeAudioTrack(const ParsedMediaFormat &format, double durationSeconds)
+{
+    MediaAudioTrack track;
+    track.formatId = format.formatId;
+    track.language = format.language;
+    track.formatNote = format.formatNote;
+    track.ext = format.ext;
+    track.audioCodec = format.audioCodec;
+    track.bitrateKbps = formatBitrateKbps(format);
+    track.languagePreference = format.languagePreference;
+    track.sourcePreference = format.sourcePreference;
+    track.estimatedBytes = format.size > 0
+        ? format.size
+        : (durationSeconds > 0.0 && track.bitrateKbps > 0.0
+               ? qRound64(track.bitrateKbps * 1000.0 / 8.0 * durationSeconds)
+               : 0);
+    track.isAudioOnly = !hasVideoStream(format);
+    return track;
+}
+
 MediaFormatOption makeVideoFormatOptionForHeight(const QList<ParsedMediaFormat> &formats,
+                                                const QList<MediaAudioTrack> &audioTracks,
+                                                int preferredTrackIndex,
                                                 int height, double durationSeconds)
 {
     MediaFormatOption option;
@@ -149,50 +190,57 @@ MediaFormatOption makeVideoFormatOptionForHeight(const QList<ParsedMediaFormat> 
     }
 
     const ParsedMediaFormat &video = formats.at(videoIndex);
-    const int audioIndex = hasAudio(video) ? videoIndex : bestAudioFormat(formats);
-    const ParsedMediaFormat *audio = audioIndex >= 0 ? &formats.at(audioIndex) : nullptr;
+    const MediaAudioTrack *selectedAudio = preferredTrackIndex >= 0
+        && preferredTrackIndex < audioTracks.size()
+        ? &audioTracks.at(preferredTrackIndex) : nullptr;
+    const bool videoHasAudio = hasAudio(video);
     option.available = true;
     option.isAudio = false;
+    option.videoFormatId = video.formatId;
+    option.canSelectAudio = !videoHasAudio && selectedAudio && selectedAudio->isAudioOnly;
     option.actualHeight = video.height;
     option.fps = video.fps;
     option.qualityLabel = MediaMetadataParser::actualQualityLabel(video.height);
     option.formatCodec = QStringLiteral("%1/%2")
         .arg(video.ext.toUpper(), codecLabel(video.videoCodec, false));
     option.formatSelector = video.formatId;
-    double bytesPerSecond = formatBytesPerSecond(video, durationSeconds);
-    if (audio && audioIndex != videoIndex) {
-        option.formatCodec += QStringLiteral(" + %1/%2")
-            .arg(audio->ext.toUpper(), codecLabel(audio->audioCodec, true));
-        if (!option.formatSelector.isEmpty() && !audio->formatId.isEmpty()) {
-            option.formatSelector += QStringLiteral("+") + audio->formatId;
+    option.videoEstimatedBytesPerSecond = formatBytesPerSecond(video, durationSeconds);
+    double bytesPerSecond = option.videoEstimatedBytesPerSecond;
+    if (!videoHasAudio && selectedAudio) {
+        if (selectedAudio->isAudioOnly) {
+            if (!option.formatSelector.isEmpty() && !selectedAudio->formatId.isEmpty()) {
+                option.formatSelector += QStringLiteral("+") + selectedAudio->formatId;
+            }
+            bytesPerSecond += audioBytesPerSecond(*selectedAudio, durationSeconds);
         }
-        bytesPerSecond += formatBytesPerSecond(*audio, durationSeconds);
-    } else if (audio && hasAudio(video)) {
+    } else if (videoHasAudio) {
         option.formatCodec += QStringLiteral(" + %1")
             .arg(codecLabel(video.audioCodec, true));
+        option.canSelectAudio = false;
     }
     option.estimatedBytesPerSecond = bytesPerSecond;
     option.estimatedBytes = durationSeconds > 0.0
         ? qRound64(bytesPerSecond * durationSeconds)
-        : video.size + (audio && audioIndex != videoIndex ? audio->size : 0);
+        : video.size + (!videoHasAudio && selectedAudio && selectedAudio->isAudioOnly
+                            ? selectedAudio->estimatedBytes : 0);
     option.resolutionMode = QStringLiteral("%1x%2 • %3 fps")
         .arg(video.width).arg(video.height)
         .arg(video.fps > 0.0 ? QString::number(video.fps, 'f', 0) : QStringLiteral("?"));
     return option;
 }
 
-MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats, double durationSeconds)
+MediaFormatOption makeAudioFormatOption(const QList<MediaAudioTrack> &audioTracks,
+                                       int preferredTrackIndex, double durationSeconds)
 {
     MediaFormatOption option;
-    const int audioIndex = bestAudioFormat(formats);
-    if (audioIndex < 0) {
+    if (preferredTrackIndex < 0 || preferredTrackIndex >= audioTracks.size()) {
         option.available = false;
         option.formatCodec = QStringLiteral("Áudio não disponível neste vídeo");
         option.resolutionMode = QStringLiteral("Somente vídeo");
         return option;
     }
 
-    const ParsedMediaFormat &audio = formats.at(audioIndex);
+    const MediaAudioTrack &audio = audioTracks.at(preferredTrackIndex);
     option.available = true;
     option.isAudio = true;
     option.actualHeight = 0;
@@ -200,13 +248,12 @@ MediaFormatOption makeAudioFormatOption(const QList<ParsedMediaFormat> &formats,
     option.formatCodec = QStringLiteral("MP3 • origem %1/%2")
         .arg(audio.ext.toUpper(), codecLabel(audio.audioCodec, true));
     option.formatSelector = audio.formatId;
-    option.estimatedBytesPerSecond = formatBytesPerSecond(audio, durationSeconds);
+    option.estimatedBytesPerSecond = audioBytesPerSecond(audio, durationSeconds);
     option.estimatedBytes = durationSeconds > 0.0
         ? qRound64(option.estimatedBytesPerSecond * durationSeconds)
-        : audio.size;
-    const double bitrate = formatBitrateKbps(audio);
-    option.resolutionMode = bitrate > 0.0
-        ? QStringLiteral("Áudio • %1 kbps").arg(qRound(bitrate))
+        : audio.estimatedBytes;
+    option.resolutionMode = audio.bitrateKbps > 0.0
+        ? QStringLiteral("Áudio • %1 kbps").arg(qRound(audio.bitrateKbps))
         : QStringLiteral("Áudio");
     return option;
 }
@@ -368,8 +415,12 @@ MediaMetadata parse(const QByteArray &output)
         format.ext = object.value(QStringLiteral("ext")).toString();
         format.videoCodec = object.value(QStringLiteral("vcodec")).toString();
         format.audioCodec = object.value(QStringLiteral("acodec")).toString();
+        format.language = object.value(QStringLiteral("language")).toString().trimmed();
+        format.formatNote = object.value(QStringLiteral("format_note")).toString().trimmed();
         format.width = object.value(QStringLiteral("width")).toInt();
         format.height = object.value(QStringLiteral("height")).toInt();
+        format.languagePreference = object.value(QStringLiteral("language_preference")).toInt(-1);
+        format.sourcePreference = object.value(QStringLiteral("source_preference")).toInt();
         format.fps = object.value(QStringLiteral("fps")).toDouble();
         format.tbr = object.value(QStringLiteral("tbr")).toDouble();
         format.vbr = object.value(QStringLiteral("vbr")).toDouble();
@@ -385,6 +436,45 @@ MediaMetadata parse(const QByteArray &output)
         return metadata;
     }
 
+    QSet<QString> audioFormatIds;
+    for (const ParsedMediaFormat &format : formats) {
+        if (hasAudio(format) && !hasVideoStream(format) && !format.formatId.isEmpty()
+            && !audioFormatIds.contains(format.formatId)) {
+            metadata.audioTracks.append(makeAudioTrack(format, metadata.durationSeconds));
+            audioFormatIds.insert(format.formatId);
+        }
+    }
+
+    // Some extractors expose only muxed formats. Keep one usable audio source
+    // for audio-only downloads, but do not offer it as a replaceable track for
+    // video formats because its audio cannot be separated by yt-dlp's format ID.
+    if (metadata.audioTracks.isEmpty()) {
+        int bestMuxedAudio = -1;
+        for (int index = 0; index < formats.size(); ++index) {
+            const ParsedMediaFormat &candidate = formats.at(index);
+            if (!hasAudio(candidate)) {
+                continue;
+            }
+            if (bestMuxedAudio < 0) {
+                bestMuxedAudio = index;
+                continue;
+            }
+            const ParsedMediaFormat &current = formats.at(bestMuxedAudio);
+            if (candidate.languagePreference > current.languagePreference
+                || (candidate.languagePreference == current.languagePreference
+                    && (candidate.sourcePreference > current.sourcePreference
+                        || (candidate.sourcePreference == current.sourcePreference
+                            && formatBitrateKbps(candidate) > formatBitrateKbps(current))))) {
+                bestMuxedAudio = index;
+            }
+        }
+        if (bestMuxedAudio >= 0) {
+            metadata.audioTracks.append(makeAudioTrack(formats.at(bestMuxedAudio),
+                                                       metadata.durationSeconds));
+        }
+    }
+    metadata.preferredAudioTrackIndex = preferredAudioTrackIndex(metadata.audioTracks);
+
     QList<int> distinctHeights;
     for (const ParsedMediaFormat &fmt : formats) {
         if (hasVideo(fmt) && fmt.height > 0 && !distinctHeights.contains(fmt.height)) {
@@ -394,13 +484,16 @@ MediaMetadata parse(const QByteArray &output)
     std::sort(distinctHeights.begin(), distinctHeights.end(), std::greater<int>());
 
     for (int height : distinctHeights) {
-        MediaFormatOption opt = makeVideoFormatOptionForHeight(formats, height, metadata.durationSeconds);
+        MediaFormatOption opt = makeVideoFormatOptionForHeight(
+            formats, metadata.audioTracks, metadata.preferredAudioTrackIndex,
+            height, metadata.durationSeconds);
         if (opt.available) {
             metadata.options.append(opt);
         }
     }
 
-    MediaFormatOption audioOpt = makeAudioFormatOption(formats, metadata.durationSeconds);
+    MediaFormatOption audioOpt = makeAudioFormatOption(
+        metadata.audioTracks, metadata.preferredAudioTrackIndex, metadata.durationSeconds);
     if (audioOpt.available) {
         metadata.options.append(audioOpt);
     }

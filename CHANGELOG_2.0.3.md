@@ -4,22 +4,24 @@
 
 ## Correções e melhorias registradas
 
+- Adicionado um seletor de faixa de áudio ao diálogo de formatos, com idioma, codec e bitrate.
+- O seletor preserva todas as faixas de áudio distintas e inicia na faixa indicada como preferida pelo `yt-dlp`, quando essa informação está disponível.
+- Em downloads individuais, o seletor combina os IDs exatos do formato de vídeo e da faixa de áudio escolhida.
+- Em playlists e lotes, a seleção usa o idioma escolhido em cada item e recorre à faixa padrão da fonte quando esse idioma não está disponível.
+- A seleção de áudio também é aplicada a downloads em MP3; formatos com áudio embutido que não pode ser substituído desabilitam essa opção.
+- Os detalhes do formato e as estimativas de tamanho são atualizados quando a faixa de áudio selecionada muda.
 - Corrigida a inconsistência entre o formato exibido na seleção e o formato realmente enviado ao `yt-dlp`.
-- Os IDs exatos dos fluxos de vídeo e áudio agora são preservados desde a leitura dos metadados até o download individual.
-- A estimativa de tamanho passa a ficar associada aos mesmos fluxos selecionados para o download.
-- Em downloads individuais, o seletor exato de vídeo + áudio é utilizado.
-- Em playlists e lotes, permanece o fallback por resolução para que cada item escolha seus próprios fluxos válidos.
 - Aumentada a concorrência de fragmentos do `yt-dlp` de 4 para 8 para melhorar a taxa de transferência.
 - Adicionada recuperação automática quando a taxa de download fica abaixo de 100 KB/s por throttling forte.
 
 ## Validação realizada
 
-- Projeto compilado com sucesso em modo Release.
-- Todos os 7 testes automatizados passaram.
-- Adicionado teste para confirmar o envio do seletor exato de vídeo e áudio.
+- Compilação Windows em modo Release concluída com sucesso.
+- Todos os 8 testes automatizados passaram, incluindo testes do seletor visual, dos metadados de áudio e dos argumentos enviados ao `yt-dlp`.
 
 ## Pendências antes do lançamento
 
 - Validar a velocidade em novos downloads reais do YouTube.
 - Confirmar estabilidade com vídeos individuais e playlists.
+- Validar a compilação e os testes no Linux.
 - Só alterar a versão oficial do projeto quando os testes estiverem concluídos.

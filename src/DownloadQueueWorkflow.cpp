@@ -19,6 +19,7 @@ DownloadBatchResult DownloadQueueWorkflow::enqueue(
         request.url = item.url;
         request.quality = options.quality;
         request.formatSelector = options.formatSelector;
+        request.audioLanguage = options.audioLanguage;
         request.timeRange = options.timeRange;
         request.outputDirectory = options.outputDirectory;
 

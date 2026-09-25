@@ -13,13 +13,30 @@ struct MediaFormatOption {
     // selected stream IDs prevents the download from choosing a different
     // stream than the one used for the estimate shown in the dialog.
     QString formatSelector;
+    // Video-only format ID used when the audio track is selected separately.
+    QString videoFormatId;
     QString resolutionMode;
     int actualHeight{0};
     double fps{0.0};
+    double videoEstimatedBytesPerSecond{0.0};
     qint64 estimatedBytes{0};
     double estimatedBytesPerSecond{0.0};
     bool isAudio{false};
+    bool canSelectAudio{true};
     bool available{true};
+};
+
+struct MediaAudioTrack {
+    QString formatId;
+    QString language;
+    QString formatNote;
+    QString ext;
+    QString audioCodec;
+    double bitrateKbps{0.0};
+    int languagePreference{-1};
+    int sourcePreference{0};
+    qint64 estimatedBytes{0};
+    bool isAudioOnly{true};
 };
 
 struct MediaMetadata {
@@ -30,6 +47,8 @@ struct MediaMetadata {
     QStringList thumbnailCandidates;
     double durationSeconds{0.0};
     QList<MediaFormatOption> options;
+    QList<MediaAudioTrack> audioTracks;
+    int preferredAudioTrackIndex{-1};
     QString error;
 };
 

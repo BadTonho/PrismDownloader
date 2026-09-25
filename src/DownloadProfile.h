@@ -44,6 +44,62 @@ inline std::string formatSelectorForQuality(const std::string &quality)
     return "bv*+ba/b";
 }
 
+inline std::string audioLanguagePrefix(const std::string &language)
+{
+    std::string prefix;
+    for (unsigned char character : language) {
+        if (character == '-' || character == '_') {
+            break;
+        }
+        if (!std::isalnum(character)) {
+            return {};
+        }
+        prefix.push_back(static_cast<char>(std::tolower(character)));
+    }
+    return prefix;
+}
+
+inline std::string audioSelectorForLanguage(const std::string &language)
+{
+    const std::string prefix = audioLanguagePrefix(language);
+    return prefix.empty() ? "ba" : "ba[language^=" + prefix + "]";
+}
+
+inline std::string audioOnlySelectorForLanguage(const std::string &language)
+{
+    const std::string preferred = audioSelectorForLanguage(language);
+    return preferred == "ba" ? preferred : preferred + "/ba";
+}
+
+inline std::string formatSelectorForQualityAndLanguage(const std::string &quality,
+                                                       const std::string &language)
+{
+    const std::string baseSelector = formatSelectorForQuality(quality);
+    const std::string prefix = audioLanguagePrefix(language);
+    if (prefix.empty()) {
+        return baseSelector;
+    }
+
+    const std::string audioSelector = "+ba";
+    const std::size_t audioPosition = baseSelector.find(audioSelector);
+    if (audioPosition == std::string::npos) {
+        return baseSelector;
+    }
+
+    std::string preferredSelector = baseSelector;
+    const std::size_t fallbackPosition = preferredSelector.find('/');
+    if (fallbackPosition != std::string::npos) {
+        preferredSelector.resize(fallbackPosition);
+    }
+    const std::size_t preferredAudioPosition = preferredSelector.find(audioSelector);
+    if (preferredAudioPosition == std::string::npos) {
+        return baseSelector;
+    }
+    preferredSelector.insert(preferredAudioPosition + audioSelector.size(),
+                             "[language^=" + prefix + "]");
+    return preferredSelector + "/" + baseSelector;
+}
+
 }
 
 #endif // DOWNLOADPROFILE_H

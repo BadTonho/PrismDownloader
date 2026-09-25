@@ -20,7 +20,14 @@ int main()
     if (!check(DownloadProfile::formatSelectorForQuality("4K / Melhor Disponivel") == "bv*[height<=2160]+ba/b[height<=2160]", "4K selector")
         || !check(DownloadProfile::formatSelectorForQuality("1080p Full HD") == "bv*[height<=1080]+ba/b[height<=1080]", "1080p selector")
         || !check(DownloadProfile::formatSelectorForQuality("720p HD") == "bv*[height<=720]+ba/b[height<=720]", "720p selector")
-        || !check(DownloadProfile::formatSelectorForQuality("Perfil desconhecido") == "bv*+ba/b", "fallback selector")) {
+        || !check(DownloadProfile::formatSelectorForQuality("Perfil desconhecido") == "bv*+ba/b", "fallback selector")
+        || !check(DownloadProfile::formatSelectorForQualityAndLanguage("1080p", "pt-BR")
+                      == "bv*[height<=1080]+ba[language^=pt]/bv*[height<=1080]+ba/b[height<=1080]",
+                  "video selector prefers the selected language and falls back")
+        || !check(DownloadProfile::audioOnlySelectorForLanguage("pt-BR")
+                      == "ba[language^=pt]/ba", "audio-only language selector falls back")
+        || !check(DownloadProfile::audioOnlySelectorForLanguage("pt|bad") == "ba",
+                  "invalid language metadata cannot alter the format selector")) {
         return 1;
     }
 

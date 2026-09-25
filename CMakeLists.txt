@@ -175,6 +175,17 @@ if(BUILD_TESTING)
     target_link_libraries(PrismMediaMetadataTests PRIVATE Qt6::Core)
     target_compile_features(PrismMediaMetadataTests PRIVATE cxx_std_17)
 
+    add_executable(PrismFormatSelectionDialogTests
+        tests/FormatSelectionDialogTests.cpp
+        src/FormatSelectionDialog.h
+        src/FormatSelectionDialog.cpp
+        src/MediaMetadata.h
+        src/MediaMetadata.cpp
+    )
+    target_include_directories(PrismFormatSelectionDialogTests PRIVATE src)
+    target_link_libraries(PrismFormatSelectionDialogTests PRIVATE Qt6::Widgets Qt6::Network)
+    target_compile_features(PrismFormatSelectionDialogTests PRIVATE cxx_std_17)
+
     add_executable(PrismMediaToolResolverTests
         tests/MediaToolResolverTests.cpp
         src/MediaToolResolver.h
@@ -233,12 +244,14 @@ if(BUILD_TESTING)
     target_link_libraries(PrismQueueManagerTests PRIVATE Qt6::Core)
     target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_17)
 
-    foreach(target PrismDownloaderTests PrismMediaMetadataTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests)
+    foreach(target PrismDownloaderTests PrismMediaMetadataTests PrismFormatSelectionDialogTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests)
         if(MSVC)
             target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
             add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${PRISM_QT_BIN_DIR}/Qt6Core.dll"
+                "${PRISM_QT_BIN_DIR}/Qt6Gui.dll"
+                "${PRISM_QT_BIN_DIR}/Qt6Widgets.dll"
                 "${PRISM_QT_BIN_DIR}/Qt6Network.dll"
                 $<TARGET_FILE_DIR:${target}>
             )
@@ -249,6 +262,9 @@ if(BUILD_TESTING)
 
     add_test(NAME PrismDownloader.ProfileSelection COMMAND PrismDownloaderTests)
     add_test(NAME PrismDownloader.MediaMetadata COMMAND PrismMediaMetadataTests)
+    add_test(NAME PrismDownloader.FormatSelectionDialog COMMAND PrismFormatSelectionDialogTests)
+    set_tests_properties(PrismDownloader.FormatSelectionDialog PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     add_test(NAME PrismDownloader.MediaToolResolver COMMAND PrismMediaToolResolverTests)
     add_test(NAME PrismDownloader.YtDlpUpdateService COMMAND PrismYtDlpUpdateServiceTests)
     add_test(NAME PrismDownloader.AppUpdateService COMMAND PrismAppUpdateServiceTests)
@@ -280,6 +296,16 @@ if(WIN32)
         target_compile_options(PrismPortableUpdateHelper PRIVATE /W4 /permissive- /utf-8)
     else()
         target_compile_options(PrismPortableUpdateHelper PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    if(BUILD_TESTING AND MSVC)
+        add_custom_command(TARGET PrismFormatSelectionDialogTests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:PrismFormatSelectionDialogTests>/platforms"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${PRISM_QT_BIN_DIR}/../plugins/platforms/qoffscreen.dll"
+            "$<TARGET_FILE_DIR:PrismFormatSelectionDialogTests>/platforms/qoffscreen.dll"
+        )
     endif()
 endif()
 

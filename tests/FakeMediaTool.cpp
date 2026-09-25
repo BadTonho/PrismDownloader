@@ -48,6 +48,16 @@ int main(int argc, char *argv[])
             return 7;
         }
     }
+    if (identifier == "language-selector" || identifier == "audio-language-selector") {
+        const int formatIndex = arguments.indexOf("-f");
+        const QString expected = identifier == "language-selector"
+            ? QStringLiteral("bv*[height<=1080]+ba[language^=pt]/bv*[height<=1080]+ba/b[height<=1080]")
+            : QStringLiteral("ba[language^=pt]/ba");
+        if (formatIndex < 0 || formatIndex + 1 >= arguments.size()
+            || arguments.at(formatIndex + 1) != expected) {
+            return 9;
+        }
+    }
     const int fragmentsIndex = arguments.indexOf("--concurrent-fragments");
     if (fragmentsIndex < 0 || fragmentsIndex + 1 >= arguments.size()
         || arguments.at(fragmentsIndex + 1) != "8") {

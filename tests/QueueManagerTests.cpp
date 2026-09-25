@@ -117,6 +117,48 @@ bool testExactFormatSelector(const QString &toolPath)
         && check(completions == 1, "exact-format download emits completion");
 }
 
+bool testLanguageFormatSelectors(const QString &toolPath)
+{
+    const struct TestCase {
+        const char *identifier;
+        const char *quality;
+        const char *expectedLabel;
+    } cases[] = {
+        {"language-selector", "1080p Full HD", "video playlist language selector"},
+        {"audio-language-selector", "Audio MP3", "audio-only playlist language selector"}
+    };
+
+    for (const TestCase &testCase : cases) {
+        QTemporaryDir output;
+        if (!check(output.isValid(), "temporary language-selector directory")) return false;
+
+        DownloadManager manager(nullptr, toolPath);
+        int errors = 0;
+        int completions = 0;
+        QObject::connect(&manager, &DownloadManager::jobStatus,
+                         [&errors](DownloadId, DownloadStatus status, const QString &) {
+            if (status == DownloadStatus::Error) ++errors;
+        });
+        QObject::connect(&manager, &DownloadManager::jobCompleted,
+                         [&completions](DownloadId, const QString &) { ++completions; });
+
+        DownloadRequest request;
+        request.url = QUrl(QString("https://example.test/video/%1").arg(testCase.identifier));
+        request.quality = QString::fromLatin1(testCase.quality);
+        request.audioLanguage = QStringLiteral("pt-BR");
+        request.outputDirectory = output.path();
+        if (!check(manager.enqueueDownload(request).accepted,
+                   "enqueue language-selector download")) return false;
+        if (!check(waitUntil([&manager]() { return !manager.hasWork(); }),
+                   "language-selector download completes")) return false;
+        if (!check(errors == 0, testCase.expectedLabel)
+            || !check(completions == 1, "language-selector download emits completion")) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool testReportedOutputPathVariants(const QString &toolPath)
 {
     const QStringList variants{"relative", "json", "stale"};
@@ -344,6 +386,7 @@ int main(int argc, char *argv[])
     const bool success = testMissingToolsAreReported()
         && testDownloadScheduling(toolPath)
         && testExactFormatSelector(toolPath)
+        && testLanguageFormatSelectors(toolPath)
         && testReportedOutputPathVariants(toolPath)
         && testDuplicateCancellationAndLimit(toolPath)
         && testConversionQueue(toolPath)

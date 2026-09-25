@@ -10,6 +10,7 @@
 struct DownloadBatchOptions {
     QString quality;
     QString formatSelector;
+    QString audioLanguage;
     QString timeRange;
     QString outputDirectory;
 };

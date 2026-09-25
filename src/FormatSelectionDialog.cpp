@@ -22,6 +22,49 @@
 
 #include <algorithm>
 
+namespace {
+
+QString audioTrackDisplayText(const MediaAudioTrack &track)
+{
+    QString label = track.language.isEmpty()
+        ? (track.formatNote.isEmpty() ? QStringLiteral("Idioma não informado")
+                                      : track.formatNote)
+        : track.language;
+    if (!track.formatNote.isEmpty() && track.formatNote.compare(label, Qt::CaseInsensitive) != 0) {
+        label += QStringLiteral(" — ") + track.formatNote;
+    }
+
+    QStringList technicalDetails;
+    const QString codec = track.audioCodec.isEmpty() ? QString() : track.audioCodec;
+    const QString extension = track.ext.isEmpty() ? QString() : track.ext.toUpper();
+    if (!extension.isEmpty() || !codec.isEmpty()) {
+        technicalDetails.append(extension.isEmpty() ? codec
+            : codec.isEmpty() ? extension : extension + QStringLiteral("/") + codec);
+    }
+    if (track.bitrateKbps > 0.0) {
+        technicalDetails.append(QStringLiteral("%1 kb/s").arg(qRound(track.bitrateKbps)));
+    }
+    if (!technicalDetails.isEmpty()) {
+        label += QStringLiteral(" — ") + technicalDetails.join(QStringLiteral(", "));
+    }
+    if (!track.formatId.isEmpty()) {
+        label += QStringLiteral(" [%1]").arg(track.formatId);
+    }
+    return label;
+}
+
+QString audioTrackCodecText(const MediaAudioTrack &track)
+{
+    const QString extension = track.ext.isEmpty() ? QString() : track.ext.toUpper();
+    if (extension.isEmpty()) {
+        return track.audioCodec;
+    }
+    return track.audioCodec.isEmpty()
+        ? extension : extension + QStringLiteral("/") + track.audioCodec;
+}
+
+}
+
 FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
                                              int itemCount,
                                              int currentQualityIndex,
@@ -175,6 +218,37 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     }
     m_table->selectRow(selectedRow);
     dialogLayout->addWidget(m_table, 1);
+
+    auto *audioTrackLayout = new QHBoxLayout();
+    auto *audioTrackTitle = new QLabel(QStringLiteral("Faixa de áudio:"), this);
+    audioTrackTitle->setStyleSheet(QStringLiteral("color: #a3a3a3; font-weight: bold;"));
+    m_audioTrackCombo = new QComboBox(this);
+    m_audioTrackCombo->setObjectName(QStringLiteral("audioTrackCombo"));
+    m_audioTrackCombo->setMinimumHeight(32);
+    for (int index = 0; index < m_metadata.audioTracks.size(); ++index) {
+        const MediaAudioTrack &track = m_metadata.audioTracks.at(index);
+        m_audioTrackCombo->addItem(audioTrackDisplayText(track), index);
+        m_audioTrackCombo->setItemData(index,
+            QStringLiteral("ID do formato: %1\nIdioma: %2\nNota: %3")
+                .arg(track.formatId,
+                     track.language.isEmpty() ? QStringLiteral("não informado") : track.language,
+                     track.formatNote), Qt::ToolTipRole);
+    }
+    if (m_metadata.audioTracks.isEmpty()) {
+        m_audioTrackCombo->addItem(QStringLiteral("Faixa padrão da fonte"), -1);
+        m_audioTrackCombo->setEnabled(false);
+    } else if (m_metadata.preferredAudioTrackIndex >= 0
+               && m_metadata.preferredAudioTrackIndex < m_metadata.audioTracks.size()) {
+        m_audioTrackCombo->setCurrentIndex(m_metadata.preferredAudioTrackIndex);
+    }
+    audioTrackLayout->addWidget(audioTrackTitle);
+    audioTrackLayout->addWidget(m_audioTrackCombo, 1);
+    dialogLayout->addLayout(audioTrackLayout);
+    connect(m_audioTrackCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+            [this](int) { updateEstimates(m_editTime ? m_editTime->text() : QString()); });
+    connect(m_table, &QTableWidget::currentCellChanged, this,
+            [this](int, int, int, int) { updateAudioTrackAvailability(); });
+    updateAudioTrackAvailability();
 
     // ==========================================
     // OPÇÕES ADICIONAIS (RECORTE, CONVERSÃO, PASTA)
@@ -340,26 +414,85 @@ void FormatSelectionDialog::updateEstimates(const QString &timeRange)
     }
     const double duration = MediaMetadataParser::selectedDurationSeconds(
         timeRange, m_metadata.durationSeconds);
+    const int audioTrackIndex = m_audioTrackCombo ? m_audioTrackCombo->currentData().toInt() : -1;
+    const MediaAudioTrack *selectedAudio = audioTrackIndex >= 0
+        && audioTrackIndex < m_metadata.audioTracks.size()
+        ? &m_metadata.audioTracks.at(audioTrackIndex) : nullptr;
+    const double selectedAudioBytesPerSecond = selectedAudio
+        ? (selectedAudio->estimatedBytes > 0 && m_metadata.durationSeconds > 0.0
+               ? static_cast<double>(selectedAudio->estimatedBytes) / m_metadata.durationSeconds
+               : selectedAudio->bitrateKbps * 1000.0 / 8.0)
+        : 0.0;
     for (int index = 0; index < m_metadata.options.size() && index < m_table->rowCount(); ++index) {
         const MediaFormatOption &option = m_metadata.options.at(index);
         if (!option.available) {
             continue;
         }
-        const qint64 estimate = option.estimatedBytesPerSecond > 0.0 && duration > 0.0
-            ? qRound64(option.estimatedBytesPerSecond * duration)
-            : option.estimatedBytes;
+        double bytesPerSecond = option.estimatedBytesPerSecond;
+        QString formatCodec = option.formatCodec;
+        if (option.isAudio && selectedAudio) {
+            bytesPerSecond = selectedAudioBytesPerSecond;
+            formatCodec = QStringLiteral("MP3 • origem %1")
+                .arg(audioTrackCodecText(*selectedAudio));
+        } else if (option.canSelectAudio && selectedAudio && selectedAudio->isAudioOnly) {
+            bytesPerSecond = option.videoEstimatedBytesPerSecond + selectedAudioBytesPerSecond;
+            formatCodec += QStringLiteral(" + %1").arg(audioTrackCodecText(*selectedAudio));
+        }
+        const qint64 estimate = bytesPerSecond > 0.0 && duration > 0.0
+            ? qRound64(bytesPerSecond * duration) : option.estimatedBytes;
+        if (m_table->item(index, 1)) {
+            m_table->item(index, 1)->setText(formatCodec);
+        }
         m_table->item(index, 3)->setText(MediaMetadataParser::readableBytes(estimate));
         m_table->item(index, 3)->setToolTip(QStringLiteral(
             "Estimativa baseada no tamanho/bitrate informado pelo servidor; o resultado pode variar."));
     }
 }
 
+void FormatSelectionDialog::updateAudioTrackAvailability()
+{
+    if (!m_audioTrackCombo || !m_table) {
+        return;
+    }
+    const int qualityIndex = m_table->currentRow();
+    const bool audioOnly = qualityIndex >= 0 && qualityIndex < m_metadata.options.size()
+        && m_metadata.options.at(qualityIndex).isAudio;
+    const bool canReplaceAudio = audioOnly
+        || (qualityIndex >= 0 && qualityIndex < m_metadata.options.size()
+            && m_metadata.options.at(qualityIndex).canSelectAudio);
+    m_audioTrackCombo->setEnabled(!m_metadata.audioTracks.isEmpty() && canReplaceAudio);
+    if (!canReplaceAudio && !audioOnly) {
+        m_audioTrackCombo->setToolTip(QStringLiteral(
+            "Este formato já inclui uma faixa de áudio embutida e não permite substituí-la."));
+    } else {
+        m_audioTrackCombo->setToolTip(QString());
+    }
+    updateEstimates(m_editTime ? m_editTime->text() : QString());
+}
+
 FormatSelectionResult FormatSelectionDialog::result() const
 {
     FormatSelectionResult selection;
     selection.qualityIndex = m_table ? m_table->currentRow() : -1;
+    selection.audioTrackIndex = m_audioTrackCombo ? m_audioTrackCombo->currentData().toInt() : -1;
+    const MediaAudioTrack *audioTrack = selection.audioTrackIndex >= 0
+        && selection.audioTrackIndex < m_metadata.audioTracks.size()
+        ? &m_metadata.audioTracks.at(selection.audioTrackIndex) : nullptr;
+    if (audioTrack) {
+        selection.audioLanguage = audioTrack->language;
+    }
+
     if (selection.qualityIndex >= 0 && selection.qualityIndex < m_metadata.options.size()) {
-        selection.formatSelector = m_metadata.options.at(selection.qualityIndex).formatSelector;
+        const MediaFormatOption &option = m_metadata.options.at(selection.qualityIndex);
+        if (option.isAudio) {
+            selection.formatSelector = audioTrack ? audioTrack->formatId : option.formatSelector;
+        } else if (option.canSelectAudio && audioTrack && audioTrack->isAudioOnly
+                   && !option.videoFormatId.isEmpty() && !audioTrack->formatId.isEmpty()) {
+            selection.formatSelector = option.videoFormatId + QStringLiteral("+") + audioTrack->formatId;
+        } else {
+            selection.formatSelector = option.videoFormatId.isEmpty()
+                ? option.formatSelector : option.videoFormatId;
+        }
     }
     selection.timeRange = m_editTime ? m_editTime->text().trimmed() : QString();
     selection.doConvert = m_checkConversion && m_checkConversion->isChecked();

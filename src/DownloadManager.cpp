@@ -700,12 +700,15 @@ QStringList DownloadManager::buildArguments(const DownloadRequest &request) cons
     if (item.isAudioOnly()) {
         if (!request.formatSelector.isEmpty()) {
             arguments << "-f" << request.formatSelector;
+        } else if (!request.audioLanguage.isEmpty()) {
+            arguments << "-f" << QString::fromStdString(
+                DownloadProfile::audioOnlySelectorForLanguage(request.audioLanguage.toStdString()));
         }
         arguments << "-x" << "--audio-format" << "mp3" << "--audio-quality" << "0";
     } else {
         const QString formatSelector = request.formatSelector.isEmpty()
-            ? QString::fromStdString(
-                DownloadProfile::formatSelectorForQuality(request.quality.toStdString()))
+            ? QString::fromStdString(DownloadProfile::formatSelectorForQualityAndLanguage(
+                request.quality.toStdString(), request.audioLanguage.toStdString()))
             : request.formatSelector;
         arguments << "-f" << formatSelector
                   << "--merge-output-format" << "mp4";

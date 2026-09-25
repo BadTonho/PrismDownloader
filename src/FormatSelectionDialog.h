@@ -15,7 +15,9 @@ class QTableWidget;
 
 struct FormatSelectionResult {
     int qualityIndex{-1};
+    int audioTrackIndex{-1};
     QString formatSelector;
+    QString audioLanguage;
     QString timeRange;
     bool doConvert{false};
     QString convertFormat;
@@ -42,10 +44,12 @@ public:
 private:
     void loadThumbnailAsync(const QStringList &candidateUrls, int candidateIndex = 0);
     void updateEstimates(const QString &timeRange);
+    void updateAudioTrackAvailability();
 
     const MediaMetadata m_metadata;
     QLabel *m_thumbnailLabel{nullptr};
     QTableWidget *m_table{nullptr};
+    QComboBox *m_audioTrackCombo{nullptr};
     QLineEdit *m_editTime{nullptr};
     QCheckBox *m_checkConversion{nullptr};
     QComboBox *m_conversionFormat{nullptr};

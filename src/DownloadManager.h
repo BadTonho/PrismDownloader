@@ -19,6 +19,9 @@ struct DownloadRequest {
     // When present, this is the exact selector chosen from the metadata
     // dialog. It takes precedence over the resolution-based fallback.
     QString formatSelector;
+    // Playlist/batch downloads use a language code because format IDs differ
+    // between videos. Empty means yt-dlp's preferred audio selection.
+    QString audioLanguage;
     QString timeRange;
     QString outputDirectory;
 };
