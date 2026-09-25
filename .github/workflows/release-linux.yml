@@ -79,7 +79,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed.' }
           New-Item -ItemType Directory -Path release-assets,portable-staging -Force | Out-Null
           Copy-Item -Path build/Release/* -Destination portable-staging -Recurse -Force
-          @('PrismDownloaderTests.exe','PrismMediaMetadataTests.exe','PrismMediaToolResolverTests.exe','PrismYtDlpUpdateServiceTests.exe','PrismAppUpdateServiceTests.exe','PrismPortableUpdateCommonTests.exe','PrismFakeMediaTool.exe','PrismQueueManagerTests.exe') | ForEach-Object { Remove-Item -LiteralPath (Join-Path portable-staging $_) -Force -ErrorAction SilentlyContinue }
+          @('PrismDownloaderTests.exe','PrismMediaMetadataTests.exe','PrismFormatSelectionDialogTests.exe','PrismMediaToolResolverTests.exe','PrismYtDlpUpdateServiceTests.exe','PrismAppUpdateServiceTests.exe','PrismPortableUpdateCommonTests.exe','PrismFakeMediaTool.exe','PrismQueueManagerTests.exe') | ForEach-Object { Remove-Item -LiteralPath (Join-Path portable-staging $_) -Force -ErrorAction SilentlyContinue }
+          Remove-Item -LiteralPath (Join-Path portable-staging 'platforms/qoffscreen.dll') -Force -ErrorAction SilentlyContinue
           Compress-Archive -Path portable-staging/* -DestinationPath "release-assets/PrismDownloader_v$($version)_Portable.zip" -Force
           Copy-Item -LiteralPath "dist/PrismDownloader_v$($version)_Setup.exe" -Destination release-assets
           if (-not (Test-Path "release-assets/PrismDownloader_v$($version)_Setup.exe") -or -not (Test-Path "release-assets/PrismDownloader_v$($version)_Portable.zip")) { throw 'Windows release assets are incomplete.' }
