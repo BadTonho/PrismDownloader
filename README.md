@@ -19,7 +19,7 @@
   <a href="https://www.qt.io/"><img src="https://img.shields.io/badge/Qt_GUI-6.7%20Dark%20Tech-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Qt 6"></a>
   <a href="https://developer.nvidia.com/video-codec-sdk"><img src="https://img.shields.io/badge/NVIDIA-NVENC%20Hardware-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="NVIDIA NVENC"></a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-00a859?style=for-the-badge&logo=linux&logoColor=white" alt="Windows and Linux">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-6b21a8?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-6b21a8?style=for-the-badge&logo=gnu&logoColor=white" alt="GPLv3 License"></a>
 </p>
 
 ---
@@ -143,8 +143,8 @@ For complete architecture, module specifications, hardware acceleration matrix, 
 
 ## ⚖️ License and Copyrights
 
-This software is released under the terms of the **MIT License** (see [LICENSE](LICENSE) for details).  
-The community is free to use, modify, and redistribute this project, **provided the copyright notices remain intact (Copyright © Tonho Studios)**.
+This software is released under the terms of the **GNU General Public License v3.0 (GPLv3)** (see [LICENSE](LICENSE) for details).  
+The community is free to use, modify, and redistribute this project under the same open-source terms, **provided the copyright notices remain intact (Copyright © Tonho Studios)**.
 
 * To report vulnerabilities, refer to our [Security Policy](SECURITY.md).
 * Want to help improve the C++ codebase? Read our [Contributing Guide](CONTRIBUTING.md).

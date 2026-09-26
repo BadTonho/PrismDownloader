@@ -65,7 +65,7 @@ Understanding the architecture helps scope valid reports:
 - **External engines:** [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) and [`FFmpeg`](https://ffmpeg.org/) are resolved from the configured/bundled installation
 - **Process isolation:** Child processes are spawned via `QProcess` with Windows `CREATE_NO_WINDOW` (`0x08000000`) or a dedicated Linux session, and monitored via exit codes
 - **Network activity:** Limited to the GitHub Releases API for update checks (no telemetry or user data is collected or transmitted)
-- **License:** [MIT](LICENSE) — Copyright © 2026 Tonho Studios (BadTonho)
+- **License:** [GPLv3](LICENSE) — Copyright © 2026 Tonho Studios (BadTonho)
 
 ---
 

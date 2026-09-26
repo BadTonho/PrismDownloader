@@ -19,7 +19,7 @@
   <a href="https://www.qt.io/"><img src="https://img.shields.io/badge/Qt_GUI-6.7%20Dark%20Tech-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Qt 6"></a>
   <a href="https://developer.nvidia.com/video-codec-sdk"><img src="https://img.shields.io/badge/NVIDIA-NVENC%20Hardware-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="NVIDIA NVENC"></a>
   <img src="https://img.shields.io/badge/Plataforma-Windows%20%7C%20Linux-00a859?style=for-the-badge&logo=linux&logoColor=white" alt="Windows e Linux">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/Licen%C3%A7a-MIT-6b21a8?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="Licença MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Licen%C3%A7a-GPLv3-6b21a8?style=for-the-badge&logo=gnu&logoColor=white" alt="Licença GPLv3"></a>
 </p>
 
 ---
@@ -138,8 +138,8 @@ Para detalhes aprofundados sobre arquitetura, especificação de módulos, acele
 
 ## ⚖️ Licença e Direitos Autorais
 
-Este software é disponibilizado publicamente sob os termos da **Licença MIT** (consulte o arquivo [LICENSE](LICENSE)).  
-A comunidade possui liberdade legal para utilizar, auditar e redistribuir esta ferramenta, **desde que preservada a nota de direitos autorais (Copyright © Tonho Studios)**.
+Este software é disponibilizado publicamente sob os termos da **GNU General Public License v3.0 (GPLv3)** (consulte o arquivo [LICENSE](LICENSE)).  
+A comunidade possui liberdade legal para utilizar, auditar e redistribuir esta ferramenta sob os mesmos termos de código aberto, **desde que preservada a nota de direitos autorais (Copyright © Tonho Studios)**.
 
 * Para relatar falhas críticas ou vulnerabilidades, consulte a nossa [Política de Segurança](SECURITY.md).
 * Deseja colaborar com o código C++ do projeto? Leia o nosso [Guia de Contribuição](CONTRIBUTING.md).
