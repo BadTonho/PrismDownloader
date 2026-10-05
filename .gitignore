@@ -3,6 +3,7 @@ build/
 build-linux/
 dist/
 dist-linux/
+package/
 *.exe
 *.dll
 *.obj
