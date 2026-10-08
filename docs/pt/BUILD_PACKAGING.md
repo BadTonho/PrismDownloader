@@ -43,7 +43,7 @@ Compacte a pasta com o executável compilado (`build/Release/`), as DLLs de runt
 #### Instalador Oficial (`.exe`)
 Utilize o script Inno Setup para compilar o instalador:
 ```powershell
-& "C:\Users\Admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe" setup_script.iss
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" setup_script.iss
 ```
 O arquivo resultante será gravado em `dist/PrismDownloader_vX.Y.Z_Setup.exe`.
 

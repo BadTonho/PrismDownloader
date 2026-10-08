@@ -11,7 +11,7 @@ package/
 *.ilk
 *.log
 
-# Arquivos de IDE do Visual Studio / Qt
+# Arquivos de IDE do Visual Studio / VS Code / JetBrains / Qt
 *.suo
 *.user
 *.vcxproj*
@@ -19,6 +19,21 @@ package/
 *.sdf
 *.opensdf
 .vs/
+.vscode/
+.idea/
+*.swp
+*~
+
+# Variáveis de ambiente e arquivos de configuração locais
+.env
+.env.*
+*.env
+
+# Arquivos de sistema e temporários
+*.bak
+*.tmp
+Thumbs.db
+.DS_Store
 
 # Mídias de teste baixadas
 *.mp4
@@ -34,7 +49,11 @@ package/
 *.agents*
 *.agent*
 
-# Chaves privadas e certificados
+# Chaves privadas, certificados e segredos
 *.pem
 *.key
 *.sig.key
+*.pfx
+*.p12
+*.priv
+*.secret

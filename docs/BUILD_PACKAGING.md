@@ -43,7 +43,7 @@ Bundle the compiled executable (`build/Release/`), Qt 6 runtime DLLs (`Qt6Core.d
 #### Official Installer (`.exe`)
 Compile the Inno Setup script:
 ```powershell
-& "C:\Users\Admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe" setup_script.iss
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" setup_script.iss
 ```
 The resulting executable is generated at `dist/PrismDownloader_vX.Y.Z_Setup.exe`.
 
