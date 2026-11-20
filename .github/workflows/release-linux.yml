@@ -4,16 +4,17 @@ on:
   push:
     tags: ["v*"]
 
+# Build jobs run third-party actions/installers: read-only token.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-deb:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Cache pinned yt-dlp bundle
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/third_party/yt-dlp
           key: ytdlp-${{ runner.os }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
@@ -38,7 +39,7 @@ jobs:
           status=0; timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || status=$?; test "$status" -eq 124
           mkdir -p release-assets
           cp "$package_file" "release-assets/prism-downloader_${GITHUB_REF_NAME#v}_amd64.deb"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-linux
           path: release-assets/*.deb
@@ -47,13 +48,13 @@ jobs:
   build-windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Cache pinned yt-dlp bundle
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/third_party/yt-dlp
           key: ytdlp-${{ runner.os }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
-      - uses: jurplel/install-qt-action@v4
+      - uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: 6.7.2
           arch: win64_msvc2019_64
@@ -84,7 +85,7 @@ jobs:
           Compress-Archive -Path portable-staging/* -DestinationPath "release-assets/PrismDownloader_v$($version)_Portable.zip" -Force
           Copy-Item -LiteralPath "dist/PrismDownloader_v$($version)_Setup.exe" -Destination release-assets
           if (-not (Test-Path "release-assets/PrismDownloader_v$($version)_Setup.exe") -or -not (Test-Path "release-assets/PrismDownloader_v$($version)_Portable.zip")) { throw 'Windows release assets are incomplete.' }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-windows
           path: release-assets/*
@@ -92,10 +93,12 @@ jobs:
 
   publish-release:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     needs: [build-deb, build-windows]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: release-assets
           merge-multiple: true
