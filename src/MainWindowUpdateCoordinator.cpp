@@ -402,7 +402,7 @@ void MainWindowUpdateCoordinator::installVerifiedAppPackage(const QString &versi
 
     m_appUpdateInstaller->install(version, packagePath,
                                   m_appUpdateService->latestRelease().sha256,
-                                  isInstalledWindowsCopy());
+                                  m_appUpdateService->packageKind());
 }
 
 void MainWindowUpdateCoordinator::checkYtDlpUpdates(bool silent)

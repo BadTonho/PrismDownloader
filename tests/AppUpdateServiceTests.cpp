@@ -85,8 +85,52 @@ int main(int argc, char *argv[])
                         == QStringLiteral("prism-downloader_2.0.1_amd64.deb"),
                  "Linux package asset name is stable") && success;
 
+    success = check(AppUpdateService::expectedAssetName(QStringLiteral("2.0.1"),
+                                                         AppUpdatePackageKind::LinuxDebUbuntu2204)
+                        == QStringLiteral("prism-downloader_2.0.1_ubuntu22.04_amd64.deb"),
+                    "Ubuntu 22.04 deb name")
+        && check(AppUpdateService::expectedAssetName(QStringLiteral("2.0.1"),
+                                                     AppUpdatePackageKind::LinuxDebDebian12)
+                        == QStringLiteral("prism-downloader_2.0.1_debian12_amd64.deb"),
+                 "Debian 12 deb name")
+        && check(AppUpdateService::expectedAssetName(QStringLiteral("2.0.1"),
+                                                     AppUpdatePackageKind::LinuxRpm)
+                        == QStringLiteral("prism-downloader_2.0.1_x86_64.rpm"),
+                 "RPM name")
+        && check(AppUpdateService::expectedAssetName(QStringLiteral("2.0.1"),
+                                                     AppUpdatePackageKind::LinuxAppImage)
+                        == QStringLiteral("PrismDownloader_v2.0.1_x86_64.AppImage"),
+                 "AppImage name")
+        && check(AppUpdateService::expectedAssetName(QStringLiteral("2.0.1"),
+                                                     AppUpdatePackageKind::LinuxTarball)
+                        == QStringLiteral("PrismDownloader_v2.0.1_linux_x86_64.tar.gz"),
+                 "tarball name") && success;
+
+    success = check(AppUpdateService::packageForLinuxId(QStringLiteral("deb-ubuntu24.04"), false)
+                        == AppUpdatePackageKind::LinuxDeb, "default id maps to the legacy deb")
+        && check(AppUpdateService::packageForLinuxId(QStringLiteral("deb-ubuntu22.04"), false)
+                     == AppUpdatePackageKind::LinuxDebUbuntu2204, "ubuntu 22.04 id")
+        && check(AppUpdateService::packageForLinuxId(QStringLiteral("deb-debian12"), false)
+                     == AppUpdatePackageKind::LinuxDebDebian12, "debian 12 id")
+        && check(AppUpdateService::packageForLinuxId(QStringLiteral("rpm"), false)
+                     == AppUpdatePackageKind::LinuxRpm, "rpm id")
+        && check(AppUpdateService::packageForLinuxId(QStringLiteral("bundle"), true)
+                     == AppUpdatePackageKind::LinuxAppImage, "bundle under AppImage")
+        && check(AppUpdateService::packageForLinuxId(QStringLiteral("bundle"), false)
+                     == AppUpdatePackageKind::LinuxTarball, "bundle outside AppImage") && success;
+
     const QByteArray manifest = validManifest();
     QString error;
+
+    // Formatos além dos três históricos só são exigidos quando são o do cliente.
+    const AppUpdateReleaseInfo missingRpm = AppUpdateService::parseRelease(
+        releasePayload(), manifest, AppUpdatePackageKind::LinuxRpm, &error);
+    success = check(!missingRpm.isValid() && error.contains(QStringLiteral("x86_64.rpm")),
+                    "release missing the client's own optional format is rejected") && success;
+    const AppUpdateReleaseInfo withoutRpmForDeb = AppUpdateService::parseRelease(
+        releasePayload(), manifest, AppUpdatePackageKind::LinuxDeb, &error);
+    success = check(withoutRpmForDeb.isValid(),
+                    "missing optional formats do not block other clients") && success;
     const AppUpdateReleaseInfo release = AppUpdateService::parseRelease(
         releasePayload(), manifest,
         AppUpdatePackageKind::WindowsPortable, &error);

@@ -15,7 +15,12 @@ class QTemporaryFile;
 enum class AppUpdatePackageKind {
     WindowsSetup,
     WindowsPortable,
-    LinuxDeb
+    LinuxDeb,          // Ubuntu 24.04 / Linux Mint 22 (nome histórico, sem sufixo)
+    LinuxDebUbuntu2204,
+    LinuxDebDebian12,
+    LinuxRpm,          // Fedora / openSUSE
+    LinuxAppImage,
+    LinuxTarball
 };
 
 struct AppUpdateReleaseInfo {
@@ -38,6 +43,9 @@ public:
     ~AppUpdateService() override;
 
     static AppUpdatePackageKind packageForCurrentPlatform(bool installedWindows);
+    // Mapeia o identificador de empacotamento definido no build
+    // (PRISM_LINUX_PACKAGE) para o tipo de pacote de atualização.
+    static AppUpdatePackageKind packageForLinuxId(const QString &linuxPackageId, bool runningAsAppImage);
     static QString expectedAssetName(const QString &version, AppUpdatePackageKind packageKind);
     static bool hasValidChecksum(const QByteArray &binary, const QString &expectedSha256);
     static AppUpdateReleaseInfo parseRelease(const QByteArray &releasePayload,
@@ -45,6 +53,7 @@ public:
                                              AppUpdatePackageKind packageKind,
                                              QString *errorMessage = nullptr);
 
+    AppUpdatePackageKind packageKind() const { return m_packageKind; }
     bool hasLatestRelease() const;
     const AppUpdateReleaseInfo &latestRelease() const;
     bool isBusy() const;

@@ -32,14 +32,29 @@ def main() -> None:
     parser.add_argument("--asset", required=True, action="append", type=parse_asset)
     args = parser.parse_args()
 
-    expected_names = {
+    # Os três primeiros nomes são os históricos (clientes antigos exigem todos);
+    # os demais são formatos Linux adicionais.
+    required_names = {
         f"PrismDownloader_v{args.version}_Setup.exe",
         f"PrismDownloader_v{args.version}_Portable.zip",
         f"prism-downloader_{args.version}_amd64.deb",
     }
+    optional_names = {
+        f"prism-downloader_{args.version}_ubuntu22.04_amd64.deb",
+        f"prism-downloader_{args.version}_debian12_amd64.deb",
+        f"prism-downloader_{args.version}_x86_64.rpm",
+        f"PrismDownloader_v{args.version}_x86_64.AppImage",
+        f"PrismDownloader_v{args.version}_linux_x86_64.tar.gz",
+    }
     assets = dict(args.asset)
-    if set(assets) != expected_names or len(assets) != 3:
-        raise SystemExit("manifest must contain exactly the Windows Setup, Windows Portable, and Linux DEB assets")
+    names = set(assets)
+    if len(names) != len(args.asset):
+        raise SystemExit("duplicate asset names")
+    if not required_names <= names:
+        raise SystemExit(f"missing required assets: {sorted(required_names - names)}")
+    unknown = names - required_names - optional_names
+    if unknown:
+        raise SystemExit(f"unexpected assets: {sorted(unknown)}")
 
     payload = {
         "assets": [

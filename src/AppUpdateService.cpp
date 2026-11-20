@@ -131,6 +131,30 @@ AppUpdateService::AppUpdateService(AppUpdatePackageKind packageKind, QObject *pa
 
 AppUpdateService::~AppUpdateService() = default;
 
+#ifndef PRISM_LINUX_PACKAGE
+#define PRISM_LINUX_PACKAGE "deb-ubuntu24.04"
+#endif
+
+AppUpdatePackageKind AppUpdateService::packageForLinuxId(const QString &linuxPackageId,
+                                                         bool runningAsAppImage)
+{
+    if (linuxPackageId == QStringLiteral("deb-ubuntu22.04")) {
+        return AppUpdatePackageKind::LinuxDebUbuntu2204;
+    }
+    if (linuxPackageId == QStringLiteral("deb-debian12")) {
+        return AppUpdatePackageKind::LinuxDebDebian12;
+    }
+    if (linuxPackageId == QStringLiteral("rpm")) {
+        return AppUpdatePackageKind::LinuxRpm;
+    }
+    if (linuxPackageId == QStringLiteral("bundle")) {
+        // O mesmo binário empacotado é distribuído como AppImage e como tar.gz.
+        return runningAsAppImage ? AppUpdatePackageKind::LinuxAppImage
+                                 : AppUpdatePackageKind::LinuxTarball;
+    }
+    return AppUpdatePackageKind::LinuxDeb;
+}
+
 AppUpdatePackageKind AppUpdateService::packageForCurrentPlatform(bool installedWindows)
 {
 #ifdef Q_OS_WIN
@@ -138,7 +162,8 @@ AppUpdatePackageKind AppUpdateService::packageForCurrentPlatform(bool installedW
                             : AppUpdatePackageKind::WindowsPortable;
 #else
     Q_UNUSED(installedWindows)
-    return AppUpdatePackageKind::LinuxDeb;
+    return packageForLinuxId(QStringLiteral(PRISM_LINUX_PACKAGE),
+                             !qEnvironmentVariable("APPIMAGE").isEmpty());
 #endif
 }
 
@@ -151,6 +176,16 @@ QString AppUpdateService::expectedAssetName(const QString &version, AppUpdatePac
         return QStringLiteral("PrismDownloader_v%1_Portable.zip").arg(version);
     case AppUpdatePackageKind::LinuxDeb:
         return QStringLiteral("prism-downloader_%1_amd64.deb").arg(version);
+    case AppUpdatePackageKind::LinuxDebUbuntu2204:
+        return QStringLiteral("prism-downloader_%1_ubuntu22.04_amd64.deb").arg(version);
+    case AppUpdatePackageKind::LinuxDebDebian12:
+        return QStringLiteral("prism-downloader_%1_debian12_amd64.deb").arg(version);
+    case AppUpdatePackageKind::LinuxRpm:
+        return QStringLiteral("prism-downloader_%1_x86_64.rpm").arg(version);
+    case AppUpdatePackageKind::LinuxAppImage:
+        return QStringLiteral("PrismDownloader_v%1_x86_64.AppImage").arg(version);
+    case AppUpdatePackageKind::LinuxTarball:
+        return QStringLiteral("PrismDownloader_v%1_linux_x86_64.tar.gz").arg(version);
     }
     return {};
 }
@@ -205,10 +240,16 @@ AppUpdateReleaseInfo AppUpdateService::parseRelease(const QByteArray &releasePay
     const QJsonArray manifestAssets = manifestObject.value(QStringLiteral("assets")).toArray();
     QString selectedHash;
     QUrl selectedUrl;
-    const QList<AppUpdatePackageKind> requiredPackages{
+    // Os três pacotes históricos continuam obrigatórios (clientes antigos
+    // exigem todos). Os demais formatos Linux só são exigidos quando são o
+    // formato deste cliente, para que um formato ausente não bloqueie os outros.
+    QList<AppUpdatePackageKind> requiredPackages{
         AppUpdatePackageKind::WindowsSetup,
         AppUpdatePackageKind::WindowsPortable,
         AppUpdatePackageKind::LinuxDeb};
+    if (!requiredPackages.contains(packageKind)) {
+        requiredPackages.append(packageKind);
+    }
     for (AppUpdatePackageKind requiredPackage : requiredPackages) {
         const QString requiredName = expectedAssetName(releaseVersion, requiredPackage);
         QString assetError;
