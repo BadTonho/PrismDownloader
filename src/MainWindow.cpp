@@ -1324,6 +1324,16 @@ void MainWindow::initializeLogFile()
         return;
     }
 
+    // Rotação simples: descarta logs diários com mais de 14 dias.
+    const QDateTime retentionLimit = QDateTime::currentDateTime().addDays(-14);
+    const QFileInfoList oldLogs = logDirectory.entryInfoList(
+        {QStringLiteral("prism-*.log")}, QDir::Files);
+    for (const QFileInfo &oldLog : oldLogs) {
+        if (oldLog.lastModified() < retentionLimit) {
+            QFile::remove(oldLog.absoluteFilePath());
+        }
+    }
+
     m_logFilePath = logDirectory.filePath(
         QStringLiteral("prism-%1.log").arg(QDate::currentDate().toString(QStringLiteral("yyyy-MM-dd"))));
     m_logFile.setFileName(m_logFilePath);
@@ -1340,7 +1350,12 @@ void MainWindow::logMessage(const QString &msg)
         const QString line = normalizedLogLine(message);
         m_allLogs.append(line);
         if (m_logFile.isOpen()) {
-            m_logFile.write(line.toUtf8());
+            // URLs podem trazer tokens na query string; o arquivo não os guarda.
+            static const QRegularExpression queryPattern(
+                QStringLiteral(R"re((https?://[^\s?"']+)\?[^\s"']*)re"));
+            QString persisted = line;
+            persisted.replace(queryPattern, QStringLiteral(R"(\1?[...])"));
+            m_logFile.write(persisted.toUtf8());
             m_logFile.putChar('\n');
         }
         if (m_logEdit && shouldShowLogLine(line)) {
