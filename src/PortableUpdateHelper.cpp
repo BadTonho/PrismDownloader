@@ -8,6 +8,8 @@
 #include <QProcess>
 #include <QTemporaryDir>
 
+#include <string>
+
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
@@ -37,12 +39,49 @@ bool renameDirectory(const QString &from, const QString &to)
     return source.dir().rename(source.fileName(), destination.fileName());
 }
 
+// A atualização troca a pasta inteira. Tudo o que o usuário deixou na pasta
+// Portable e que não faz parte do novo pacote (downloads, binários próprios,
+// anotações) é devolvido à pasta nova antes de o backup ser descartado.
+void restoreUserEntries(const QString &backup, const QString &target)
+{
+    QDir backupDirectory(backup);
+    const QDir targetDirectory(target);
+    const QFileInfoList entries = backupDirectory.entryInfoList(
+        QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+    for (const QFileInfo &entry : entries) {
+        if (targetDirectory.exists(entry.fileName())) {
+            continue;
+        }
+        backupDirectory.rename(entry.fileName(), targetDirectory.filePath(entry.fileName()));
+    }
 }
 
-int main(int argc, char *argv[])
+void reportFailure(int code)
 {
-    QCoreApplication app(argc, argv);
-    const QStringList arguments = app.arguments();
+#ifdef Q_OS_WIN
+    const wchar_t *reason = L"Erro desconhecido.";
+    switch (code) {
+    case 3: reason = L"Os argumentos da atualização são inválidos."; break;
+    case 4: reason = L"O Prism Downloader não foi encerrado a tempo."; break;
+    case 5: reason = L"Não foi possível criar a pasta temporária ao lado da instalação."; break;
+    case 6: reason = L"Não foi possível extrair o pacote de atualização."; break;
+    case 7: reason = L"O pacote baixado não contém o PrismDownloader.exe."; break;
+    case 8: reason = L"Não foi possível substituir os arquivos (algum arquivo da pasta está em uso?)."; break;
+    case 9: reason = L"A nova versão não pôde ser iniciada; a versão anterior foi restaurada."; break;
+    default: break;
+    }
+    const std::wstring message = std::wstring(L"A atualização Portable falhou (código ")
+        + std::to_wstring(code) + L").\n\n" + reason
+        + L"\n\nA versão anterior foi mantida.";
+    MessageBoxW(nullptr, message.c_str(), L"Prism Downloader - Atualização",
+                MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
+#else
+    Q_UNUSED(code)
+#endif
+}
+
+int run(const QStringList &arguments)
+{
     if (arguments.size() != 7 || arguments.at(1) != QStringLiteral("--parent-pid")
         || arguments.at(3) != QStringLiteral("--archive")
         || arguments.at(5) != QStringLiteral("--target")) {
@@ -66,15 +105,13 @@ int main(int argc, char *argv[])
         return 5;
     }
 
+    // O tar.exe nativo do Windows 10+ (bsdtar) lê .zip e recusa por padrão
+    // entradas com ".." ou caminhos absolutos. Evita PowerShell codificado.
+    const QString systemRoot = qEnvironmentVariable("SystemRoot", QStringLiteral("C:/Windows"));
+    const QString tar = QDir(systemRoot).filePath(QStringLiteral("System32/tar.exe"));
     QProcess extractor;
-    const QString script = PortableUpdateCommon::extractionScript(archive, staging.path());
-    const QByteArray scriptBytes(reinterpret_cast<const char *>(script.utf16()),
-                                 script.size() * static_cast<int>(sizeof(ushort)));
-    const QString encodedScript = QString::fromLatin1(scriptBytes.toBase64());
-    extractor.start(QStringLiteral("powershell.exe"), {
-        QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
-        QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
-        QStringLiteral("-EncodedCommand"), encodedScript});
+    extractor.start(tar, {QStringLiteral("-xf"), QDir::toNativeSeparators(archive),
+                          QStringLiteral("-C"), QDir::toNativeSeparators(staging.path())});
     if (!extractor.waitForStarted(10000) || !extractor.waitForFinished(-1)
         || extractor.exitStatus() != QProcess::NormalExit || extractor.exitCode() != 0) {
         return 6;
@@ -102,6 +139,26 @@ int main(int argc, char *argv[])
         return 9;
     }
     QFile::remove(archive);
+    restoreUserEntries(backup, target);
     QDir(backup).removeRecursively();
     return 0;
+}
+
+}
+
+int main(int argc, char *argv[])
+{
+    QCoreApplication app(argc, argv);
+    const QStringList arguments = app.arguments();
+    const int code = run(arguments);
+    if (code != 0) {
+        reportFailure(code);
+        // Reabre a versão atual para que o app não simplesmente desapareça.
+        const QString target = arguments.size() == 7 ? QDir::cleanPath(arguments.at(6)) : QString();
+        const QString executable = QDir(target).filePath(QStringLiteral("PrismDownloader.exe"));
+        if (!target.isEmpty() && QFileInfo(executable).isFile()) {
+            QProcess::startDetached(executable);
+        }
+    }
+    return code;
 }

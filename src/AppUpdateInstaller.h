@@ -15,7 +15,11 @@ public:
     bool isInstalling() const;
     void install(const QString &version,
                  const QString &packagePath,
+                 const QString &expectedSha256,
                  bool installedWindowsCopy);
+
+    // Remove pacotes e helpers de atualizações anteriores que ficaram em %TEMP%.
+    static void cleanupStaleFiles();
 
 signals:
     void installingChanged(bool installing);

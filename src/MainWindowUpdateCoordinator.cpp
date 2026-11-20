@@ -24,6 +24,7 @@ MainWindowUpdateCoordinator::MainWindowUpdateCoordinator(MainWindow *window,
       m_versionTag(std::move(versionTag)),
       m_versionNumber(std::move(versionNumber))
 {
+    AppUpdateInstaller::cleanupStaleFiles();
     m_appUpdateInstaller = new AppUpdateInstaller(m_window);
     QObject::connect(m_appUpdateInstaller, &AppUpdateInstaller::statusMessage, m_window,
             [this](const QString &message) {
@@ -332,6 +333,22 @@ void MainWindowUpdateCoordinator::tryStartPendingAppUpdate()
     }
 
     m_appUpdatePending = false;
+    if (!m_verifiedPackagePath.isEmpty()
+        && m_verifiedPackageVersion == m_appUpdateService->latestRelease().version
+        && QFileInfo(m_verifiedPackagePath).isFile()) {
+        // Pacote já verificado numa tentativa adiada: instala sem baixar de novo.
+        const QString version = m_verifiedPackageVersion;
+        const QString path = m_verifiedPackagePath;
+        m_verifiedPackageVersion.clear();
+        m_verifiedPackagePath.clear();
+        installVerifiedAppPackage(version, path);
+        return;
+    }
+    if (!m_verifiedPackagePath.isEmpty()) {
+        QFile::remove(m_verifiedPackagePath);
+        m_verifiedPackagePath.clear();
+        m_verifiedPackageVersion.clear();
+    }
     if (m_window->m_updateStatusLabel) {
         m_window->m_updateStatusLabel->setText(
             "Baixando pacote; validando SHA-256...");
@@ -366,6 +383,8 @@ void MainWindowUpdateCoordinator::installVerifiedAppPackage(const QString &versi
 {
     if (!canInstallAppUpdate()) {
         m_appUpdatePending = true;
+        m_verifiedPackageVersion = version;
+        m_verifiedPackagePath = packagePath;
         if (m_window->m_updateStatusLabel) {
             m_window->m_updateStatusLabel->setText(
                 "Pacote v" + version
@@ -380,7 +399,9 @@ void MainWindowUpdateCoordinator::installVerifiedAppPackage(const QString &versi
         return;
     }
 
-    m_appUpdateInstaller->install(version, packagePath, isInstalledWindowsCopy());
+    m_appUpdateInstaller->install(version, packagePath,
+                                  m_appUpdateService->latestRelease().sha256,
+                                  isInstalledWindowsCopy());
 }
 
 void MainWindowUpdateCoordinator::checkYtDlpUpdates(bool silent)

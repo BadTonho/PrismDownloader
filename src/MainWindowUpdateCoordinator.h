@@ -35,6 +35,8 @@ private:
     bool m_ytdlpCheckSilent{true};
     bool m_appUpdateCheckSilent{true};
     bool m_appUpdatePending{false};
+    QString m_verifiedPackageVersion;
+    QString m_verifiedPackagePath;
 };
 
 #endif // MAINWINDOW_UPDATE_COORDINATOR_H
