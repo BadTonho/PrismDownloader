@@ -1,8 +1,8 @@
 name: Release packages
 
+# Execução somente manual (Actions > Run workflow). A versão vem de version.iss.
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
 
 # Build jobs run third-party actions/installers: read-only token.
 permissions:
@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
-          test "v$version" = "$GITHUB_REF_NAME"
+          test -n "$version"
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - run: cmake --build build --parallel && ctest --test-dir build --output-on-failure
       - name: Package and smoke test DEB
@@ -38,7 +38,8 @@ jobs:
           sudo apt-get install --yes "$package_file"
           status=0; timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || status=$?; test "$status" -eq 124
           mkdir -p release-assets
-          cp "$package_file" "release-assets/prism-downloader_${GITHUB_REF_NAME#v}_amd64.deb"
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          cp "$package_file" "release-assets/prism-downloader_${version}_amd64.deb"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-linux
@@ -64,7 +65,7 @@ jobs:
         shell: pwsh
         run: |
           $version = (Select-String -Path version.iss -Pattern '^#define PRISM_VERSION "([0-9.]+)"$').Matches[0].Groups[1].Value
-          if ("v$version" -ne $env:GITHUB_REF_NAME) { throw 'Tag does not match version.iss.' }
+          if (-not $version) { throw 'PRISM_VERSION not found in version.iss.' }
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - shell: pwsh
         run: |
@@ -105,7 +106,8 @@ jobs:
       - name: Create release manifest
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          test -n "$version"
           python3 scripts/create_update_manifest.py --version "$version" --output release-assets/prism-update-manifest.json \
             --asset "PrismDownloader_v${version}_Setup.exe=release-assets/PrismDownloader_v${version}_Setup.exe" \
             --asset "PrismDownloader_v${version}_Portable.zip=release-assets/PrismDownloader_v${version}_Portable.zip" \
@@ -115,8 +117,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" release-assets/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" release-assets/* --title "Prism Downloader $GITHUB_REF_NAME" --generate-notes
+            gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --title "Prism Downloader $tag" --generate-notes
           fi
