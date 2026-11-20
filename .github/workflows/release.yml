@@ -44,7 +44,12 @@ jobs:
           python3 scripts/create_update_manifest.py --version "$version" --output release-assets/prism-update-manifest.json \
             --asset "PrismDownloader_v${version}_Setup.exe=release-assets/PrismDownloader_v${version}_Setup.exe" \
             --asset "PrismDownloader_v${version}_Portable.zip=release-assets/PrismDownloader_v${version}_Portable.zip" \
-            --asset "prism-downloader_${version}_amd64.deb=release-assets/prism-downloader_${version}_amd64.deb"
+            --asset "prism-downloader_${version}_amd64.deb=release-assets/prism-downloader_${version}_amd64.deb" \
+            --asset "prism-downloader_${version}_ubuntu22.04_amd64.deb=release-assets/prism-downloader_${version}_ubuntu22.04_amd64.deb" \
+            --asset "prism-downloader_${version}_debian12_amd64.deb=release-assets/prism-downloader_${version}_debian12_amd64.deb" \
+            --asset "prism-downloader_${version}_x86_64.rpm=release-assets/prism-downloader_${version}_x86_64.rpm" \
+            --asset "PrismDownloader_v${version}_x86_64.AppImage=release-assets/PrismDownloader_v${version}_x86_64.AppImage" \
+            --asset "PrismDownloader_v${version}_linux_x86_64.tar.gz=release-assets/PrismDownloader_v${version}_linux_x86_64.tar.gz"
       - name: Publish release assets
         shell: bash
         env:

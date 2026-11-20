@@ -12,40 +12,181 @@ permissions:
 
 jobs:
   build-deb:
-    runs-on: ubuntu-24.04
+    name: DEB (${{ matrix.id }})
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu 24.04 / Linux Mint 22: nome histórico, sem sufixo.
+          - id: deb-ubuntu24.04
+            runner: ubuntu-24.04
+            container: ''
+            suffix: ''
+          - id: deb-ubuntu22.04
+            runner: ubuntu-22.04
+            container: ''
+            suffix: _ubuntu22.04
+          - id: deb-debian12
+            runner: ubuntu-24.04
+            container: debian:12
+            suffix: _debian12
+    env:
+      SUDO: ${{ matrix.container == '' && 'sudo' || '' }}
+      DEBIAN_FRONTEND: noninteractive
     steps:
+      - name: Prepare container
+        if: matrix.container != ''
+        shell: bash
+        run: apt-get update && apt-get install --yes ca-certificates curl git tar gzip
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Cache pinned yt-dlp bundle
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/third_party/yt-dlp
-          key: ytdlp-${{ runner.os }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
-      - run: sudo apt-get update && sudo apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
+          key: ytdlp-${{ matrix.id }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
+      - name: Install build dependencies
+        shell: bash
+        run: $SUDO apt-get update && $SUDO apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
       - name: Configure release build
         shell: bash
         run: |
           version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
           test -n "$version"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DPRISM_LINUX_PACKAGE=${{ matrix.id }}
       - run: cmake --build build --parallel && ctest --test-dir build --output-on-failure
+        shell: bash
       - name: Package and smoke test DEB
         shell: bash
         run: |
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
           cpack --config build/CPackConfig.cmake -G DEB -B package
           package_file=$(find package -maxdepth 1 -name '*.deb' -print -quit)
           test -n "$package_file"
           dpkg-deb --contents "$package_file" | grep -q 'usr/bin/prism-downloader'
           dpkg-deb --contents "$package_file" | grep -q 'usr/lib/prism-downloader/yt-dlp'
           dpkg-deb --field "$package_file" Depends | grep -q 'ffmpeg'
-          sudo apt-get install --yes "$package_file"
+          $SUDO apt-get install --yes "$PWD/$package_file"
           status=0; timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || status=$?; test "$status" -eq 124
           mkdir -p release-assets
-          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
-          cp "$package_file" "release-assets/prism-downloader_${version}_amd64.deb"
+          cp "$package_file" "release-assets/prism-downloader_${version}${{ matrix.suffix }}_amd64.deb"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: release-linux
+          name: release-linux-${{ matrix.id }}
           path: release-assets/*.deb
+          if-no-files-found: error
+
+  build-rpm:
+    name: RPM (Fedora)
+    runs-on: ubuntu-24.04
+    container: fedora:43
+    steps:
+      - name: Install build dependencies
+        shell: bash
+        run: dnf install -y cmake ninja-build gcc-c++ qt6-qtbase-devel rpm-build git tar gzip zstd ca-certificates ffmpeg-free sed findutils which
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Cache pinned yt-dlp bundle
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/third_party/yt-dlp
+          key: ytdlp-rpm-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
+      - name: Configure release build
+        shell: bash
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DPRISM_LINUX_PACKAGE=rpm
+      - run: cmake --build build --parallel && ctest --test-dir build --output-on-failure
+        shell: bash
+      - name: Package and smoke test RPM
+        shell: bash
+        run: |
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          cpack --config build/CPackConfig.cmake -G RPM -B package
+          package_file=$(find package -maxdepth 1 -name '*.rpm' -print -quit)
+          test -n "$package_file"
+          rpm -qpl "$package_file" | grep -q '/usr/bin/prism-downloader'
+          rpm -qpl "$package_file" | grep -q '/usr/lib/prism-downloader/yt-dlp'
+          rpm -qp --requires "$package_file" | grep -q '/usr/bin/ffmpeg'
+          dnf install -y --nogpgcheck "$PWD/$package_file"
+          status=0; timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || status=$?; test "$status" -eq 124
+          # O yt-dlp embutido é PyInstaller: confirma que o rpmbuild não o alterou.
+          cmp /usr/lib/prism-downloader/yt-dlp build/third_party/yt-dlp/*/yt-dlp_linux
+          mkdir -p release-assets
+          cp "$package_file" "release-assets/prism-downloader_${version}_x86_64.rpm"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-linux-rpm
+          path: release-assets/*.rpm
+          if-no-files-found: error
+
+  build-bundle:
+    name: AppImage + tar.gz
+    # Ubuntu 22.04 (glibc 2.35) para o binário rodar em distribuições mais antigas.
+    runs-on: ubuntu-22.04
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: 1
+      LINUXDEPLOY_URL: https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20250213-2/linuxdeploy-x86_64.AppImage
+      LINUXDEPLOY_SHA256: 4648f278ab3ef31f819e67c30d50f462640e5365a77637d7e6f2ad9fd0b4522a
+      LINUXDEPLOY_QT_URL: https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage
+      LINUXDEPLOY_QT_SHA256: 15106be885c1c48a021198e7e1e9a48ce9d02a86dd0a1848f00bdbf3c1c92724
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Cache pinned yt-dlp bundle
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/third_party/yt-dlp
+          key: ytdlp-bundle-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
+      - uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        with:
+          version: 6.7.2
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install --yes ninja-build patchelf file libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libfontconfig1 libdbus-1-3
+      - name: Configure release build
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DPRISM_LINUX_PACKAGE=bundle -DCMAKE_INSTALL_PREFIX=/usr
+      - run: cmake --build build --parallel && ctest --test-dir build --output-on-failure
+      - name: Stage AppDir
+        run: DESTDIR="$PWD/AppDir" cmake --install build
+      - name: Download pinned linuxdeploy tools
+        run: |
+          mkdir -p tools
+          curl -fsSL -o tools/linuxdeploy-x86_64.AppImage "$LINUXDEPLOY_URL"
+          curl -fsSL -o tools/linuxdeploy-plugin-qt-x86_64.AppImage "$LINUXDEPLOY_QT_URL"
+          echo "$LINUXDEPLOY_SHA256  tools/linuxdeploy-x86_64.AppImage" | sha256sum -c -
+          echo "$LINUXDEPLOY_QT_SHA256  tools/linuxdeploy-plugin-qt-x86_64.AppImage" | sha256sum -c -
+          chmod +x tools/*.AppImage
+      - name: Bundle Qt and create AppImage
+        run: |
+          export PATH="$PWD/tools:$PATH"
+          export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          export NO_STRIP=1
+          tools/linuxdeploy-x86_64.AppImage --appdir AppDir \
+            --desktop-file AppDir/usr/share/applications/prism-downloader.desktop \
+            --plugin qt --output appimage
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          mkdir -p release-assets
+          appimage=$(find . -maxdepth 1 -name '*.AppImage' -print -quit)
+          test -n "$appimage"
+          mv "$appimage" "release-assets/PrismDownloader_v${version}_x86_64.AppImage"
+          # O yt-dlp embutido precisa ter sido incluído no AppDir.
+          test -x AppDir/usr/lib/prism-downloader/yt-dlp
+      - name: Create tar.gz from the same bundled tree
+        run: |
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          tar -C AppDir --transform 's,^usr,prism-downloader,' -czf "release-assets/PrismDownloader_v${version}_linux_x86_64.tar.gz" usr
+      - name: Smoke test AppImage and tar.gz
+        run: |
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          status=0; timeout 10s env QT_QPA_PLATFORM=offscreen "release-assets/PrismDownloader_v${version}_x86_64.AppImage" || status=$?; test "$status" -eq 124
+          mkdir -p smoke && tar -C smoke -xzf "release-assets/PrismDownloader_v${version}_linux_x86_64.tar.gz"
+          test -x smoke/prism-downloader/bin/prism-downloader
+          test -x smoke/prism-downloader/lib/prism-downloader/yt-dlp
+          status=0; timeout 10s env QT_QPA_PLATFORM=offscreen smoke/prism-downloader/bin/prism-downloader || status=$?; test "$status" -eq 124
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-linux-bundle
+          path: release-assets/*
           if-no-files-found: error
 
   build-windows:
