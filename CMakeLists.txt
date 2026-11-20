@@ -14,6 +14,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(PRISM_ENABLE_LTO "Ativar otimização de link-time no build de release" OFF)
 
+if(UNIX AND NOT APPLE)
+    # Formato de pacote deste build; o atualizador usa o valor para escolher o
+    # asset correto da release (ver AppUpdateService::packageForLinuxId).
+    set(PRISM_LINUX_PACKAGE "deb-ubuntu24.04" CACHE STRING
+        "Formato Linux: deb-ubuntu24.04, deb-ubuntu22.04, deb-debian12, rpm ou bundle (AppImage/tar.gz)")
+    set_property(CACHE PRISM_LINUX_PACKAGE PROPERTY STRINGS
+        deb-ubuntu24.04 deb-ubuntu22.04 deb-debian12 rpm bundle)
+    add_compile_definitions(PRISM_LINUX_PACKAGE="${PRISM_LINUX_PACKAGE}")
+endif()
+
 if(WIN32 OR (UNIX AND NOT APPLE))
     option(PRISM_FETCH_BUNDLED_YTDLP "Baixar o yt-dlp Nightly fixado para o pacote" ON)
     set(PRISM_BUNDLED_YTDLP_PATH "" CACHE FILEPATH
@@ -312,8 +322,10 @@ endif()
 if(UNIX AND NOT APPLE)
     include(GNUInstallDirs)
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    # Caminho fixo: o app procura ../lib/prism-downloader/yt-dlp (em Fedora o
+    # CMAKE_INSTALL_LIBDIR seria lib64 e o binário não seria encontrado).
     install(PROGRAMS "${PRISM_BUNDLED_YTDLP_PATH}"
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/prism-downloader
+            DESTINATION lib/prism-downloader
             RENAME yt-dlp)
     install(FILES resources/prism-downloader.desktop
             DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
@@ -336,6 +348,17 @@ if(UNIX AND NOT APPLE)
     # AMD/Intel VAAPI uses the Mesa driver on the supported Ubuntu/Mint targets.
     # Keep this optional so NVIDIA-only systems are not made to depend on it.
     set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "mesa-va-drivers")
+
+    # RPM (Fedora/openSUSE). O ffmpeg vem de repositórios diferentes (ffmpeg-free,
+    # RPM Fusion, Packman), então a dependência é pelo arquivo.
+    set(CPACK_RPM_PACKAGE_LICENSE "GPLv3")
+    set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
+    set(CPACK_RPM_PACKAGE_REQUIRES "/usr/bin/ffmpeg")
+    set(CPACK_RPM_PACKAGE_RELEASE 1)
+    set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+    # O yt-dlp embutido é um executável PyInstaller; o strip/brp do rpmbuild
+    # corromperia o payload.
+    set(CPACK_RPM_SPEC_MORE_DEFINE "%define __os_install_post %{nil}\n%define _build_id_links none")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)
