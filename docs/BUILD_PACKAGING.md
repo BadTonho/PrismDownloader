@@ -104,7 +104,11 @@ The repository integrates a comprehensive unit test suite managed through CTest:
 
 ## 🌐 4. Continuous Integration & Releases (CI/CD)
 
-The GitHub Actions workflow (`.github/workflows/release-linux.yml`):
+Two GitHub Actions workflows exist:
+* `.github/workflows/ci.yml` (manual: Actions > Run workflow) builds, tests and packages Linux/Windows without publishing anything.
+* `.github/workflows/release.yml` runs when a `v*` tag is pushed (e.g. `git tag v2.0.3 && git push origin v2.0.3`). The tag must equal `PRISM_VERSION` in `version.iss`. It reuses `ci.yml` and then publishes the release, using `changelog/<version>.md` as release notes when present.
+
+The pipeline:
 1. Builds the Linux `.deb` package in an Ubuntu 24.04 runner.
 2. Runs the full `ctest` test suite.
 3. Generates `prism-update-manifest.json` with the SHA-256 hashes of the release assets.

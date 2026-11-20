@@ -1,8 +1,10 @@
-name: Release packages
+name: CI build
 
-# Execução somente manual (Actions > Run workflow). A versão vem de version.iss.
+# Compila, testa e empacota. Execução manual (Actions > Run workflow) ou chamado
+# pelo workflow de release. Não publica nada. A versão vem de version.iss.
 on:
   workflow_dispatch:
+  workflow_call:
 
 # Build jobs run third-party actions/installers: read-only token.
 permissions:
@@ -91,36 +93,3 @@ jobs:
           name: release-windows
           path: release-assets/*
           if-no-files-found: error
-
-  publish-release:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    needs: [build-deb, build-windows]
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          path: release-assets
-          merge-multiple: true
-      - name: Create release manifest
-        shell: bash
-        run: |
-          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
-          test -n "$version"
-          python3 scripts/create_update_manifest.py --version "$version" --output release-assets/prism-update-manifest.json \
-            --asset "PrismDownloader_v${version}_Setup.exe=release-assets/PrismDownloader_v${version}_Setup.exe" \
-            --asset "PrismDownloader_v${version}_Portable.zip=release-assets/PrismDownloader_v${version}_Portable.zip" \
-            --asset "prism-downloader_${version}_amd64.deb=release-assets/prism-downloader_${version}_amd64.deb"
-      - name: Publish release assets
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
-          tag="v$version"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" release-assets/* --clobber
-          else
-            gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --title "Prism Downloader $tag" --generate-notes
-          fi

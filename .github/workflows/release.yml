@@ -1,0 +1,63 @@
+name: Release
+
+# Disparado por uma tag de versão (ex.: v2.0.3). A tag precisa ser igual a
+# PRISM_VERSION em version.iss.
+on:
+  push:
+    tags: ["v*"]
+
+# Jobs de build executam actions/instaladores de terceiros: token somente leitura.
+permissions:
+  contents: read
+
+jobs:
+  verify-tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check tag against version.iss
+        shell: bash
+        run: |
+          version=$(sed -n 's/^#define PRISM_VERSION "\([0-9.]*\)"$/\1/p' version.iss)
+          test -n "$version"
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != v$version (version.iss)"; exit 1; }
+
+  build:
+    needs: verify-tag
+    uses: ./.github/workflows/ci.yml
+
+  publish-release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    needs: build
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Create release manifest
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python3 scripts/create_update_manifest.py --version "$version" --output release-assets/prism-update-manifest.json \
+            --asset "PrismDownloader_v${version}_Setup.exe=release-assets/PrismDownloader_v${version}_Setup.exe" \
+            --asset "PrismDownloader_v${version}_Portable.zip=release-assets/PrismDownloader_v${version}_Portable.zip" \
+            --asset "prism-downloader_${version}_amd64.deb=release-assets/prism-downloader_${version}_amd64.deb"
+      - name: Publish release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          notes_args=(--generate-notes)
+          if [ -f "changelog/${version}.md" ]; then
+            notes_args=(--notes-file "changelog/${version}.md")
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release-assets/* --verify-tag \
+            --title "Prism Downloader $GITHUB_REF_NAME" "${notes_args[@]}"
+          fi

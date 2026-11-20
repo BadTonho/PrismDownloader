@@ -104,7 +104,11 @@ O projeto inclui uma bateria completa de testes unitários integrados ao CTest:
 
 ## 🌐 4. Pipeline de Integração Contínua (CI/CD)
 
-O repositório possui uma action automatizada no GitHub (`.github/workflows/release-linux.yml`) que:
+O repositório possui dois workflows do GitHub Actions:
+* `.github/workflows/ci.yml` (manual: Actions > Run workflow) compila, testa e empacota Linux/Windows sem publicar nada.
+* `.github/workflows/release.yml` roda quando uma tag `v*` é enviada (ex.: `git tag v2.0.3 && git push origin v2.0.3`). A tag precisa ser igual a `PRISM_VERSION` em `version.iss`. Ele reutiliza o `ci.yml` e publica a release, usando `changelog/<versão>.md` como notas quando existir.
+
+O pipeline:
 1. Constrói o pacote Linux `.deb` em ambiente limpo Ubuntu 24.04.
 2. Compila a suíte de testes e executa o `ctest`.
 3. Gera `prism-update-manifest.json` com os hashes SHA-256 dos artefatos da release.
