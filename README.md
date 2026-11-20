@@ -60,7 +60,7 @@ Developed by **Tonho Studios**, **Prism Downloader** brings a clean desktop work
 
 ### ☁️ 5. Tonho Studios Update Center
 * **GitHub Cloud Synchronization:** Asynchronous update checking on startup with support for silent backgrounds.
-* **SHA-256 self-update for Windows and Linux:** Each release ships a manifest containing the SHA-256 of the Setup, Portable, and DEB packages. Prism rejects incomplete releases and preserves the existing installation when a downloaded package hash does not match. Automatic download and installation are opt-in; otherwise the update center presents a **Download and update now** action.
+* **SHA-256 self-update for Windows and Linux:** Each release ships a manifest containing the SHA-256 of every package (Setup, Portable, DEB, RPM, AppImage, tar.gz). Prism rejects incomplete releases and preserves the existing installation when a downloaded package hash does not match. Automatic download and installation are opt-in; otherwise the update center presents a **Download and update now** action.
 * **Bundled, updatable yt-dlp engine:** Packages include an official `yt-dlp` Nightly. The update center shows the selected version and source, then downloads an update only after confirmation and SHA-256 validation.
 * **Newest-version preference:** A `yt-dlp` on `PATH` is used only as a fallback when Prism's own copy is unusable. Prism never changes that installation; its own updates stay in the user's data directory.
 
@@ -74,7 +74,12 @@ Visit the [Official GitHub Releases page](https://github.com/BadTonho/PrismDownl
 | :--- | :--- |
 | ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Official Tonho Studios Installer** (Recommended). Complete setup wizard in Portuguese (Brazil) with Desktop shortcut creation. |
 | 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Portable Archive**. Extract anywhere on your Hard Drive or USB flash drive and run immediately. |
-| 🐧 **[`prism-downloader_X.Y.Z_amd64.deb`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | Package for **Linux Mint 22 / Ubuntu 24.04 amd64**. Install with `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. It bundles yt-dlp Nightly and APT installs FFmpeg. |
+| 🐧 **`prism-downloader_X.Y.Z_amd64.deb`** | **Linux Mint 22 / Ubuntu 24.04** (amd64). `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. Bundles yt-dlp Nightly; APT installs FFmpeg. |
+| 🐧 **`prism-downloader_X.Y.Z_ubuntu22.04_amd64.deb`** | **Ubuntu 22.04 / Linux Mint 21** (amd64). Same installation command. |
+| 🐧 **`prism-downloader_X.Y.Z_debian12_amd64.deb`** | **Debian 12** (amd64). Same installation command. |
+| 🐧 **`prism-downloader_X.Y.Z_x86_64.rpm`** | **Fedora / openSUSE** (x86_64). `sudo dnf install ./prism-downloader_X.Y.Z_x86_64.rpm` (needs an `ffmpeg` that provides `/usr/bin/ffmpeg`). |
+| 🐧 **`PrismDownloader_vX.Y.Z_x86_64.AppImage`** | **Any recent distro**. `chmod +x` and run. Qt is bundled; FFmpeg comes from the system. |
+| 🐧 **`PrismDownloader_vX.Y.Z_linux_x86_64.tar.gz`** | Same bundled build as a folder: extract anywhere and run `prism-downloader/bin/prism-downloader`. |
 
 ---
 

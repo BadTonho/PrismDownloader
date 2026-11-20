@@ -85,6 +85,16 @@ cpack --config build/CPackConfig.cmake -G DEB -B package
 sudo apt install ./package/prism-downloader_*.deb
 ```
 
+### 2.5. Other Linux formats
+The package format of a build is chosen with `-DPRISM_LINUX_PACKAGE=<id>` (it selects which release asset the in-app updater downloads):
+
+| Id | Output | Notes |
+| :--- | :--- | :--- |
+| `deb-ubuntu24.04` (default) | `cpack -G DEB` | Ubuntu 24.04 / Mint 22 (historic asset name) |
+| `deb-ubuntu22.04`, `deb-debian12` | `cpack -G DEB` | Build on that distribution; the CI renames the asset with a suffix |
+| `rpm` | `cpack -G RPM` | Build on Fedora; needs `rpm-build`. Depends on `/usr/bin/ffmpeg` |
+| `bundle` | AppImage + tar.gz | Built with Qt 6.7.2 and `linuxdeploy` + `linuxdeploy-plugin-qt` (pinned by SHA-256 in `ci.yml`); `cmake --install` into an AppDir first |
+
 ---
 
 ## 🧪 3. Automated Test Suite (`tests/`)
@@ -109,7 +119,7 @@ Two GitHub Actions workflows exist:
 * `.github/workflows/release.yml` runs when a `v*` tag is pushed (e.g. `git tag v2.0.3 && git push origin v2.0.3`). The tag must equal `PRISM_VERSION` in `version.iss`. It reuses `ci.yml` and then publishes the release, using `changelog/<version>.md` as release notes when present.
 
 The pipeline:
-1. Builds the Linux `.deb` package in an Ubuntu 24.04 runner.
+1. Builds the Linux packages: `.deb` for Ubuntu 24.04, Ubuntu 22.04 and Debian 12; `.rpm` in a Fedora container; AppImage and tar.gz (bundled Qt) on Ubuntu 22.04.
 2. Runs the full `ctest` test suite.
 3. Generates `prism-update-manifest.json` with the SHA-256 hashes of the release assets.
 4. Publishes the manifest and package assets directly to GitHub Releases.

@@ -60,7 +60,7 @@ Desenvolvido pela **Tonho Studios**, o **Prism Downloader** oferece um fluxo de 
 
 ### ☁️ 5. Central de Atualizações Tonho Studios
 * **Sincronização com GitHub Releases:** Verificação assíncrona de novas versões na inicialização com suporte a checagem em segundo plano.
-* **Auto-atualização para Windows e Linux:** Cada release publica um manifesto contendo os hashes SHA-256 dos pacotes Setup, Portátil e DEB. O Prism rejeita releases incompletas e preserva a instalação quando o hash do pacote baixado não corresponde.
+* **Auto-atualização para Windows e Linux:** Cada release publica um manifesto contendo os hashes SHA-256 de todos os pacotes (Setup, Portátil, DEB, RPM, AppImage e tar.gz). O Prism rejeita releases incompletas e preserva a instalação quando o hash do pacote baixado não corresponde.
 * **Motor yt-dlp atualizável autonomamente:** O aplicativo traz o canal Nightly do `yt-dlp` e permite atualizá-lo com validação SHA-256 diretamente na pasta do usuário, sem necessidade de permissões de administrador.
 
 ---
@@ -73,7 +73,12 @@ Acesse a [Página Oficial de Releases no GitHub](https://github.com/BadTonho/Pri
 | :--- | :--- |
 | ⭐ **[`PrismDownloader_vX.X.X_Setup.exe`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Instalador Oficial Tonho Studios** (Recomendado). Assistente completo em Português (Brasil) com criação de atalho na Área de Trabalho. |
 | 💼 **[`PrismDownloader_vX.X.X_Portable.zip`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | **Arquivo Portátil Autônomo**. Extraia em qualquer pasta ou pendrive e execute imediatamente. |
-| 🐧 **[`prism-downloader_X.Y.Z_amd64.deb`](https://github.com/BadTonho/PrismDownloader/releases/latest)** | Pacote para **Linux Mint 22 / Ubuntu 24.04 amd64**. Instale com `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. |
+| 🐧 **`prism-downloader_X.Y.Z_amd64.deb`** | **Linux Mint 22 / Ubuntu 24.04** (amd64). `sudo apt install ./prism-downloader_X.Y.Z_amd64.deb`. |
+| 🐧 **`prism-downloader_X.Y.Z_ubuntu22.04_amd64.deb`** | **Ubuntu 22.04 / Linux Mint 21** (amd64). Mesmo comando de instalação. |
+| 🐧 **`prism-downloader_X.Y.Z_debian12_amd64.deb`** | **Debian 12** (amd64). Mesmo comando de instalação. |
+| 🐧 **`prism-downloader_X.Y.Z_x86_64.rpm`** | **Fedora / openSUSE** (x86_64). `sudo dnf install ./prism-downloader_X.Y.Z_x86_64.rpm` (requer um `ffmpeg` que forneça `/usr/bin/ffmpeg`). |
+| 🐧 **`PrismDownloader_vX.Y.Z_x86_64.AppImage`** | **Qualquer distro recente**. `chmod +x` e execute. O Qt vai embutido; o FFmpeg vem do sistema. |
+| 🐧 **`PrismDownloader_vX.Y.Z_linux_x86_64.tar.gz`** | Mesmo build embutido em pasta: extraia onde quiser e execute `prism-downloader/bin/prism-downloader`. |
 
 ---
 

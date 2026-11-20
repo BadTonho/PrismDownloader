@@ -14,7 +14,12 @@ Uma release precisa destes arquivos:
 
 - `PrismDownloader_vX.Y.Z_Setup.exe`
 - `PrismDownloader_vX.Y.Z_Portable.zip`
-- `prism-downloader_X.Y.Z_amd64.deb`
+- `prism-downloader_X.Y.Z_amd64.deb` (Ubuntu 24.04 / Mint 22)
+- `prism-downloader_X.Y.Z_ubuntu22.04_amd64.deb`
+- `prism-downloader_X.Y.Z_debian12_amd64.deb`
+- `prism-downloader_X.Y.Z_x86_64.rpm`
+- `PrismDownloader_vX.Y.Z_x86_64.AppImage`
+- `PrismDownloader_vX.Y.Z_linux_x86_64.tar.gz`
 - `prism-update-manifest.json`
 
 O manifesto é gerado com `scripts/create_update_manifest.py`:
@@ -24,6 +29,7 @@ python scripts/create_update_manifest.py --version 2.0.1 --output dist/prism-upd
   --asset PrismDownloader_v2.0.1_Setup.exe=dist/PrismDownloader_v2.0.1_Setup.exe `
   --asset PrismDownloader_v2.0.1_Portable.zip=dist/PrismDownloader_v2.0.1_Portable.zip `
   --asset prism-downloader_2.0.1_amd64.deb=dist/prism-downloader_2.0.1_amd64.deb
+  # opcional: --asset para os .deb ubuntu22.04/debian12, .rpm, .AppImage e .tar.gz
 ```
 
 O manifesto verifica a integridade do download, mas não garante sozinho a
