@@ -428,6 +428,15 @@ void DownloadManager::parseOutputLine(Job *job, const QString &line)
         return;
     }
 
+    // yt-dlp prints `Merging formats into "path"` (quoted, no colon).
+    static const QRegularExpression mergePattern(
+        QStringLiteral(R"re(Merging formats into\s+"(.+)")re"));
+    if (const QRegularExpressionMatch merge = mergePattern.match(line); merge.hasMatch()) {
+        const QString mergedPath = merge.captured(1).trimmed();
+        job->observedFilePaths.append(mergedPath);
+        job->postProcessFilePaths.append(mergedPath);
+    }
+
     // These lines are useful as a fallback for yt-dlp versions that print a
     // stale after_move:filepath after a merge or audio extraction.
     static const QStringList outputMarkers{
@@ -528,6 +537,17 @@ QString DownloadManager::resolveCompletedFilePath(Job *job) const
         if (const QString path = existingMediaPath(absolutePath(*iterator));
             !path.isEmpty()) {
             return path;
+        }
+    }
+
+    // With other jobs writing to the same directory, "newest file" could belong
+    // to another download (and be deleted by its automatic conversion), so the
+    // guess is only made when this job is the sole writer there.
+    for (const Job *other : m_jobs) {
+        if (other != job && !other->terminal && other->process
+            && QDir::cleanPath(other->request.outputDirectory)
+                == QDir::cleanPath(job->request.outputDirectory)) {
+            return {};
         }
     }
 

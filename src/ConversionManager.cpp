@@ -82,7 +82,8 @@ struct ConversionManager::Job {
 
 ConversionManager::ConversionManager(QObject *parent, const QString &programPath)
     : QObject(parent),
-      m_programPath(MediaToolResolver::resolve(MediaTool::Ffmpeg, programPath))
+      m_programPath(MediaToolResolver::resolve(MediaTool::Ffmpeg, programPath)),
+      m_programPathOverride(programPath)
 {
 }
 
@@ -104,6 +105,8 @@ ConversionManager::~ConversionManager()
 
 ConversionEnqueueResult ConversionManager::enqueueConversion(const ConversionRequest &request)
 {
+    // Reavalia a cada pedido: um ffmpeg instalado depois da abertura do app é detectado.
+    m_programPath = MediaToolResolver::resolve(MediaTool::Ffmpeg, m_programPathOverride);
     if (m_programPath.isEmpty() || !QFile::exists(m_programPath)) {
         return {false, 0, MediaToolResolver::missingMessage(MediaTool::Ffmpeg)};
     }
@@ -323,6 +326,7 @@ void ConversionManager::onActiveFinished(int exitCode, QProcess::ExitStatus exit
     readActiveOutput(m_active, true);
     if (m_active->cancelRequested) {
         Job *cancelled = m_active;
+        QFile::remove(cancelled->outputFile); // saída parcial
         emit conversionCancelled(cancelled->id, cancelled->request.ownerDownloadId);
         emit conversionLog(cancelled->id, cancelled->request.ownerDownloadId, "Conversão cancelada.");
         m_active = nullptr;
@@ -342,9 +346,11 @@ void ConversionManager::onActiveFinished(int exitCode, QProcess::ExitStatus exit
         startActiveProcess(m_active->cpuArguments);
         return;
     }
-    if (exitStatus == QProcess::NormalExit && exitCode == 0 && QFile::exists(m_active->outputFile)) {
+    if (exitStatus == QProcess::NormalExit && exitCode == 0
+        && QFileInfo(m_active->outputFile).size() > 0) {
         finishActiveSuccess();
     } else {
+        QFile::remove(m_active->outputFile); // não deixa saída parcial/vazia
         finishActiveFailure(QString("FFmpeg encerrou com código %1.").arg(exitCode));
     }
 }

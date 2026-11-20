@@ -67,6 +67,7 @@ private:
     ConversionId m_nextId{1};
     bool m_shuttingDown{false};
     QString m_programPath;
+    QString m_programPathOverride;
 
     void startNext();
     void startActiveProcess(const QStringList &arguments);
