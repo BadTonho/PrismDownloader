@@ -62,7 +62,7 @@ Developed by **Tonho Studios**, **Prism Downloader** brings a clean desktop work
 * **GitHub Cloud Synchronization:** Asynchronous update checking on startup with support for silent backgrounds.
 * **SHA-256 self-update for Windows and Linux:** Each release ships a manifest containing the SHA-256 of the Setup, Portable, and DEB packages. Prism rejects incomplete releases and preserves the existing installation when a downloaded package hash does not match. Automatic download and installation are opt-in; otherwise the update center presents a **Download and update now** action.
 * **Bundled, updatable yt-dlp engine:** Packages include an official `yt-dlp` Nightly. The update center shows the selected version and source, then downloads an update only after confirmation and SHA-256 validation.
-* **Newest-version preference:** A newer manually installed copy on `PATH` is also detected. Prism never changes that installation; its own updates stay in the user's data directory.
+* **Newest-version preference:** A `yt-dlp` on `PATH` is used only as a fallback when Prism's own copy is unusable. Prism never changes that installation; its own updates stay in the user's data directory.
 
 ---
 
@@ -94,7 +94,7 @@ cpack --config build/CPackConfig.cmake -G DEB -B package
 sudo apt install ./package/prism-downloader_*.deb
 ```
 
-The package targets Mint 22 and Ubuntu 24.04 on `amd64`. It installs the official `yt-dlp_linux` Nightly at `/usr/lib/prism-downloader/yt-dlp` and uses the system `ffmpeg`. CMake downloads the pinned Nightly and verifies its SHA-256 during configuration, so package builds require internet access. The application can install a newer Nightly without `sudo` in the user's data directory and also selects a newer manually installed copy from `PATH`.
+The package targets Mint 22 and Ubuntu 24.04 on `amd64`. It installs the official `yt-dlp_linux` Nightly at `/usr/lib/prism-downloader/yt-dlp` and uses the system `ffmpeg`. CMake downloads the pinned Nightly and verifies its SHA-256 during configuration, so package builds require internet access. The application can install a newer Nightly without `sudo` in the user's data directory and falls back to a copy from `PATH` only if the bundled one is unusable.
 
 ### Windows 10 / 11 (64-bit)
 

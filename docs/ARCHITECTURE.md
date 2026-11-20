@@ -135,8 +135,8 @@ graph TD
     Start["Begin Tool Resolution"] --> CheckUser["1. User-updated binary in AppData / .local/share?"]
     CheckUser -- Yes --> CheckVer1["Compare semantic version against other candidates"]
     CheckUser -- No --> CheckBundled["2. Bundled binary in application folder?"]
-    CheckBundled -- Yes --> CheckVer2["Compare version against system PATH"]
-    CheckBundled -- No --> CheckPath["3. Available on System PATH?"]
+    CheckBundled -- Yes --> CheckVer2["Compare version against user-updated binary"]
+    CheckBundled -- No --> CheckPath["3. Fallback only: absolute PATH entry?"]
     CheckVer1 --> PickNewest["Select highest semantic version"]
     CheckVer2 --> PickNewest
     CheckPath --> UsePath["Use PATH binary"]
@@ -146,4 +146,4 @@ graph TD
 This multi-tiered resolution guarantees that:
 1. End users can run the app out of the box without configuring environment variables.
 2. Self-updating `yt-dlp` Nightly builds take precedence over outdated bundled binaries.
-3. Newer system-wide tools installed by power users on `PATH` can be preferred automatically.
+3. A `yt-dlp` on `PATH` is used only as a last resort (when neither the user-updated nor the bundled binary works), so an arbitrary executable cannot shadow the verified one. Relative `PATH` entries are ignored.

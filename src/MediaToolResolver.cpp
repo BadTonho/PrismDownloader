@@ -15,7 +15,12 @@
 
 namespace {
 
-constexpr qint64 kVersionCacheLifetimeMs = 30000;
+constexpr qint64 kVersionCacheLifetimeMs = 10 * 60 * 1000;
+constexpr qint64 kFailedVersionCacheLifetimeMs = 30000;
+// Binários onefile (PyInstaller) extraem-se na primeira execução e o antivírus
+// pode escaneá-los; 4 s era curto e gerava falsos "yt-dlp não encontrado".
+constexpr int kProbeStartTimeoutMs = 5000;
+constexpr int kProbeFinishTimeoutMs = 20000;
 
 struct VersionCacheEntry {
     qint64 fileSize{-1};
@@ -103,7 +108,10 @@ QStringList executablePathsFromEnvironment(const QString &executable)
 #endif
     QStringList result;
     for (const QString &directory : pathVariable.split(QDir::listSeparator(), Qt::SkipEmptyParts)) {
-        result.append(QDir(directory).absoluteFilePath(executable));
+        // Entradas relativas (".") resolveriam contra a pasta atual: ignoradas.
+        if (QDir::isAbsolutePath(directory)) {
+            result.append(QDir(directory).absoluteFilePath(executable));
+        }
     }
     return result;
 }
@@ -141,13 +149,21 @@ MediaToolInfo MediaToolResolver::resolveInfo(MediaTool tool, const QString &prog
 #endif
     }
 
+    // Somente binários controlados pelo Prism (cópia atualizada e embutida)
+    // competem por versão. O PATH é apenas um recurso de último caso: um
+    // yt-dlp qualquer ali, anunciando uma versão maior, não pode se sobrepor
+    // ao binário verificado.
     QList<MediaToolInfo> candidates;
     QSet<QString> knownPaths;
     appendCandidate(candidates, knownPaths, ytDlpUserPath(), MediaToolSource::UserUpdate);
+    appendCandidate(candidates, knownPaths, ytDlpBundledPath(), MediaToolSource::Bundled);
+    const MediaToolInfo trusted = selectYtDlpCandidate(candidates);
+    if (trusted.isAvailable()) {
+        return trusted;
+    }
     for (const QString &path : executablePathsFromEnvironment(executableName(MediaTool::YtDlp))) {
         appendCandidate(candidates, knownPaths, path, MediaToolSource::Path);
     }
-    appendCandidate(candidates, knownPaths, ytDlpBundledPath(), MediaToolSource::Bundled);
     return selectYtDlpCandidate(candidates);
 }
 
@@ -189,7 +205,9 @@ QString MediaToolResolver::versionForExecutable(const QString &programPath)
         if (iterator != versionCache().cend()
             && iterator->fileSize == fileInfo.size()
             && iterator->lastModified == fileInfo.lastModified()
-            && nowMs - iterator->checkedAtMs < kVersionCacheLifetimeMs) {
+            && nowMs - iterator->checkedAtMs < (iterator->version.isEmpty()
+                                                    ? kFailedVersionCacheLifetimeMs
+                                                    : kVersionCacheLifetimeMs)) {
             return iterator->version;
         }
     }
@@ -197,7 +215,7 @@ QString MediaToolResolver::versionForExecutable(const QString &programPath)
     QProcess probe;
     probe.setProcessChannelMode(QProcess::MergedChannels);
     probe.start(programPath, {QStringLiteral("--version")});
-    if (!probe.waitForStarted(1500)) {
+    if (!probe.waitForStarted(kProbeStartTimeoutMs)) {
         if (probe.state() != QProcess::NotRunning) {
             probe.kill();
             probe.waitForFinished(1000);
@@ -206,11 +224,10 @@ QString MediaToolResolver::versionForExecutable(const QString &programPath)
         versionCache().insert(cacheKey, {fileInfo.size(), fileInfo.lastModified(), nowMs, {}});
         return {};
     }
-    if (!probe.waitForFinished(4000)) {
+    if (!probe.waitForFinished(kProbeFinishTimeoutMs)) {
+        // Timeout não é prova de binário inválido: não guarda resultado negativo.
         probe.kill();
         probe.waitForFinished(1000);
-        QMutexLocker locker(&versionCacheMutex());
-        versionCache().insert(cacheKey, {fileInfo.size(), fileInfo.lastModified(), nowMs, {}});
         return {};
     }
     if (probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0) {

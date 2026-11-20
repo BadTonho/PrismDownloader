@@ -135,8 +135,8 @@ graph TD
     Start["Início da Resolução"] --> CheckUser["1. Existe binário atualizado pelo usuário em AppData / .local/share?"]
     CheckUser -- Sim --> CheckVer1["Compara versão com demais fontes"]
     CheckUser -- Não --> CheckBundled["2. Existe binário embutido na pasta do app?"]
-    CheckBundled -- Sim --> CheckVer2["Compara versão com PATH"]
-    CheckBundled -- Não --> CheckPath["3. Existe no PATH do Sistema?"]
+    CheckBundled -- Sim --> CheckVer2["Compara versão com o binário atualizado"]
+    CheckBundled -- Não --> CheckPath["3. Último recurso: PATH (caminho absoluto)"]
     CheckVer1 --> PickNewest["Seleciona a versão mais recente"]
     CheckVer2 --> PickNewest
     CheckPath --> UsePath["Utiliza do PATH"]

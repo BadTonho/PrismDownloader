@@ -173,7 +173,7 @@ Localiza e prioriza os executáveis do `yt-dlp` e `FFmpeg` no sistema operaciona
 ### Métodos Estáticos Principais
 * `resolve(MediaTool tool, const QString &programPath = {})`: Retorna o caminho do binário mais adequado.
 * `resolveInfo(MediaTool tool, const QString &programPath = {})`: Retorna o `MediaToolInfo` completo.
-* `selectYtDlpCandidate(const QList<MediaToolInfo> &candidates)`: Compara versões entre diretório de usuário, bundle e PATH, escolhendo a mais recente.
+* `selectYtDlpCandidate(const QList<MediaToolInfo> &candidates)`: Escolhe a versão mais recente entre os candidatos recebidos. O `resolveInfo` só inclui candidatos do PATH quando nenhum binário do usuário/bundle funciona.
 * `isVersionNewer(const QString &candidate, const QString &current)`: Compara semanticamente duas versões de software.
 * `ytDlpUserPath()`: Retorna o caminho onde atualizações locais do yt-dlp são salvas (ex: `%LOCALAPPDATA%/PrismDownloader/yt-dlp.exe` ou `~/.local/share/prism-downloader/yt-dlp`).
 

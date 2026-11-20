@@ -163,7 +163,7 @@ Discovers, verifies, and prioritizes `yt-dlp` and `FFmpeg` binaries.
 
 * `resolve(MediaTool tool, const QString &programPath = {})`: Returns verified path to the best executable.
 * `resolveInfo(MediaTool tool, const QString &programPath = {})`: Returns detailed `MediaToolInfo` struct.
-* `selectYtDlpCandidate(const QList<MediaToolInfo> &candidates)`: Selects the newest binary across User Update, Bundle, and PATH.
+* `selectYtDlpCandidate(const QList<MediaToolInfo> &candidates)`: Selects the newest binary among the given candidates. `resolveInfo` only offers PATH candidates when no User Update/Bundled binary is usable.
 * `isVersionNewer(const QString &candidate, const QString &current)`: Performs semantic version comparison.
 * `ytDlpUserPath()`: Returns persistent user storage path (`%LOCALAPPDATA%/PrismDownloader/yt-dlp.exe` or `~/.local/share/prism-downloader/yt-dlp`).
 
