@@ -35,6 +35,36 @@ void armReplyTimeout(QNetworkReply *reply, int timeoutMs)
     });
 }
 
+// Aborta a resposta se ela ultrapassar o limite, em vez de bufferizar tudo
+// na memória antes de conferir o tamanho.
+void limitReplySize(QNetworkReply *reply, qint64 maximumBytes)
+{
+    reply->setReadBufferSize(maximumBytes + 1);
+    QObject::connect(reply, &QNetworkReply::downloadProgress, reply,
+                     [reply, maximumBytes](qint64 received, qint64 total) {
+        if ((received > maximumBytes || total > maximumBytes) && reply->isRunning()) {
+            reply->abort();
+        }
+    });
+}
+
+// Timeout por inatividade: reinicia a cada progresso, então downloads grandes
+// em conexões lentas não são cortados enquanto os dados continuam chegando.
+void armInactivityTimeout(QNetworkReply *reply, int timeoutMs)
+{
+    auto *timer = new QTimer(reply);
+    timer->setSingleShot(true);
+    timer->setInterval(timeoutMs);
+    QObject::connect(timer, &QTimer::timeout, reply, [reply]() {
+        if (reply->isRunning()) {
+            reply->abort();
+        }
+    });
+    QObject::connect(reply, &QNetworkReply::downloadProgress, timer,
+                     [timer](qint64, qint64) { timer->start(); });
+    timer->start();
+}
+
 bool isOfficialGitHubUrl(const QUrl &url)
 {
     const QString host = url.host().toLower();
@@ -165,6 +195,7 @@ void YtDlpUpdateService::checkLatestRelease()
     m_checking = true;
     QNetworkReply *reply = m_networkManager->get(githubRequest(kNightlyReleaseApi));
     armReplyTimeout(reply, 30000);
+    limitReplySize(reply, kMaximumReleasePayloadBytes);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         m_checking = false;
@@ -206,6 +237,7 @@ void YtDlpUpdateService::downloadChecksums()
 {
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_latestRelease.checksumsUrl));
     armReplyTimeout(reply, 30000);
+    limitReplySize(reply, kMaximumChecksumsBytes);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
@@ -255,7 +287,7 @@ void YtDlpUpdateService::downloadBinary(const QString &expectedSha256)
     m_binaryWriteFailed = false;
 
     QNetworkReply *reply = m_networkManager->get(githubRequest(m_latestRelease.binaryUrl));
-    armReplyTimeout(reply, 5 * 60 * 1000);
+    armInactivityTimeout(reply, 60 * 1000);
     connect(reply, &QNetworkReply::downloadProgress, this, &YtDlpUpdateService::updateProgress);
     const auto writeChunk = [this](const QByteArray &bytes) {
         if (bytes.isEmpty() || !m_binaryFile) {

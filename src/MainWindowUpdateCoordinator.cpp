@@ -4,6 +4,7 @@
 #include "AppUpdateService.h"
 #include "MainWindow.h"
 #include "MediaToolResolver.h"
+#include "YtDlpMetadataService.h"
 #include "YtDlpStatus.h"
 #include "YtDlpUpdateService.h"
 
@@ -445,6 +446,7 @@ void MainWindowUpdateCoordinator::updateYtdlpEngine()
     }
     if (m_window->m_downloadManager->hasWork()
         || m_window->m_conversionManager->hasWork()
+        || (m_window->m_metadataService && m_window->m_metadataService->isRunning())
         || (m_window->m_playlistPreviewService
             && m_window->m_playlistPreviewService->isBusy())) {
         QMessageBox::warning(
