@@ -49,6 +49,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
+include(cmake/FtxuiDependency.cmake)
 configure_file(src/PrismVersion.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/PrismVersion.h" @ONLY)
 
 set(PRISM_SOURCES
@@ -254,7 +255,17 @@ if(BUILD_TESTING)
     target_link_libraries(PrismQueueManagerTests PRIVATE Qt6::Core)
     target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_17)
 
-    foreach(target PrismDownloaderTests PrismMediaMetadataTests PrismFormatSelectionDialogTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests)
+    add_executable(PrismTuiStateTests
+        tests/TuiStateTests.cpp
+        src/tui/TuiState.h
+        src/tui/TuiState.cpp
+        src/MediaItem.h
+    )
+    target_include_directories(PrismTuiStateTests PRIVATE src)
+    target_link_libraries(PrismTuiStateTests PRIVATE Qt6::Core)
+    target_compile_features(PrismTuiStateTests PRIVATE cxx_std_17)
+
+    foreach(target PrismDownloaderTests PrismMediaMetadataTests PrismFormatSelectionDialogTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests PrismTuiStateTests)
         if(MSVC)
             target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
             add_custom_command(TARGET ${target} POST_BUILD
@@ -281,6 +292,51 @@ if(BUILD_TESTING)
     add_test(NAME PrismDownloader.PortableUpdateCommon COMMAND PrismPortableUpdateCommonTests)
     add_test(NAME PrismDownloader.QueueManagers
              COMMAND PrismQueueManagerTests $<TARGET_FILE:PrismFakeMediaTool>)
+    add_test(NAME PrismDownloader.TuiState COMMAND PrismTuiStateTests)
+endif()
+
+add_executable(prism-cli
+    src/tui/TuiMain.cpp
+    src/tui/TuiApp.h
+    src/tui/TuiApp.cpp
+    src/tui/TuiBackend.h
+    src/tui/TuiBackend.cpp
+    src/tui/TuiState.h
+    src/tui/TuiState.cpp
+    src/AppSettings.h
+    src/AppSettings.cpp
+    src/DownloadManager.h
+    src/DownloadManager.cpp
+    src/ConversionManager.h
+    src/ConversionManager.cpp
+    src/MediaToolResolver.h
+    src/MediaToolResolver.cpp
+    src/GPUDetector.h
+    src/GPUDetector.cpp
+    src/DownloadProfile.h
+    src/MediaItem.h
+)
+target_include_directories(prism-cli PRIVATE
+    src
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+target_link_libraries(prism-cli PRIVATE
+    Qt6::Core
+    ftxui::screen
+    ftxui::dom
+    ftxui::component
+)
+target_compile_features(prism-cli PRIVATE cxx_std_17)
+if(MSVC)
+    target_compile_options(prism-cli PRIVATE /W4 /permissive- /utf-8)
+    target_compile_definitions(prism-cli PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+    add_custom_command(TARGET prism-cli POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${PRISM_QT_BIN_DIR}/Qt6Core.dll"
+        $<TARGET_FILE_DIR:prism-cli>
+    )
+else()
+    target_compile_options(prism-cli PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(PRISM_ENABLE_LTO)
@@ -321,7 +377,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
     include(GNUInstallDirs)
-    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS ${PROJECT_NAME} prism-cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     # Caminho fixo: o app procura ../lib/prism-downloader/yt-dlp (em Fedora o
     # CMAKE_INSTALL_LIBDIR seria lib64 e o binário não seria encontrado).
     install(PROGRAMS "${PRISM_BUNDLED_YTDLP_PATH}"

@@ -109,6 +109,10 @@ O projeto inclui uma bateria completa de testes unitários integrados ao CTest:
 | `MediaToolResolverTests` | `tests/MediaToolResolverTests.cpp` | Testa resolução de prioridade de binários (User Update vs. Bundle vs. PATH) e comparação de versões. |
 | `PortableUpdateCommonTests` | `tests/PortableUpdateCommonTests.cpp` | Valida comandos de extração e argumentos do assistente portátil. |
 | `DownloadProfileTests` | `tests/DownloadProfileTests.cpp` | Valida seletores de formato de qualidade gerados para o yt-dlp. |
+| `TuiStateTests` | `tests/TuiStateTests.cpp` | Valida transições de estado da TUI interativa, filtros de log, varredura de biblioteca e formatação. |
+
+### 3.1. Interface Interativa no Terminal (`prism-cli`)
+Junto com o executável gráfico, a compilação gera o `prism-cli` (`prism-cli.exe` no Windows e `/usr/bin/prism-cli` no Linux), uma interface interativa de terminal (TUI) construída com **FTXUI** (baixado e validado por SHA-256 via `cmake/FtxuiDependency.cmake`). Funciona nativamente no Windows Terminal/PowerShell/CMD e em terminais Linux (incluindo sessões SSH sem ambiente gráfico), oferecendo navegação interativa para Downloads, Biblioteca, Conversor, Logs e Diagnóstico do Sistema.
 
 ---
 

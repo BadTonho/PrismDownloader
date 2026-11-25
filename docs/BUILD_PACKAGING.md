@@ -109,6 +109,10 @@ The repository integrates a comprehensive unit test suite managed through CTest:
 | `MediaToolResolverTests` | `tests/MediaToolResolverTests.cpp` | Tests priority candidate selection (User Update vs. Bundle vs. PATH) and semantic version comparisons. |
 | `PortableUpdateCommonTests` | `tests/PortableUpdateCommonTests.cpp` | Validates extraction scripts and arguments for the portable helper. |
 | `DownloadProfileTests` | `tests/DownloadProfileTests.cpp` | Validates format selector string generation for all resolution profiles. |
+| `TuiStateTests` | `tests/TuiStateTests.cpp` | Validates interactive terminal TUI state transitions, log filtering, library scanning, and formatting. |
+
+### 3.1. Interactive Terminal UI (`prism-cli`)
+Alongside the graphical desktop executable, the build produces `prism-cli` (`prism-cli.exe` on Windows, `/usr/bin/prism-cli` on Linux), an interactive Terminal User Interface powered by **FTXUI** (fetched and verified by SHA-256 via `cmake/FtxuiDependency.cmake`). It runs natively on Windows Terminal/PowerShell/CMD and Linux terminals (including headless SSH sessions) with interactive navigation for Downloads, Library, Converter, Logs, and System Diagnostics.
 
 ---
 
