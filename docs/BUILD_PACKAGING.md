@@ -115,8 +115,8 @@ The repository integrates a comprehensive unit test suite managed through CTest:
 ## 🌐 4. Continuous Integration & Releases (CI/CD)
 
 Two GitHub Actions workflows exist:
-* `.github/workflows/ci.yml` (manual: Actions > Run workflow) builds, tests and packages Linux/Windows without publishing anything.
-* `.github/workflows/release.yml` runs when a `v*` tag is pushed (e.g. `git tag v2.0.3 && git push origin v2.0.3`). The tag must equal `PRISM_VERSION` in `version.iss`. It reuses `ci.yml` and then publishes the release, using `changelog/<version>.md` as release notes when present.
+* `.github/workflows/ci.yml` (manual: Actions > CI build > Run workflow) builds, tests and packages Linux/Windows without publishing anything.
+* `.github/workflows/release.yml` can be run manually from GitHub Actions (Actions > Release > Run workflow, with optional `tag`, `draft` and `prerelease` inputs) or triggered by pushing a `v*` tag (e.g. `git tag v2.0.3 && git push origin v2.0.3`). The tag must equal `v<PRISM_VERSION>` in `version.iss` (when triggered manually with an empty tag, `v<PRISM_VERSION>` is used automatically). It reuses `ci.yml` and then publishes the release, using `changelog/<version>.md` as release notes when present.
 
 The pipeline:
 1. Builds the Linux packages: `.deb` for Ubuntu 24.04, Ubuntu 22.04 and Debian 12; `.rpm` in a Fedora container; AppImage and tar.gz (bundled Qt) on Ubuntu 22.04.

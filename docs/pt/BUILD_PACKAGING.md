@@ -115,8 +115,8 @@ O projeto inclui uma bateria completa de testes unitários integrados ao CTest:
 ## 🌐 4. Pipeline de Integração Contínua (CI/CD)
 
 O repositório possui dois workflows do GitHub Actions:
-* `.github/workflows/ci.yml` (manual: Actions > Run workflow) compila, testa e empacota Linux/Windows sem publicar nada.
-* `.github/workflows/release.yml` roda quando uma tag `v*` é enviada (ex.: `git tag v2.0.3 && git push origin v2.0.3`). A tag precisa ser igual a `PRISM_VERSION` em `version.iss`. Ele reutiliza o `ci.yml` e publica a release, usando `changelog/<versão>.md` como notas quando existir.
+* `.github/workflows/ci.yml` (manual: Actions > CI build > Run workflow) compila, testa e empacota Linux/Windows sem publicar nada.
+* `.github/workflows/release.yml` pode ser executado manualmente pelo GitHub Actions (Actions > Release > Run workflow, com opções de `tag`, `draft` e `prerelease`) ou disparado quando uma tag `v*` é enviada (ex.: `git tag v2.0.3 && git push origin v2.0.3`). A tag precisa ser igual a `v<PRISM_VERSION>` em `version.iss` (na execução manual com `tag` vazio, usa `v<PRISM_VERSION>` automaticamente). Ele reutiliza o `ci.yml` e publica a release, usando `changelog/<versão>.md` como notas quando existir.
 
 O pipeline:
 1. Constrói os pacotes Linux: `.deb` para Ubuntu 24.04, Ubuntu 22.04 e Debian 12; `.rpm` em container Fedora; AppImage e tar.gz (Qt embutido) no Ubuntu 22.04.

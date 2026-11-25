@@ -219,7 +219,19 @@ jobs:
         shell: pwsh
         run: |
           $version = (Select-String -Path version.iss -Pattern '^#define PRISM_VERSION "([0-9.]+)"$').Matches[0].Groups[1].Value
-          Copy-Item -LiteralPath (Get-Command ffmpeg.exe).Source -Destination build/Release/ffmpeg.exe -Force
+          $ffmpegPath = $null
+          if ($env:ChocolateyInstall -and (Test-Path "$env:ChocolateyInstall\lib\ffmpeg")) {
+            $ffmpegPath = Get-ChildItem -Path "$env:ChocolateyInstall\lib\ffmpeg" -Recurse -Filter "ffmpeg.exe" -File |
+              Sort-Object Length -Descending |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $ffmpegPath) {
+            $ffmpegPath = (Get-Command ffmpeg.exe).Source
+          }
+          if (-not $ffmpegPath -or (Get-Item -LiteralPath $ffmpegPath).Length -lt 1MB) {
+            throw "Real ffmpeg.exe binary not found (resolved: $ffmpegPath)."
+          }
+          Copy-Item -LiteralPath $ffmpegPath -Destination build/Release/ffmpeg.exe -Force
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup_script.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed.' }
           New-Item -ItemType Directory -Path release-assets,portable-staging -Force | Out-Null
