@@ -4,7 +4,7 @@
   <a href="../BUILD_PACKAGING.md">🇺🇸 Read the English version here.</a>
 </p>
 
-Este guia fornece instruções detalhadas para configurar o ambiente de desenvolvimento, compilar o código fonte em **C++17**, executar os testes unitários e gerar os pacotes oficiais de distribuição para **Windows** e **Linux**.
+Este guia fornece instruções detalhadas para configurar o ambiente de desenvolvimento, compilar o código fonte em **C++20**, executar os testes unitários e gerar os pacotes oficiais de distribuição para **Windows** e **Linux**.
 
 ---
 

@@ -4,7 +4,7 @@
   <a href="../ARCHITECTURE.md">🇺🇸 Read the English version here.</a>
 </p>
 
-Este documento detalha a arquitetura de software, fluxo de dados e o modelo de concorrência do **Prism Downloader**, projetado em **C++17** com **Qt 6** para máxima velocidade de execução, responsividade de interface e estabilidade operacional.
+Este documento detalha a arquitetura de software, fluxo de dados e o modelo de concorrência do **Prism Downloader**, projetado em **C++20** com **Qt 6** para máxima velocidade de execução, responsividade de interface e estabilidade operacional.
 
 ---
 
@@ -23,7 +23,7 @@ flowchart TD
         UPD_Tab["Central de Atualizações"]
     end
 
-    subgraph Core_Services ["Camada de Serviços & Lógica Core (C++17)"]
+    subgraph Core_Services ["Camada de Serviços & Lógica Core (C++20)"]
         DM["DownloadManager\n(Fila Concorrente 1-5)"]
         CM["ConversionManager\n(Fila FIFO Estrita 1-Job)"]
         GD["GPUDetector\n(Sondagem Universal de Hardware)"]

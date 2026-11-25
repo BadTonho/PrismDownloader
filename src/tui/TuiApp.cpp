@@ -559,7 +559,7 @@ int TuiApp::run()
                 separator() | color(kBorderColor),
                 kvRow("Aplicativo:", "Prism Downloader (Studio TUI)", kSlateText),
                 kvRow("Versao:", m_versionTag, kEmeraldBright),
-                kvRow("Arquitetura:", "C++17 + Qt6 Core + FTXUI", kSlateText),
+                kvRow("Arquitetura:", "C++20 + Qt6 Core + FTXUI", kSlateText),
                 kvRow("Pasta de Destino:", snap.outputFolder, kCyan),
             }) | borderStyled(ROUNDED, kBorderColor),
 

@@ -4,7 +4,7 @@
   <a href="../README.md">🇺🇸 Read the English version (Primary Documentation) here.</a>
 </p>
 
-Bem-vindo à documentação oficial do **Prism Downloader**, a suíte desktop desenvolvida em **C++17** e **Qt 6** focada em download de mídias em alta velocidade, extração de áudio, corte de trechos (*trimming*), conversão acelerada por GPU e atualizações automáticas com verificação criptográfica.
+Bem-vindo à documentação oficial do **Prism Downloader**, a suíte desktop desenvolvida em **C++20** e **Qt 6** focada em download de mídias em alta velocidade, extração de áudio, corte de trechos (*trimming*), conversão acelerada por GPU e atualizações automáticas com verificação criptográfica.
 
 ---
 
@@ -14,7 +14,7 @@ A documentação está organizada de forma modular para facilitar a consulta por
 
 | Documento | Descrição | Versão em Inglês |
 | :--- | :--- | :--- |
-| 🏗️ [**Arquitetura do Sistema**](ARQUITETURA.md) | Visão geral da arquitetura em C++17/Qt 6, fluxo de dados ponta a ponta, modelo de concorrência com threads/processos desacoplados e gerenciamento de filas. | [ARCHITECTURE.md](../ARCHITECTURE.md) |
+| 🏗️ [**Arquitetura do Sistema**](ARQUITETURA.md) | Visão geral da arquitetura em C++20/Qt 6, fluxo de dados ponta a ponta, modelo de concorrência com threads/processos desacoplados e gerenciamento de filas. | [ARCHITECTURE.md](../ARCHITECTURE.md) |
 | 🧩 [**Referência de Módulos & Código**](MODULOS.md) | Descrição técnica minuciosa de cada classe, estrutura de dados, enums, métodos públicos e sinais/slots do projeto. | [MODULES.md](../MODULES.md) |
 | ⚡ [**Aceleração por Hardware & GPU**](HARDWARE_GPU.md) | Detecção de GPU multiplataforma (Windows DXGI e Linux DRM/VAAPI), seleção de encoders (NVENC, AMF, QSV, VAAPI), fallback para CPU e CLI `--diagnose-gpu`. | [HARDWARE_GPU.md](../HARDWARE_GPU.md) |
 | 🛡️ [**Atualizações Automáticas**](AUTO_UPDATE.md) | Mecanismo de auto-atualização do Prism e do motor `yt-dlp`, verificação de integridade SHA-256 e rotina de staging para versão portátil. | [AUTO_UPDATE.md](../AUTO_UPDATE.md) |
@@ -25,7 +25,7 @@ A documentação está organizada de forma modular para facilitar a consulta por
 
 ## 🛠️ Stack Tecnológica & Dependências
 
-* **Linguagem:** C++17 (padrão ISO C++17 estrito).
+* **Linguagem:** C++20 (padrão ISO C++20 estrito).
 * **Framework Gráfico & Core:** Qt 6.7+ (`QtWidgets`, `QtNetwork`, `QtCore`, `QtGui`).
 * **Motores de Mídia Integrados:**
   * `yt-dlp` (Canal Nightly oficial para extração de stream e metadados).

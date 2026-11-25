@@ -8,7 +8,7 @@ if(NOT PRISM_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
 endif()
 project(PrismDownloader VERSION ${PRISM_VERSION} LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -175,7 +175,7 @@ if(BUILD_TESTING)
         src/MediaItem.h
     )
     target_include_directories(PrismDownloaderTests PRIVATE src)
-    target_compile_features(PrismDownloaderTests PRIVATE cxx_std_17)
+    target_compile_features(PrismDownloaderTests PRIVATE cxx_std_20)
 
     add_executable(PrismMediaMetadataTests
         tests/MediaMetadataTests.cpp
@@ -184,7 +184,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismMediaMetadataTests PRIVATE src)
     target_link_libraries(PrismMediaMetadataTests PRIVATE Qt6::Core)
-    target_compile_features(PrismMediaMetadataTests PRIVATE cxx_std_17)
+    target_compile_features(PrismMediaMetadataTests PRIVATE cxx_std_20)
 
     add_executable(PrismFormatSelectionDialogTests
         tests/FormatSelectionDialogTests.cpp
@@ -195,7 +195,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismFormatSelectionDialogTests PRIVATE src)
     target_link_libraries(PrismFormatSelectionDialogTests PRIVATE Qt6::Widgets Qt6::Network)
-    target_compile_features(PrismFormatSelectionDialogTests PRIVATE cxx_std_17)
+    target_compile_features(PrismFormatSelectionDialogTests PRIVATE cxx_std_20)
 
     add_executable(PrismMediaToolResolverTests
         tests/MediaToolResolverTests.cpp
@@ -204,7 +204,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismMediaToolResolverTests PRIVATE src)
     target_link_libraries(PrismMediaToolResolverTests PRIVATE Qt6::Core)
-    target_compile_features(PrismMediaToolResolverTests PRIVATE cxx_std_17)
+    target_compile_features(PrismMediaToolResolverTests PRIVATE cxx_std_20)
 
     add_executable(PrismYtDlpUpdateServiceTests
         tests/YtDlpUpdateServiceTests.cpp
@@ -215,7 +215,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismYtDlpUpdateServiceTests PRIVATE src)
     target_link_libraries(PrismYtDlpUpdateServiceTests PRIVATE Qt6::Core Qt6::Network)
-    target_compile_features(PrismYtDlpUpdateServiceTests PRIVATE cxx_std_17)
+    target_compile_features(PrismYtDlpUpdateServiceTests PRIVATE cxx_std_20)
 
     add_executable(PrismAppUpdateServiceTests
         tests/AppUpdateServiceTests.cpp
@@ -224,7 +224,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismAppUpdateServiceTests PRIVATE src)
     target_link_libraries(PrismAppUpdateServiceTests PRIVATE Qt6::Core Qt6::Network)
-    target_compile_features(PrismAppUpdateServiceTests PRIVATE cxx_std_17)
+    target_compile_features(PrismAppUpdateServiceTests PRIVATE cxx_std_20)
 
     add_executable(PrismPortableUpdateCommonTests
         tests/PortableUpdateCommonTests.cpp
@@ -233,11 +233,11 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismPortableUpdateCommonTests PRIVATE src)
     target_link_libraries(PrismPortableUpdateCommonTests PRIVATE Qt6::Core)
-    target_compile_features(PrismPortableUpdateCommonTests PRIVATE cxx_std_17)
+    target_compile_features(PrismPortableUpdateCommonTests PRIVATE cxx_std_20)
 
     add_executable(PrismFakeMediaTool tests/FakeMediaTool.cpp)
     target_link_libraries(PrismFakeMediaTool PRIVATE Qt6::Core)
-    target_compile_features(PrismFakeMediaTool PRIVATE cxx_std_17)
+    target_compile_features(PrismFakeMediaTool PRIVATE cxx_std_20)
 
     add_executable(PrismQueueManagerTests
         tests/QueueManagerTests.cpp
@@ -253,7 +253,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismQueueManagerTests PRIVATE src)
     target_link_libraries(PrismQueueManagerTests PRIVATE Qt6::Core)
-    target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_17)
+    target_compile_features(PrismQueueManagerTests PRIVATE cxx_std_20)
 
     add_executable(PrismTuiStateTests
         tests/TuiStateTests.cpp
@@ -263,7 +263,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(PrismTuiStateTests PRIVATE src)
     target_link_libraries(PrismTuiStateTests PRIVATE Qt6::Core)
-    target_compile_features(PrismTuiStateTests PRIVATE cxx_std_17)
+    target_compile_features(PrismTuiStateTests PRIVATE cxx_std_20)
 
     foreach(target PrismDownloaderTests PrismMediaMetadataTests PrismFormatSelectionDialogTests PrismMediaToolResolverTests PrismYtDlpUpdateServiceTests PrismAppUpdateServiceTests PrismPortableUpdateCommonTests PrismFakeMediaTool PrismQueueManagerTests PrismTuiStateTests)
         if(MSVC)
@@ -326,7 +326,7 @@ target_link_libraries(prism-cli PRIVATE
     ftxui::dom
     ftxui::component
 )
-target_compile_features(prism-cli PRIVATE cxx_std_17)
+target_compile_features(prism-cli PRIVATE cxx_std_20)
 if(MSVC)
     target_compile_options(prism-cli PRIVATE /W4 /permissive- /utf-8)
     target_compile_definitions(prism-cli PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
@@ -357,7 +357,7 @@ if(WIN32)
         src/PortableUpdateCommon.cpp
     )
     target_link_libraries(PrismPortableUpdateHelper PRIVATE Qt6::Core)
-    target_compile_features(PrismPortableUpdateHelper PRIVATE cxx_std_17)
+    target_compile_features(PrismPortableUpdateHelper PRIVATE cxx_std_20)
     if(MSVC)
         target_compile_options(PrismPortableUpdateHelper PRIVATE /W4 /permissive- /utf-8)
     else()

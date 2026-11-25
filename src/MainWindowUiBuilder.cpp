@@ -575,7 +575,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
 
     QLabel *lblAppArchKey = new QLabel("Arquitetura:", appInfoGroup);
     lblAppArchKey->setStyleSheet("color: #8c8c8c; font-weight: bold;");
-    QLabel *lblAppArchVal = new QLabel("Núcleo em C++17 Padrão + Interface Gráfica Qt 6.7", appInfoGroup);
+    QLabel *lblAppArchVal = new QLabel("Núcleo em C++20 Padrão + Interface Gráfica Qt 6.7", appInfoGroup);
     lblAppArchVal->setStyleSheet("color: #e2e8f0; font-size: 13px;");
 
     QLabel *lblAppEngineKey = new QLabel("Motor de Processamento:", appInfoGroup);

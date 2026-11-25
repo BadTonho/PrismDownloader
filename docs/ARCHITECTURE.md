@@ -4,7 +4,7 @@
   <a href="pt/ARQUITETURA.md">🇧🇷 Leia a versão em Português do Brasil (PT-BR) aqui.</a>
 </p>
 
-This document provides a comprehensive technical overview of the software architecture, data flow pipeline, process management, and concurrency models in **Prism Downloader**, engineered with **Pure C++17** and **Qt 6**.
+This document provides a comprehensive technical overview of the software architecture, data flow pipeline, process management, and concurrency models in **Prism Downloader**, engineered with **Pure C++20** and **Qt 6**.
 
 ---
 
@@ -23,7 +23,7 @@ flowchart TD
         UPD_Tab["Update Center Tab"]
     end
 
-    subgraph Core_Services ["Core Services & Logic Layer (C++17)"]
+    subgraph Core_Services ["Core Services & Logic Layer (C++20)"]
         DM["DownloadManager\n(Concurrent Queue 1-5 Workers)"]
         CM["ConversionManager\n(Strict FIFO Single-Job Queue)"]
         GD["GPUDetector\n(Universal Hardware Probing)"]

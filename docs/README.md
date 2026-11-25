@@ -4,7 +4,7 @@
   <a href="pt/README.md">🇧🇷 Leia a versão em Português do Brasil (PT-BR) aqui.</a>
 </p>
 
-Welcome to the official documentation for **Prism Downloader**, the high-performance desktop media suite developed in **Pure C++17** and **Qt 6**, designed for high-speed downloads, lossless stream-copy muxing, audio extraction, time-slice trimming, GPU-accelerated conversions, and SHA-256-validated automatic self-updates.
+Welcome to the official documentation for **Prism Downloader**, the high-performance desktop media suite developed in **Pure C++20** and **Qt 6**, designed for high-speed downloads, lossless stream-copy muxing, audio extraction, time-slice trimming, GPU-accelerated conversions, and SHA-256-validated automatic self-updates.
 
 ---
 
@@ -25,7 +25,7 @@ The documentation is organized into focused, modular technical guides:
 
 ## 🛠️ Technology Stack & Dependencies
 
-* **Core Language:** ISO C++17 Standard.
+* **Core Language:** ISO C++20 Standard.
 * **UI Framework & Core Engine:** Qt 6.7+ (`QtWidgets`, `QtNetwork`, `QtCore`, `QtGui`).
 * **Integrated Media Engines:**
   * `yt-dlp` (Official Nightly release channel for media stream analysis and downloading).
