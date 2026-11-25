@@ -48,7 +48,7 @@ jobs:
           key: ytdlp-${{ matrix.id }}-${{ hashFiles('cmake/YtDlpBundle.cmake') }}
       - name: Install build dependencies
         shell: bash
-        run: $SUDO apt-get update && $SUDO apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools ffmpeg dpkg-dev
+        run: $SUDO apt-get update && $SUDO apt-get install --yes cmake ninja-build g++ qt6-base-dev qt6-base-dev-tools libgl1-mesa-dev ffmpeg dpkg-dev file
       - name: Configure release build
         shell: bash
         run: |
@@ -64,9 +64,11 @@ jobs:
           cpack --config build/CPackConfig.cmake -G DEB -B package
           package_file=$(find package -maxdepth 1 -name '*.deb' -print -quit)
           test -n "$package_file"
-          dpkg-deb --contents "$package_file" | grep -q 'usr/bin/prism-downloader'
-          dpkg-deb --contents "$package_file" | grep -q 'usr/lib/prism-downloader/yt-dlp'
-          dpkg-deb --field "$package_file" Depends | grep -q 'ffmpeg'
+          deb_contents=$(dpkg-deb --contents "$package_file")
+          grep -q 'usr/bin/prism-downloader' <<<"$deb_contents"
+          grep -q 'usr/lib/prism-downloader/yt-dlp' <<<"$deb_contents"
+          deb_depends=$(dpkg-deb --field "$package_file" Depends)
+          grep -q 'ffmpeg' <<<"$deb_depends"
           $SUDO apt-get install --yes "$PWD/$package_file"
           status=0; timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || status=$?; test "$status" -eq 124
           mkdir -p release-assets
@@ -103,9 +105,11 @@ jobs:
           cpack --config build/CPackConfig.cmake -G RPM -B package
           package_file=$(find package -maxdepth 1 -name '*.rpm' -print -quit)
           test -n "$package_file"
-          rpm -qpl "$package_file" | grep -q '/usr/bin/prism-downloader'
-          rpm -qpl "$package_file" | grep -q '/usr/lib/prism-downloader/yt-dlp'
-          rpm -qp --requires "$package_file" | grep -q '/usr/bin/ffmpeg'
+          rpm_contents=$(rpm -qpl "$package_file")
+          grep -q '/usr/bin/prism-downloader' <<<"$rpm_contents"
+          grep -q '/usr/lib/prism-downloader/yt-dlp' <<<"$rpm_contents"
+          rpm_requires=$(rpm -qp --requires "$package_file")
+          grep -q '/usr/bin/ffmpeg' <<<"$rpm_requires"
           dnf install -y --nogpgcheck "$PWD/$package_file"
           status=0; timeout 5s env QT_QPA_PLATFORM=offscreen prism-downloader || status=$?; test "$status" -eq 124
           # O yt-dlp embutido é PyInstaller: confirma que o rpmbuild não o alterou.
