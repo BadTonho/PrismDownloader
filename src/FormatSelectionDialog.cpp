@@ -82,7 +82,7 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
 {
     setWindowTitle(QStringLiteral("Selecione o formato da fonte - Prism Studio Suite"));
     resize(1020, 680);
-    setStyleSheet(baseStyleSheet + QStringLiteral("QDialog { background-color: #1a1a1a; }"));
+    setStyleSheet(baseStyleSheet + QStringLiteral("QDialog { background-color: #0b0f14; }"));
 
     auto *dialogLayout = new QVBoxLayout(this);
     dialogLayout->setSpacing(14);
@@ -91,7 +91,7 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     auto *titleLabel = new QLabel(
         QStringLiteral("Selecione o formato da fonte e opções do download:"), this);
     titleLabel->setStyleSheet(QStringLiteral(
-        "font-weight: bold; font-size: 17px; color: #ffffff;"));
+        "font-weight: bold; font-size: 17px; color: #f8fafc;"));
     dialogLayout->addWidget(titleLabel);
 
     // ==========================================
@@ -101,22 +101,22 @@ FormatSelectionDialog::FormatSelectionDialog(const MediaMetadata &metadata,
     headerCard->setObjectName(QStringLiteral("headerCard"));
     headerCard->setStyleSheet(QStringLiteral(
         "QFrame#headerCard {"
-        "  background-color: #212121;"
-        "  border: 1px solid #333333;"
-        "  border-radius: 8px;"
+        "  background-color: #121821;"
+        "  border: 1px solid #1f2b3a;"
+        "  border-radius: 10px;"
         "}"));
     auto *cardLayout = new QHBoxLayout(headerCard);
-    cardLayout->setContentsMargins(12, 10, 12, 10);
+    cardLayout->setContentsMargins(14, 12, 14, 12);
     cardLayout->setSpacing(16);
 
     m_thumbnailLabel = new QLabel(headerCard);
     m_thumbnailLabel->setFixedSize(176, 99);
     m_thumbnailLabel->setAlignment(Qt::AlignCenter);
     m_thumbnailLabel->setStyleSheet(QStringLiteral(
-        "background-color: #121212;"
-        "border: 1px solid #3a3a3a;"
-        "border-radius: 6px;"
-        "color: #777777;"
+        "background-color: #0b0f14;"
+        "border: 1px solid #243244;"
+        "border-radius: 8px;"
+        "color: #64748b;"
         "font-size: 11px;"
         "font-weight: bold;"));
     m_thumbnailLabel->setText(QStringLiteral("Carregando\nminiatura..."));

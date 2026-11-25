@@ -59,30 +59,30 @@ LibraryView::LibraryView(QWidget *parent)
     auto *title = new QLabel(
         QStringLiteral("Biblioteca de Mídias (Arquivos na Pasta de Destino):"), this);
     title->setStyleSheet(QStringLiteral(
-        "font-weight: bold; color: #10b981; font-size: 15px;"));
+        "font-weight: bold; color: #34d399; font-size: 15px;"));
     topLayout->addWidget(title);
     topLayout->addStretch();
 
     auto *refreshButton = new QPushButton(QStringLiteral("Atualizar Lista"), this);
     refreshButton->setObjectName(QStringLiteral("browseBtn"));
     refreshButton->setCursor(Qt::PointingHandCursor);
-    refreshButton->setMinimumHeight(32);
+    refreshButton->setMinimumHeight(34);
     connect(refreshButton, &QPushButton::clicked, this, &LibraryView::refreshCurrentFolder);
     topLayout->addWidget(refreshButton);
 
-    m_listViewButton = new QPushButton(QStringLiteral("☷ Lista"), this);
+    m_listViewButton = new QPushButton(QStringLiteral("Lista"), this);
     m_listViewButton->setObjectName(QStringLiteral("libraryViewBtn"));
     m_listViewButton->setCheckable(true);
     m_listViewButton->setChecked(true);
     m_listViewButton->setCursor(Qt::PointingHandCursor);
-    m_listViewButton->setMinimumHeight(32);
+    m_listViewButton->setMinimumHeight(34);
     connect(m_listViewButton, &QPushButton::clicked, this, &LibraryView::setListView);
 
-    m_blocksViewButton = new QPushButton(QStringLiteral("▦ Blocos"), this);
+    m_blocksViewButton = new QPushButton(QStringLiteral("Blocos"), this);
     m_blocksViewButton->setObjectName(QStringLiteral("libraryViewBtn"));
     m_blocksViewButton->setCheckable(true);
     m_blocksViewButton->setCursor(Qt::PointingHandCursor);
-    m_blocksViewButton->setMinimumHeight(32);
+    m_blocksViewButton->setMinimumHeight(34);
     connect(m_blocksViewButton, &QPushButton::clicked, this, &LibraryView::setBlocksView);
 
     auto *viewGroup = new QButtonGroup(this);

@@ -25,25 +25,25 @@ PlaylistItemDetailsDialog::PlaylistItemDetailsDialog(const PlaylistItem &item,
     resize(580, 520);
     setMinimumSize(580, 500);
     setStyleSheet(baseStyleSheet + R"(
-        QDialog#playlistDetailsDialog { background-color: #151515; }
+        QDialog#playlistDetailsDialog { background-color: #0b0f14; }
         QLabel#playlistThumbnail {
-            background-color: #202020;
-            border: 1px solid #31483d;
-            border-radius: 9px;
-            color: #a3a3a3;
+            background-color: #121821;
+            border: 1px solid #223042;
+            border-radius: 10px;
+            color: #94a3b8;
         }
-        QLabel#playlistDetailsTitle { color: #ffffff; font-size: 18px; font-weight: bold; }
-        QLabel#playlistDetailsMeta { color: #10b981; font-size: 14px; font-weight: bold; }
-        QLabel#playlistDetailsUrl { color: #a3a3a3; font-size: 11px; }
+        QLabel#playlistDetailsTitle { color: #f8fafc; font-size: 18px; font-weight: bold; }
+        QLabel#playlistDetailsMeta { color: #34d399; font-size: 14px; font-weight: bold; }
+        QLabel#playlistDetailsUrl { color: #94a3b8; font-size: 11px; }
         QPushButton#playlistDetailsClose {
-            background-color: #10b981;
-            color: #021810;
+            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #10b981, stop:1 #059669);
+            color: #031a12;
             border: none;
-            border-radius: 6px;
-            padding: 10px 18px;
+            border-radius: 8px;
+            padding: 10px 20px;
             font-weight: bold;
         }
-        QPushButton#playlistDetailsClose:hover { background-color: #059669; }
+        QPushButton#playlistDetailsClose:hover { background-color: #34d399; }
     )");
 
     auto *layout = new QVBoxLayout(this);

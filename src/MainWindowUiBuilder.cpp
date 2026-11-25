@@ -17,6 +17,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPixmap>
 #include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
@@ -103,15 +104,46 @@ void MainWindowUiBuilder::build(MainWindow *window,
     // ==========================================
     QFrame *sidebar = new QFrame(window);
     sidebar->setObjectName("sidebar");
-    sidebar->setFixedWidth(220);
+    sidebar->setFixedWidth(228);
     QVBoxLayout *sidebarLayout = new QVBoxLayout(sidebar);
-    sidebarLayout->setSpacing(10);
-    sidebarLayout->setContentsMargins(0, 20, 0, 20);
+    sidebarLayout->setSpacing(6);
+    sidebarLayout->setContentsMargins(0, 22, 0, 18);
 
-    QLabel *brandLabel = new QLabel("Studio Suite", sidebar);
-    brandLabel->setAlignment(Qt::AlignCenter);
-    brandLabel->setStyleSheet("font-weight: bold; font-size: 16px; color: #10b981; margin-bottom: 14px;");
-    sidebarLayout->addWidget(brandLabel);
+    // Cabeçalho da marca (ícone + título + subtítulo)
+    QWidget *brandWidget = new QWidget(sidebar);
+    QHBoxLayout *brandLayout = new QHBoxLayout(brandWidget);
+    brandLayout->setContentsMargins(18, 0, 18, 12);
+    brandLayout->setSpacing(10);
+
+    QLabel *brandIcon = new QLabel(brandWidget);
+    const QPixmap appIconPixmap(QStringLiteral(":/app_icon.png"));
+    if (!appIconPixmap.isNull()) {
+        brandIcon->setPixmap(appIconPixmap.scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+    brandIcon->setFixedSize(32, 32);
+    brandIcon->setAlignment(Qt::AlignCenter);
+
+    QVBoxLayout *brandTextLayout = new QVBoxLayout();
+    brandTextLayout->setSpacing(1);
+    brandTextLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *brandLabel = new QLabel("Prism", brandWidget);
+    brandLabel->setObjectName("brandTitle");
+    QLabel *brandSubLabel = new QLabel("STUDIO SUITE", brandWidget);
+    brandSubLabel->setObjectName("brandSubtitle");
+
+    brandTextLayout->addWidget(brandLabel);
+    brandTextLayout->addWidget(brandSubLabel);
+
+    brandLayout->addWidget(brandIcon);
+    brandLayout->addLayout(brandTextLayout);
+    brandLayout->addStretch();
+    sidebarLayout->addWidget(brandWidget);
+
+    QFrame *topDivider = new QFrame(sidebar);
+    topDivider->setObjectName("sidebarDivider");
+    sidebarLayout->addWidget(topDivider);
+    sidebarLayout->addSpacing(6);
 
     m_navDownloadBtn = new QPushButton("Downloads", sidebar);
     m_navDownloadBtn->setObjectName("navBtn");
@@ -160,9 +192,14 @@ void MainWindowUiBuilder::build(MainWindow *window,
     sidebarLayout->addWidget(m_navInfoBtn);
     sidebarLayout->addStretch();
 
+    QFrame *bottomDivider = new QFrame(sidebar);
+    bottomDivider->setObjectName("sidebarDivider");
+    sidebarLayout->addWidget(bottomDivider);
+    sidebarLayout->addSpacing(4);
+
     m_sidebarUpdateNotification = new QLabel(versionTag + " (Em Dia)", sidebar);
     m_sidebarUpdateNotification->setAlignment(Qt::AlignCenter);
-    m_sidebarUpdateNotification->setStyleSheet("color: #737373; font-size: 12px; font-weight: bold; margin-bottom: 2px;");
+    m_sidebarUpdateNotification->setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold; margin: 2px 12px 4px 12px;");
     sidebarLayout->addWidget(m_sidebarUpdateNotification);
 
     sidebarLayout->addWidget(m_sidebarUpdateBtn);
@@ -185,43 +222,51 @@ void MainWindowUiBuilder::build(MainWindow *window,
     QWidget *pageDownloads = new QWidget(m_stackedWidget);
     pageDownloads->setObjectName("downloadPage");
     QVBoxLayout *downloadsLayout = new QVBoxLayout(pageDownloads);
-    downloadsLayout->setSpacing(20);
-    downloadsLayout->setContentsMargins(28, 26, 28, 24);
+    downloadsLayout->setSpacing(18);
+    downloadsLayout->setContentsMargins(26, 22, 26, 22);
+
+    // CARD SUPERIOR: URL + BOTÃO ADICIONAR + PASTA DE DESTINO
+    QFrame *heroCard = new QFrame(pageDownloads);
+    heroCard->setObjectName("heroCard");
+    QVBoxLayout *heroLayout = new QVBoxLayout(heroCard);
+    heroLayout->setSpacing(12);
+    heroLayout->setContentsMargins(18, 16, 18, 16);
 
     // LINHA SUPERIOR: INPUT DA URL + BOTÃO BAIXAR EM DESTAQUE
     QHBoxLayout *topInputLayout = new QHBoxLayout();
     topInputLayout->setSpacing(12);
 
-    m_urlInput = new QLineEdit(pageDownloads);
+    m_urlInput = new QLineEdit(heroCard);
     m_urlInput->setPlaceholderText("Insira nesta caixa o URL completo do seu vídeo (exemplo: https://youtube.com/watch?v=...)");
     m_urlInput->setMinimumHeight(44);
     m_urlInput->setStyleSheet("font-size: 14px; padding: 10px 14px;");
 
-    m_startBtn = new QPushButton("ADICIONAR À FILA", pageDownloads);
+    m_startBtn = new QPushButton("ADICIONAR À FILA", heroCard);
     m_startBtn->setObjectName("startBtn");
     m_startBtn->setCursor(Qt::PointingHandCursor);
     m_startBtn->setMinimumHeight(44);
-    m_startBtn->setFixedWidth(185);
-    m_startBtn->setStyleSheet("font-size: 15px; font-weight: bold;");
+    m_startBtn->setFixedWidth(188);
+    m_startBtn->setStyleSheet("font-size: 14px; font-weight: bold;");
 
     topInputLayout->addWidget(m_urlInput, 1);
     topInputLayout->addWidget(m_startBtn, 0);
-    downloadsLayout->addLayout(topInputLayout);
+    heroLayout->addLayout(topInputLayout);
 
     // LINHA SECUNDÁRIA: PASTA DE DESTINO DOS DOWNLOADS
     QHBoxLayout *saveLayout = new QHBoxLayout();
-    saveLayout->setSpacing(12);
-    saveLayout->setContentsMargins(0, 0, 0, 8);
+    saveLayout->setSpacing(10);
+    saveLayout->setContentsMargins(0, 0, 0, 0);
 
-    QLabel *lblSave = new QLabel("Salvar downloads em:", pageDownloads);
-    lblSave->setStyleSheet("color: #a3a3a3; font-weight: bold; font-size: 13px;");
+    QLabel *lblSave = new QLabel("Salvar downloads em:", heroCard);
+    lblSave->setStyleSheet("color: #94a3b8; font-weight: bold; font-size: 12px;");
 
-    m_outputDirInput = new QLineEdit(pageDownloads);
+    m_outputDirInput = new QLineEdit(heroCard);
     m_outputDirInput->setReadOnly(false);
-    m_browseDirBtn = new QPushButton("Alterar...", pageDownloads);
+    m_outputDirInput->setMinimumHeight(34);
+    m_browseDirBtn = new QPushButton("Alterar...", heroCard);
     m_browseDirBtn->setObjectName("browseBtn");
     m_browseDirBtn->setCursor(Qt::PointingHandCursor);
-    m_browseDirBtn->setMinimumHeight(32);
+    m_browseDirBtn->setMinimumHeight(34);
 
     QString savedFolder = settings.outputFolder;
     if (savedFolder.isEmpty() || !QDir(savedFolder).exists()) {
@@ -234,46 +279,47 @@ void MainWindowUiBuilder::build(MainWindow *window,
     saveLayout->addWidget(m_outputDirInput, 1);
     saveLayout->addWidget(m_browseDirBtn, 0);
 
-    downloadsLayout->addLayout(saveLayout);
+    heroLayout->addLayout(saveLayout);
+    downloadsLayout->addWidget(heroCard);
 
     // PAINEL CENTRAL DE PROCESSAMENTO E MONITORAMENTO AO VIVO
     QGroupBox *centralPanel = new QGroupBox("Área de Processamento e Monitoramento de Download", pageDownloads);
     QVBoxLayout *centerLayout = new QVBoxLayout(centralPanel);
-    centerLayout->setSpacing(16);
-    centerLayout->setContentsMargins(20, 30, 20, 24);
+    centerLayout->setSpacing(14);
+    centerLayout->setContentsMargins(18, 26, 18, 18);
 
     m_statusLabel = new QLabel("Status: Pronto. Aguardando você inserir uma URL acima para começar...", centralPanel);
-    m_statusLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #10b981;");
+    m_statusLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #34d399;");
 
     m_progressBar = new QProgressBar(centralPanel);
     m_progressBar->setRange(0, 100);
     m_progressBar->setValue(0);
     m_progressBar->setTextVisible(true);
-    m_progressBar->setMinimumHeight(28);
-    m_progressBar->setStyleSheet("font-size: 14px;");
+    m_progressBar->setMinimumHeight(22);
 
     QHBoxLayout *statsLayout = new QHBoxLayout();
     m_speedLabel = new QLabel("Velocidade de Download: 0.0 MB/s", centralPanel);
-    m_speedLabel->setStyleSheet("font-size: 13px; color: #cbd5e1;");
+    m_speedLabel->setStyleSheet("font-size: 12px; color: #94a3b8;");
     m_etaLabel = new QLabel("Tempo Restante: --:--", centralPanel);
-    m_etaLabel->setStyleSheet("font-size: 13px; color: #cbd5e1;");
+    m_etaLabel->setStyleSheet("font-size: 12px; color: #94a3b8;");
     statsLayout->addWidget(m_speedLabel);
     statsLayout->addStretch();
     statsLayout->addWidget(m_etaLabel);
 
     QHBoxLayout *actionBottomLayout = new QHBoxLayout();
+    actionBottomLayout->setSpacing(10);
     m_cancelBtn = new QPushButton("CANCELAR SELECIONADO", centralPanel);
     m_cancelBtn->setObjectName("cancelBtn");
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
-    m_cancelBtn->setMinimumHeight(40);
-    m_cancelBtn->setFixedWidth(210);
+    m_cancelBtn->setMinimumHeight(38);
+    m_cancelBtn->setFixedWidth(205);
     m_cancelBtn->setEnabled(false);
 
     m_cancelAllBtn = new QPushButton("CANCELAR TODOS", centralPanel);
     m_cancelAllBtn->setObjectName("cancelBtn");
     m_cancelAllBtn->setCursor(Qt::PointingHandCursor);
-    m_cancelAllBtn->setMinimumHeight(40);
-    m_cancelAllBtn->setFixedWidth(160);
+    m_cancelAllBtn->setMinimumHeight(38);
+    m_cancelAllBtn->setFixedWidth(155);
     m_cancelAllBtn->setEnabled(false);
 
     m_notifyCheckBox = new QCheckBox("Exibir resumo quando toda a fila terminar", centralPanel);
@@ -281,7 +327,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     m_notifyCheckBox->setCursor(Qt::PointingHandCursor);
 
     QLabel *concurrencyLabel = new QLabel("Downloads simultâneos:", centralPanel);
-    concurrencyLabel->setStyleSheet("color: #dedede; font-weight: bold; font-size: 13px; margin-left: 20px; margin-right: 4px;");
+    concurrencyLabel->setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 12px; margin-left: 16px; margin-right: 4px;");
 
     m_concurrencyCombo = new QComboBox(centralPanel);
     m_concurrencyCombo->setObjectName("concurrencyCombo");
@@ -296,8 +342,8 @@ void MainWindowUiBuilder::build(MainWindow *window,
         m_concurrencyCombo->setCurrentIndex(foundIdx);
     }
     m_concurrencyCombo->setToolTip("Quantidade máxima de downloads ativos ao mesmo tempo");
-    m_concurrencyCombo->setFixedWidth(52);
-    m_concurrencyCombo->setMinimumHeight(30);
+    m_concurrencyCombo->setFixedWidth(64);
+    m_concurrencyCombo->setMinimumHeight(32);
     m_concurrencyCombo->setCursor(Qt::PointingHandCursor);
 
     actionBottomLayout->addWidget(m_notifyCheckBox);
@@ -692,7 +738,7 @@ void MainWindowUiBuilder::build(MainWindow *window,
     m_updateProgressBar->setRange(0, 100);
     m_updateProgressBar->setValue(0);
     m_updateProgressBar->setTextVisible(true);
-    m_updateProgressBar->setStyleSheet("QProgressBar { background-color: #171717; border: 1px solid #333333; border-radius: 6px; color: #ffffff; font-weight: bold; height: 24px; text-align: center; } QProgressBar::chunk { background-color: #10b981; border-radius: 5px; }");
+    m_updateProgressBar->setMinimumHeight(22);
     m_updateProgressBar->setVisible(false);
     upLayout->addWidget(m_updateProgressBar);
 

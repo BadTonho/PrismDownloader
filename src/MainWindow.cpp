@@ -1417,16 +1417,18 @@ bool MainWindow::shouldShowLogLine(const QString &line) const
 void MainWindow::updateLogFilter(int mode)
 {
     m_logFilterMode = mode;
-    QString activeStyle = "background-color: #10b981; color: #000000; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid #10b981;";
-    QString inactiveStyle = "background-color: #262626; color: #dedede; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid #333333;";
-    QString clearStyle = "background-color: #ef4444; color: #ffffff; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid #dc2626;";
-    
+    QString activeStyle = "background-color: #132822; color: #34d399; font-weight: bold; padding: 6px 14px; border-radius: 7px; border: 1px solid #10b981;";
+    QString inactiveStyle = "background-color: #151d28; color: #94a3b8; font-weight: bold; padding: 6px 14px; border-radius: 7px; border: 1px solid #243244;";
+    QString copyStyle = "background-color: #151d28; color: #cbd5e1; font-weight: bold; padding: 6px 14px; border-radius: 7px; border: 1px solid #2b3a4d;";
+    QString clearStyle = "background-color: #2a161b; color: #f87171; font-weight: bold; padding: 6px 14px; border-radius: 7px; border: 1px solid #5c242f;";
+
     if (m_filterAllBtn) m_filterAllBtn->setStyleSheet(mode == 0 ? activeStyle : inactiveStyle);
     if (m_filterProcessesBtn) m_filterProcessesBtn->setStyleSheet(mode == 1 ? activeStyle : inactiveStyle);
     if (m_filterErrorsBtn) m_filterErrorsBtn->setStyleSheet(mode == 2 ? activeStyle : inactiveStyle);
     if (m_filterGeneralBtn) m_filterGeneralBtn->setStyleSheet(mode == 3 ? activeStyle : inactiveStyle);
+    if (m_copyLogsBtn) m_copyLogsBtn->setStyleSheet(copyStyle);
     if (m_clearLogsBtn) m_clearLogsBtn->setStyleSheet(clearStyle);
-    
+
     refreshLogDisplay();
 }
 
